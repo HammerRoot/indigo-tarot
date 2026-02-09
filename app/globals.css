@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1a1a2e;
+  --background: #16213e;
+  --primary: #0f3460;
+  --secondary: #533483;
+  --accent: #e94560;
+  --gold: #ffd700;
+  --text-light: #f8f9fa;
+  --text-muted: #adb5bd;
 }
 
 @theme inline {
@@ -12,15 +18,149 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-light);
+  background: linear-gradient(135deg, var(--background) 0%, var(--primary) 100%);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* 神秘感背景 */
+.mystical-bg {
+  position: relative;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+
+.mystical-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 20% 20%, rgba(255, 215, 0, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(233, 69, 96, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 60%, rgba(83, 52, 131, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* 星空效果 */
+.stars {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.stars::before {
+  content: '';
+  position: absolute;
+  background: transparent;
+  border-radius: 50%;
+  width: 2px;
+  height: 2px;
+  background: var(--gold);
+  box-shadow: 
+    100px 200px 0 0 var(--gold),
+    200px 100px 0 0 var(--text-light),
+    300px 300px 0 0 var(--gold),
+    400px 150px 0 0 var(--text-light),
+    500px 250px 0 0 var(--gold),
+    150px 350px 0 0 var(--text-light),
+    250px 50px 0 0 var(--gold),
+    350px 400px 0 0 var(--text-light),
+    450px 300px 0 0 var(--gold),
+    50px 150px 0 0 var(--text-light);
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* 卡片样式 */
+.mystical-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.mystical-card:hover {
+  border-color: var(--gold);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(255, 215, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* 按钮样式 */
+.mystical-button {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--secondary) 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.mystical-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.mystical-button:hover::before {
+  left: 100%;
+}
+
+.mystical-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(233, 69, 96, 0.4);
+}
+
+/* 输入框样式 */
+.mystical-input {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  color: var(--text-light);
+  padding: 16px;
+  width: 100%;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.mystical-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+.mystical-input::placeholder {
+  color: var(--text-muted);
 }
