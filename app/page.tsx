@@ -12,6 +12,8 @@ import {
   MysticalInput,
 } from "@/app/components/ui";
 import { ApiKeySettings } from "@/app/components/ApiKeySettings";
+import { TarotCard } from "@/app/components/TarotCard";
+import { tarotCards } from "@/lib/tarot-data";
 
 export default function Home() {
   const [localQuestion, setLocalQuestion] = useState("");
@@ -172,12 +174,44 @@ export default function Home() {
             </div>
           </motion.div>
 
+          {/* 塔罗牌预览 */}
+          <motion.div
+            className="mt-16"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+          >
+            <h3 className="text-center text-lg font-semibold text-gray-700 mb-8">塔罗牌预览</h3>
+            <div className="flex justify-center gap-4 flex-wrap">
+              {/* 展示3张示例卡牌 */}
+              {tarotCards.slice(0, 3).map((card, index) => (
+                <motion.div
+                  key={card.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 + index * 0.1 }}
+                >
+                  <TarotCard
+                    card={card}
+                    size="sm"
+                    isRevealed={true}
+                    isReversed={index === 1} // 中间的卡牌显示为逆位
+                    showDetails={false}
+                  />
+                </motion.div>
+              ))}
+            </div>
+            <p className="text-center text-xs text-gray-500 mt-4 max-w-md mx-auto">
+              韦特塔罗牌，包含22张大阿尔卡纳和56张小阿尔卡纳，每张牌都有独特的含义和象征
+            </p>
+          </motion.div>
+
           {/* 特色功能 - 简化版 */}
           <motion.div
             className="mt-12"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
+            transition={{ duration: 0.6, delay: 0.8 }}
           >
             <div className="flex items-center justify-center gap-8 text-sm text-gray-500">
               <div className="flex items-center gap-1">

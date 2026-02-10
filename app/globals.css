@@ -167,6 +167,23 @@
   .question-tag {
     @apply px-4 py-2 bg-purple-50 border border-purple-200 rounded-full text-purple-700 cursor-pointer transition-all duration-200 hover:bg-purple-100 hover:border-purple-300;
   }
+
+  /* 3D 翻转效果样式 */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  .transform-style-3d {
+    transform-style: preserve-3d;
+  }
+
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
 }
 
 /* === 工具类 === */

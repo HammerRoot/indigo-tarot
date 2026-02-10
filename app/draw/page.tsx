@@ -6,6 +6,7 @@ import { ArrowLeft, Sparkles, Eye } from 'lucide-react';
 import { useTarotStore, recommendSpread } from '@/lib/store';
 import { generateTarotReading } from '@/lib/deepseek';
 import { useRouter } from 'next/navigation';
+import { TarotCard } from '@/app/components/TarotCard';
 
 export default function DrawPage() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function DrawPage() {
   const [currentStep, setCurrentStep] = useState<'spread' | 'draw' | 'reveal'>('spread');
   const [selectedCards, setSelectedCards] = useState<number[]>([]);
   const [revealedCards, setRevealedCards] = useState<number[]>([]);
+  const [cardReversals, setCardReversals] = useState<boolean[]>([]);
 
   // 如果没有问题，返回首页
   useEffect(() => {
@@ -55,7 +57,10 @@ export default function DrawPage() {
     if (newSelected.length === recommendedSpread.cardCount) {
       setTimeout(() => {
         const cards = getRandomCards(recommendedSpread.cardCount);
+        // 生成逆位状态（30%概率逆位）
+        const reversals = cards.map(() => Math.random() < 0.3);
         setDrawnCards(cards);
+        setCardReversals(reversals);
         setCurrentStep('reveal');
       }, 1000);
     }
@@ -225,28 +230,33 @@ export default function DrawPage() {
                   {Array.from({ length: 24 }, (_, index) => (
                     <motion.div
                       key={index}
-                      className={`aspect-[2/3] mystical-card cursor-pointer relative group ${
-                        selectedCards.includes(index) ? 'border-purple-400 bg-purple-50' : 'hover:border-purple-300'
-                      }`}
-                      whileHover={{ scale: 1.05, y: -5 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleCardSelect(index)}
+                      className="relative"
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
                     >
-                      <div className="absolute inset-0 bg-gradient-to-b from-purple-500/30 to-purple-600/30 rounded-lg flex items-center justify-center group-hover:from-purple-500/40 group-hover:to-purple-600/40 transition-all">
-                        <div className="text-3xl md:text-4xl">🎴</div>
+                      <div
+                        className={`w-16 h-24 sm:w-20 sm:h-30 md:w-24 md:h-36 bg-gradient-to-br from-purple-800 via-blue-900 to-purple-900 rounded-lg border-2 shadow-lg flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                          selectedCards.includes(index) 
+                            ? 'border-yellow-400 shadow-yellow-400/50 scale-105' 
+                            : 'border-purple-300 hover:border-purple-400 hover:scale-105'
+                        }`}
+                        onClick={() => handleCardSelect(index)}
+                      >
+                        <div className="text-center text-white/80">
+                          <div className="text-lg md:text-2xl mb-1">🌟</div>
+                          <div className="text-xs font-medium">TAROT</div>
+                        </div>
+                        {selectedCards.includes(index) && (
+                          <motion.div
+                            className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                          >
+                            ✓
+                          </motion.div>
+                        )}
                       </div>
-                      {selectedCards.includes(index) && (
-                        <motion.div
-                          className="absolute inset-0 bg-purple-100 rounded-lg border-2 border-purple-400 flex items-center justify-center"
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                        >
-                          <div className="text-purple-500 text-2xl">✓</div>
-                        </motion.div>
-                      )}
                     </motion.div>
                   ))}
                 </div>
@@ -275,52 +285,54 @@ export default function DrawPage() {
                   {drawnCards.map((card, index) => (
                     <motion.div
                       key={card.id}
-                      className="relative"
+                      className="flex flex-col items-center"
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: index * 0.2 }}
                     >
-                      <div className="text-center mb-3">
-                        <div className="bg-white border border-purple-200 rounded-lg px-3 py-2 inline-block">
-                          <span className="text-sm font-semibold text-gray-700">
-                            {recommendedSpread.positions[index]}
-                          </span>
-                        </div>
-                      </div>
+                      {/* 牌位标签 */}
                       <motion.div
-                        className="w-32 h-48 md:w-36 md:h-56 mystical-card cursor-pointer relative overflow-hidden group"
-                        whileHover={{ scale: 1.05 }}
-                        onClick={() => handleRevealCard(index)}
+                        className="bg-white border border-purple-200 rounded-lg px-4 py-2 mb-4 shadow-sm"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.2 + 0.1 }}
                       >
-                        <AnimatePresence>
-                          {!revealedCards.includes(index) ? (
-                            <motion.div
-                              key="back"
-                              className="absolute inset-0 bg-gradient-to-b from-purple-500 to-purple-600 flex items-center justify-center group-hover:from-purple-600 group-hover:to-purple-700 transition-all"
-                              exit={{ rotateY: 90 }}
-                              transition={{ duration: 0.6 }}
-                            >
-                              <div className="text-5xl">🎴</div>
-                            </motion.div>
-                          ) : (
-                            <motion.div
-                              key="front"
-                              className="absolute inset-0 bg-white p-4 flex flex-col items-center justify-center text-center border border-purple-200"
-                              initial={{ rotateY: -90 }}
-                              animate={{ rotateY: 0 }}
-                              transition={{ duration: 0.6 }}
-                            >
-                              <div className="text-purple-500 text-2xl mb-2">✨</div>
-                              <h3 className="text-gray-800 font-bold text-sm mb-2 leading-tight">
-                                {card.name}
-                              </h3>
-                              <p className="text-gray-600 text-xs leading-relaxed">
-                                {card.keywordsUpright[0]}
-                              </p>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                        <span className="text-sm font-semibold text-gray-700">
+                          {recommendedSpread.positions[index]}
+                        </span>
                       </motion.div>
+
+                      {/* 塔罗牌组件 */}
+                      <TarotCard
+                        card={card}
+                        size="lg"
+                        isRevealed={revealedCards.includes(index)}
+                        isReversed={cardReversals[index] || false}
+                        showDetails={false}
+                        onClick={() => handleRevealCard(index)}
+                      />
+
+                      {/* 卡牌提示 */}
+                      {revealedCards.includes(index) && (
+                        <motion.div
+                          className="mt-3 text-center max-w-32"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.3 }}
+                        >
+                          <p className="text-xs text-gray-600 leading-relaxed">
+                            {(cardReversals[index] 
+                              ? card.keywordsReversed 
+                              : card.keywordsUpright
+                            ).slice(0, 2).join("、")}
+                          </p>
+                          {cardReversals[index] && (
+                            <span className="text-xs text-red-500 font-medium block mt-1">
+                              逆位
+                            </span>
+                          )}
+                        </motion.div>
+                      )}
                     </motion.div>
                   ))}
                 </div>
