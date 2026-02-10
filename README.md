@@ -8,7 +8,6 @@
 - **🎭 流畅抽牌体验** - 3D翻牌动画、洗牌效果、触感反馈
 - **🧠 深度AI解析** - 结合问题背景，提供个性化的塔罗解读和指引
 - **📚 历史记录** - 本地保存你的占卜历史，随时回顾
-- **🎨 精美界面** - 专业神秘的视觉设计，响应式布局
 
 ## 🛠️ 技术栈
 
@@ -78,7 +77,7 @@
 ## 🗂️ 项目结构
 
 ```
-taro-you/
+tarot-you/
 ├── app/                    # Next.js App Router
 │   ├── api/               # API 路由
 │   │   └── deepseek/      # AI解析接口
@@ -93,26 +92,6 @@ taro-you/
 ├── public/                # 静态资源
 └── ...配置文件
 ```
-
-## 🎯 开发计划
-
-### ✅ v1.0 MVP (已完成)
-
-- [x] 用户问题输入
-- [x] AI智能牌阵推荐
-- [x] 流畅抽牌动画
-- [x] AI深度解析
-- [x] 历史记录功能
-- [x] 响应式UI设计
-
-### 🚀 v2.0 计划功能
-
-- [ ] 用户注册登录系统
-- [ ] 用户反馈功能
-- [ ] 社交分享功能
-- [ ] 多语言支持
-- [ ] 微信小程序版本
-- [ ] 高级牌阵和解读
 
 ## 🧩 塔罗牌体系
 
@@ -188,7 +167,7 @@ npm run lint
 如有问题或建议，请通过以下方式联系：
 
 - 项目地址: [GitHub Repository](https://github.com/HammerRoot/tarot-u.git)
-- 问题反馈: [[GitHub Issues]](https://github.com/HammerRoot/tarot-u/issues)
+- 问题反馈: [GitHub Issues](https://github.com/HammerRoot/tarot-u/issues)
 
 ---
 

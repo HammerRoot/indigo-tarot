@@ -24,6 +24,8 @@
 .DS_Store
 *.pem
 .claude
+CLAUDE.*
+PROJECT_PLAN.md
 
 # debug
 npm-debug.log*

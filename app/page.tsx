@@ -1,138 +1,188 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Stars, Moon, Sparkles } from 'lucide-react';
-import { useTarotStore } from '@/lib/store';
-import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Stars, Moon } from "lucide-react";
+import { useTarotStore } from "@/lib/store";
+import { useRouter } from "next/navigation";
+import {
+  MysticalBg,
+  MysticalCard,
+  MysticalButton,
+  MysticalInput,
+} from "@/app/components/ui";
 
 export default function Home() {
-  const [localQuestion, setLocalQuestion] = useState('');
+  const [localQuestion, setLocalQuestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { setQuestion, resetSession } = useTarotStore();
   const router = useRouter();
 
+  // 智能生成的默认问题
+  const defaultQuestions = [
+    "我在感情方面应该如何选择？",
+    "我的事业发展前景如何？",
+    "如何改善我的人际关系？",
+  ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!localQuestion.trim()) return;
-    
+
     setIsLoading(true);
-    
+
     // 重置之前的会话状态
     resetSession();
-    
+
     // 设置新的问题
     setQuestion(localQuestion.trim());
-    
+
     // 跳转到抽牌页面
     setTimeout(() => {
       setIsLoading(false);
-      router.push('/draw');
+      router.push("/draw");
     }, 1000);
   };
 
+  const handleQuestionSelect = (question: string) => {
+    setLocalQuestion(question);
+  };
+
   return (
-    <div className="min-h-screen mystical-bg relative overflow-hidden">
-      {/* 星空背景 */}
-      <div className="stars"></div>
-      
-      <main className="relative z-10 min-h-screen flex items-center justify-center px-4">
+    <MysticalBg className="min-h-screen relative overflow-hidden">
+      <main className="relative z-10 min-h-screen flex items-center justify-center px-4 py-8 md:py-12">
         <div className="max-w-2xl w-full">
           {/* 标题区域 */}
-          <motion.div 
+          <motion.div
             className="text-center mb-12"
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <div className="flex items-center justify-center mb-6">
-              <Moon className="w-8 h-8 text-yellow-300 mr-3" />
-              <h1 className="text-4xl md:text-6xl font-bold text-transparent bg-gradient-to-r from-yellow-300 via-purple-400 to-pink-400 bg-clip-text">
+            <div className="flex items-center justify-center mb-8">
+              <Moon className="w-10 h-10 text-purple-500 mr-4" />
+              <h1 className="text-5xl md:text-7xl font-bold text-transparent bg-gradient-to-r from-purple-600 via-purple-500 to-purple-400 bg-clip-text">
                 神秘塔罗
               </h1>
-              <Stars className="w-8 h-8 text-yellow-300 ml-3" />
+              <Stars className="w-10 h-10 text-purple-500 ml-4" />
             </div>
-            <p className="text-xl text-gray-300 mb-4">
+            <p className="text-xl md:text-2xl text-gray-600 mb-6 font-medium">
               倾听内心的声音，探寻命运的指引
             </p>
-            <div className="flex items-center justify-center text-gray-400">
-              <Sparkles className="w-5 h-5 mr-2" />
-              <span>韦特塔罗 · AI智能解读</span>
-              <Sparkles className="w-5 h-5 ml-2" />
-            </div>
           </motion.div>
 
           {/* 问题输入卡片 */}
           <motion.div
-            className="mystical-card p-8"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.3 }}
           >
-            <h2 className="text-2xl font-semibold text-center mb-6 text-white">
-              在心中默念你的问题
-            </h2>
-            <p className="text-gray-300 text-center mb-8">
-              塔罗牌将为你揭示隐藏在命运中的答案。请诚挚地提出你内心的困惑或疑问，让神秘的力量指引你的方向。
-            </p>
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="question" className="block text-sm font-medium text-gray-300 mb-3">
-                  你的问题
-                </label>
-                <textarea
-                  id="question"
-                  value={localQuestion}
-                  onChange={(e) => setLocalQuestion(e.target.value)}
-                  placeholder="请输入你想要咨询的问题，比如：关于爱情、事业、人际关系等..."
-                  className="mystical-input resize-none h-32"
-                  required
-                />
-              </div>
-              
-              <div className="text-center">
-                <motion.button
-                  type="submit"
-                  disabled={isLoading || !localQuestion.trim()}
-                  className="mystical-button px-12 py-4 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  {isLoading ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-                      正在为你占卜...
-                    </div>
-                  ) : (
-                    '开始占卜'
-                  )}
-                </motion.button>
-              </div>
-            </form>
+            <MysticalCard className="p-8 md:p-10">
+              <form onSubmit={handleSubmit}>
+                <div>
+                  <label
+                    htmlFor="question"
+                    className="block text-2xl font-bold text-center mb-6 text-gray-800"
+                  >
+                    你的问题
+                  </label>
+                  <MysticalInput
+                    id="question"
+                    value={localQuestion}
+                    onChange={(e) => setLocalQuestion(e.target.value)}
+                    placeholder="请输入你想要咨询的问题，比如：关于爱情、事业、人际关系等..."
+                    className="resize-none h-40 leading-relaxed border-2 shadow-lg"
+                    rows={8}
+                    required
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <MysticalButton
+                      type="submit"
+                      disabled={isLoading || !localQuestion.trim()}
+                      className="w-full py-4 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed bg-purple-100 hover:bg-purple-200 text-purple-700 border-purple-200 shadow-sm"
+                      style={{ borderRadius: "8px" }}
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                          正在为你占卜...
+                        </div>
+                      ) : (
+                        "开始占卜"
+                      )}
+                    </MysticalButton>
+                  </motion.div>
+                </div>
+              </form>
+            </MysticalCard>
           </motion.div>
 
-          {/* 特色功能 */}
+          {/* 猜你想问 */}
           <motion.div
-            className="grid md:grid-cols-3 gap-6 mt-12"
-            initial={{ opacity: 0, y: 30 }}
+            className="mt-8"
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
           >
-            {[
-              { icon: '🎴', title: '智能推荐牌型', desc: '根据问题类型自动选择最适合的塔罗牌阵' },
-              { icon: '✨', title: 'AI深度解析', desc: '结合传统塔罗智慧与现代AI技术的专业解读' },
-              { icon: '📚', title: '历史记录', desc: '保存您的每一次占卜记录，见证成长轨迹' }
-            ].map((feature, index) => (
-              <div key={index} className="mystical-card p-6 text-center">
-                <div className="text-3xl mb-3">{feature.icon}</div>
-                <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
-                <p className="text-gray-400 text-sm">{feature.desc}</p>
+            <h3 className="text-center text-lg font-semibold text-gray-500 mb-4">
+              猜你想问
+            </h3>
+            <div className="flex flex-col items-center space-y-2 max-w-md mx-auto">
+              {defaultQuestions.map((question, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => handleQuestionSelect(question)}
+                  className="px-6 py-3 text-gray-600 hover:text-gray-800 bg-purple-50 hover:bg-purple-100 rounded-full transition-all duration-200 border border-purple-200 hover:border-purple-300"
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* 特色功能 - 简化版 */}
+          <motion.div
+            className="mt-12"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+          >
+            <div className="flex items-center justify-center gap-8 text-sm text-gray-500">
+              <div className="flex items-center gap-1">
+                <span>🎴</span>
+                <span>智能牌阵</span>
               </div>
-            ))}
+              <div className="flex items-center gap-1">
+                <span>✨</span>
+                <span>AI解析</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span>📚</span>
+                <span>历史记录</span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* 声明 */}
+          <motion.div
+            className="mt-8 mb-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.8 }}
+          >
+            <p className="text-center text-xs text-gray-400 leading-relaxed max-w-sm mx-auto">
+              内容由AI生成，请仔细甄别，禁止非法行为
+            </p>
           </motion.div>
         </div>
       </main>
-    </div>
+    </MysticalBg>
   );
 }
