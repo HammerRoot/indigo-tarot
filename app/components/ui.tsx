@@ -43,11 +43,9 @@ export function MysticalButton({
 export function MysticalInput({
   className,
   ...props
-}: React.ComponentProps<"input"> | React.ComponentProps<"textarea">) {
-  const Component = props.rows ? "textarea" : "input";
+}: React.ComponentProps<"input"> & React.ComponentProps<"textarea">) {
+  const Component = (props as any).rows ? "textarea" : "input";
   return (
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error
     <Component className={cn(styles["mystical-input"], className)} {...props} />
   );
 }
