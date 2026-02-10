@@ -29,6 +29,10 @@ interface TarotStore {
   question: string;
   setQuestion: (question: string) => void;
   
+  // API Key
+  apiKey: string;
+  setApiKey: (apiKey: string) => void;
+  
   // 推荐的牌阵
   recommendedSpread: TarotSpread | null;
   setRecommendedSpread: (spread: TarotSpread | null) => void;
@@ -107,6 +111,7 @@ export const useTarotStore = create<TarotStore>()(
     (set, get) => ({
       // 初始状态
       question: '',
+      apiKey: '',
       recommendedSpread: null,
       drawnCards: [],
       currentReading: null,
@@ -115,6 +120,8 @@ export const useTarotStore = create<TarotStore>()(
 
       // 状态更新函数
       setQuestion: (question) => set({ question }),
+      
+      setApiKey: (apiKey) => set({ apiKey }),
       
       setRecommendedSpread: (spread) => set({ recommendedSpread: spread }),
       
@@ -148,8 +155,8 @@ export const useTarotStore = create<TarotStore>()(
     }),
     {
       name: 'tarot-store',
-      // 只持久化历史记录，其他状态重新开始
-      partialize: (state) => ({ readings: state.readings })
+      // 持久化历史记录和API Key
+      partialize: (state) => ({ readings: state.readings, apiKey: state.apiKey })
     }
   )
 );
