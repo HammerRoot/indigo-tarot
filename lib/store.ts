@@ -18,6 +18,7 @@ export interface TarotReading {
   question: string;
   spread: TarotSpread;
   cards: TarotCard[];
+  cardReversals: boolean[];
   interpretation: string;
   advice: string;
   timestamp: Date;

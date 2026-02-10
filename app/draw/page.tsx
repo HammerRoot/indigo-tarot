@@ -7,6 +7,7 @@ import { useTarotStore, recommendSpread } from '@/lib/store';
 import { generateTarotReading } from '@/lib/deepseek';
 import { useRouter } from 'next/navigation';
 import { TarotCard } from '@/app/components/TarotCard';
+import { useImagePreloader } from '@/lib/useImagePreloader';
 
 export default function DrawPage() {
   const router = useRouter();
@@ -26,6 +27,8 @@ export default function DrawPage() {
   const [selectedCards, setSelectedCards] = useState<number[]>([]);
   const [revealedCards, setRevealedCards] = useState<number[]>([]);
   const [cardReversals, setCardReversals] = useState<boolean[]>([]);
+  
+  const { preloadImage, isLoaded } = useImagePreloader();
 
   // 如果没有问题，返回首页
   useEffect(() => {
@@ -55,10 +58,19 @@ export default function DrawPage() {
     
     // 如果选够了卡牌，开始翻牌
     if (newSelected.length === recommendedSpread.cardCount) {
-      setTimeout(() => {
+      setTimeout(async () => {
         const cards = getRandomCards(recommendedSpread.cardCount);
         // 生成逆位状态（30%概率逆位）
         const reversals = cards.map(() => Math.random() < 0.3);
+        
+        // 预加载所有卡牌图片
+        const preloadPromises = cards.map(card => preloadImage(card.image));
+        try {
+          await Promise.all(preloadPromises);
+        } catch (error) {
+          console.warn('Some images failed to preload:', error);
+        }
+        
         setDrawnCards(cards);
         setCardReversals(reversals);
         setCurrentStep('reveal');
@@ -92,6 +104,7 @@ export default function DrawPage() {
         ...reading,
         id: Date.now().toString(),
         spread: recommendedSpread,
+        cardReversals: cardReversals,
         timestamp: new Date()
       };
       
@@ -309,6 +322,7 @@ export default function DrawPage() {
                         isRevealed={revealedCards.includes(index)}
                         isReversed={cardReversals[index] || false}
                         showDetails={false}
+                        isImageLoaded={isLoaded(card.image)}
                         onClick={() => handleRevealCard(index)}
                       />
 
@@ -326,11 +340,6 @@ export default function DrawPage() {
                               : card.keywordsUpright
                             ).slice(0, 2).join("、")}
                           </p>
-                          {cardReversals[index] && (
-                            <span className="text-xs text-red-500 font-medium block mt-1">
-                              逆位
-                            </span>
-                          )}
                         </motion.div>
                       )}
                     </motion.div>

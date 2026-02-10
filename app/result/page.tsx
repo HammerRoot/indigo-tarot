@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Home, BookOpen, Share2, RotateCcw } from 'lucide-react';
 import { useTarotStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
+import { ResultTarotCard } from '@/app/components/ResultTarotCard';
 
 export default function ResultPage() {
   const router = useRouter();
@@ -134,32 +135,13 @@ export default function ResultPage() {
             
             <div className="flex justify-center gap-6 md:gap-8 flex-wrap">
               {currentReading.cards.map((card, index) => (
-                <motion.div
+                <ResultTarotCard
                   key={card.id}
-                  className="text-center"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.3 + index * 0.1 }}
-                >
-                  <div className="mb-4">
-                    <div className="bg-purple-100 border border-purple-200 rounded-lg px-4 py-2 inline-block">
-                      <span className="text-sm font-semibold text-gray-700">
-                        {currentReading.spread.positions[index]}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="w-36 h-56 md:w-40 md:h-60 mystical-card p-6 flex flex-col items-center justify-center group hover:scale-105 transition-transform">
-                    <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center mb-4">
-                      <div className="text-white text-2xl">✨</div>
-                    </div>
-                    <h3 className="text-gray-800 font-bold text-sm mb-3 text-center leading-tight">
-                      {card.name}
-                    </h3>
-                    <p className="text-gray-600 text-xs text-center leading-relaxed">
-                      {card.keywordsUpright.slice(0, 2).join(' · ')}
-                    </p>
-                  </div>
-                </motion.div>
+                  card={card}
+                  position={currentReading.spread.positions[index]}
+                  index={index}
+                  isReversed={currentReading.cardReversals?.[index] || false}
+                />
               ))}
             </div>
           </motion.div>
@@ -263,10 +245,25 @@ export default function ResultPage() {
                     </h3>
                     
                     <div className="mb-6">
-                      <span className="text-base font-semibold text-gray-700 mr-3">关键词:</span>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-base font-semibold text-gray-700">关键词:</span>
+                        {currentReading.cardReversals?.[index] && (
+                          <span className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-200 text-amber-700 text-xs px-2 py-1 rounded-full font-medium">
+                            <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
+                            逆位
+                          </span>
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {card.keywordsUpright.map((keyword, i) => (
-                          <span key={i} className="inline-block bg-purple-100 border border-purple-200 rounded-full px-3 py-1 text-sm font-medium text-purple-700">
+                        {(currentReading.cardReversals?.[index] ? card.keywordsReversed : card.keywordsUpright).map((keyword, i) => (
+                          <span 
+                            key={i} 
+                            className={`inline-block border rounded-full px-3 py-1 text-sm font-medium ${
+                              currentReading.cardReversals?.[index] 
+                                ? 'bg-amber-50 border-amber-200 text-amber-700' 
+                                : 'bg-purple-100 border-purple-200 text-purple-700'
+                            }`}
+                          >
                             {keyword}
                           </span>
                         ))}
@@ -275,7 +272,7 @@ export default function ResultPage() {
                     
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                       <p className="text-gray-700 leading-relaxed">
-                        {card.meaningUpright}
+                        {currentReading.cardReversals?.[index] ? card.meaningReversed : card.meaningUpright}
                       </p>
                     </div>
                   </div>

@@ -12,6 +12,7 @@ interface TarotCardProps {
   onClick?: () => void;
   size?: "sm" | "md" | "lg";
   showDetails?: boolean;
+  isImageLoaded?: boolean;
 }
 
 export function TarotCard({
@@ -21,6 +22,7 @@ export function TarotCard({
   onClick,
   size = "md",
   showDetails = false,
+  isImageLoaded = true,
 }: TarotCardProps) {
   const [imageError, setImageError] = useState(false);
 
@@ -48,24 +50,32 @@ export function TarotCard({
     </div>
   );
 
-  // 生成卡牌正面（使用占位符或实际图片）
+  // 生成卡牌正面（使用实际图片或占位符）
   const CardFront = ({ className }: { className?: string }) => (
     <div
       className={`${className} bg-gradient-to-b from-amber-50 to-purple-50 rounded-lg border-2 border-purple-300 shadow-lg overflow-hidden relative ${
         isReversed ? "rotate-180" : ""
       }`}
     >
-      {!imageError && card.image ? (
-        <Image
-          src={card.image}
-          alt={card.name}
-          width={cardSizes[size].width}
-          height={cardSizes[size].height}
-          className="w-full h-full object-cover"
-          onError={() => setImageError(true)}
-        />
+      {!imageError && card.image && isImageLoaded ? (
+        <div className="relative w-full h-full">
+          <Image
+            src={card.image}
+            alt={card.name}
+            fill
+            className="object-cover"
+            onError={() => setImageError(true)}
+            priority={isRevealed}
+            sizes={`${cardSizes[size].width}px`}
+          />
+
+          {/* 逆位指示器 - 仅边框效果 */}
+          {isReversed && isRevealed && (
+            <div className="absolute inset-0 border-2 border-amber-400 rounded-lg shadow-lg opacity-90"></div>
+          )}
+        </div>
       ) : (
-        // 占位符设计
+        // 占位符设计或图片加载失败
         <div className="w-full h-full p-2 flex flex-col justify-between">
           {/* 卡牌标题 */}
           <div className="text-center">
@@ -83,14 +93,17 @@ export function TarotCard({
           <div className="flex-1 flex items-center justify-center">
             <div className="w-16 h-16 bg-purple-200 rounded-full flex items-center justify-center">
               <span className="text-2xl">
-                {card.arcana === "major" 
-                  ? "✨" 
-                  : card.suit === "wands" ? "🔥"
-                  : card.suit === "cups" ? "💧"
-                  : card.suit === "swords" ? "⚔️"
-                  : card.suit === "pentacles" ? "💰"
-                  : "🌟"
-                }
+                {card.arcana === "major"
+                  ? "✨"
+                  : card.suit === "wands"
+                    ? "🔥"
+                    : card.suit === "cups"
+                      ? "💧"
+                      : card.suit === "swords"
+                        ? "⚔️"
+                        : card.suit === "pentacles"
+                          ? "💰"
+                          : "🌟"}
               </span>
             </div>
           </div>
@@ -101,13 +114,11 @@ export function TarotCard({
               {card.name}
             </div>
           </div>
-        </div>
-      )}
-      
-      {/* 逆位指示器 */}
-      {isReversed && isRevealed && (
-        <div className="absolute top-1 right-1 bg-red-500 text-white text-xs px-1 rounded">
-          逆位
+
+          {/* 逆位指示器 - 仅边框效果 */}
+          {isReversed && isRevealed && (
+            <div className="absolute inset-0 border-2 border-amber-400 rounded-lg shadow-lg opacity-90"></div>
+          )}
         </div>
       )}
     </div>
@@ -149,7 +160,9 @@ export function TarotCard({
           </p>
           <div className="text-xs text-purple-700">
             <strong>关键词：</strong>
-            {(isReversed ? card.keywordsReversed : card.keywordsUpright).join("、")}
+            {(isReversed ? card.keywordsReversed : card.keywordsUpright).join(
+              "、",
+            )}
           </div>
         </motion.div>
       )}
