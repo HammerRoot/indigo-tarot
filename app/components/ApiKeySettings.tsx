@@ -7,9 +7,11 @@ import { motion, AnimatePresence } from "framer-motion";
 interface ApiKeySettingsProps {
   onApiKeyChange: (apiKey: string) => void;
   currentApiKey: string;
+  remainingCalls?: number | null;
+  usingSystemKey?: boolean;
 }
 
-export function ApiKeySettings({ onApiKeyChange, currentApiKey }: ApiKeySettingsProps) {
+export function ApiKeySettings({ onApiKeyChange, currentApiKey, remainingCalls, usingSystemKey }: ApiKeySettingsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [apiKey, setApiKey] = useState(currentApiKey);
   const [showKey, setShowKey] = useState(false);
@@ -77,7 +79,7 @@ export function ApiKeySettings({ onApiKeyChange, currentApiKey }: ApiKeySettings
                     💡 API密钥说明
                   </h4>
                   <ul className="text-xs text-purple-700 space-y-1">
-                    <li>• 未配置密钥：使用系统密钥，每小时限制5次</li>
+                    <li>• 未配置密钥：使用系统密钥，每3小时限制5次</li>
                     <li>• 配置个人密钥：无限制，费用自承担</li>
                     <li>• 获取密钥：访问 <a href="https://platform.deepseek.com" target="_blank" className="underline">DeepSeek官网</a></li>
                   </ul>
@@ -108,12 +110,22 @@ export function ApiKeySettings({ onApiKeyChange, currentApiKey }: ApiKeySettings
 
                 {/* 当前状态 */}
                 <div className="mb-6 p-3 bg-gray-50 rounded-lg">
-                  <div className="text-sm text-gray-600">
-                    <strong>当前状态：</strong>
-                    {currentApiKey ? (
-                      <span className="text-green-600">使用个人密钥</span>
-                    ) : (
-                      <span className="text-orange-600">使用系统密钥（限制5次/小时）</span>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <div>
+                      <strong>当前状态：</strong>
+                      {currentApiKey ? (
+                        <span className="text-green-600">使用个人密钥</span>
+                      ) : (
+                        <span className="text-orange-600">使用系统密钥（限制5次/3小时）</span>
+                      )}
+                    </div>
+                    {usingSystemKey && remainingCalls !== null && (
+                      <div>
+                        <strong>剩余次数：</strong>
+                        <span className={`${remainingCalls === 0 ? 'text-red-600' : remainingCalls <= 2 ? 'text-orange-600' : 'text-green-600'}`}>
+                          {remainingCalls}/5 次
+                        </span>
+                      </div>
                     )}
                   </div>
                 </div>

@@ -18,21 +18,23 @@ import { tarotCards } from "@/lib/tarot-data";
 export default function Home() {
   const [localQuestion, setLocalQuestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [apiKey, setApiKey] = useState("");
-  const { setQuestion, resetSession } = useTarotStore();
+  const [localApiKey, setLocalApiKey] = useState("");
+  const { setQuestion, resetSession, remainingCalls, usingSystemKey, setApiKey } = useTarotStore();
   const router = useRouter();
 
   // 从 localStorage 加载 API Key
   useEffect(() => {
     const savedApiKey = localStorage.getItem("deepseek_api_key");
     if (savedApiKey) {
-      setApiKey(savedApiKey);
+      setLocalApiKey(savedApiKey);
+      setApiKey(savedApiKey); // 同时更新store中的API key
     }
-  }, []);
+  }, [setApiKey]);
 
   // 保存 API Key 到 localStorage
   const handleApiKeyChange = (newApiKey: string) => {
-    setApiKey(newApiKey);
+    setLocalApiKey(newApiKey);
+    setApiKey(newApiKey); // 同时更新store中的API key
     if (newApiKey) {
       localStorage.setItem("deepseek_api_key", newApiKey);
     } else {
@@ -74,8 +76,10 @@ export default function Home() {
     <MysticalBg className="min-h-screen relative overflow-hidden">
       {/* API 设置 */}
       <ApiKeySettings
-        currentApiKey={apiKey}
+        currentApiKey={localApiKey}
         onApiKeyChange={handleApiKeyChange}
+        remainingCalls={remainingCalls}
+        usingSystemKey={usingSystemKey}
       />
       <main className="relative z-10 min-h-screen flex items-center justify-center px-4 py-8 md:py-12">
         <div className="max-w-2xl w-full">

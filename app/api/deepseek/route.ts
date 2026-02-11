@@ -51,15 +51,15 @@ export async function POST(request: NextRequest) {
       // 使用系统API KEY时进行频率限制
       const cacheKey = `system_${clientIP}`;
       const now = Date.now();
-      const hourMs = 60 * 60 * 1000; // 1小时
+      const threeHoursMs = 3 * 60 * 60 * 1000; // 3小时
       
       const cached = requestCache.get(cacheKey);
       if (cached) {
-        if (now < cached.resetTime && cached.count >= 5) { // 每小时限制5次
+        if (now < cached.resetTime && cached.count >= 5) { // 每3小时限制5次
           return NextResponse.json(
             { 
               error: '调用次数已达上限', 
-              message: '使用系统API密钥每小时限制5次调用，请稍后再试或使用您自己的API密钥',
+              message: '使用系统API密钥每3小时限制5次调用，请稍后再试或使用您自己的API密钥',
               needApiKey: true
             },
             { status: 429 }
@@ -68,14 +68,14 @@ export async function POST(request: NextRequest) {
         
         if (now >= cached.resetTime) {
           // 重置计数器
-          requestCache.set(cacheKey, { count: 1, resetTime: now + hourMs });
+          requestCache.set(cacheKey, { count: 1, resetTime: now + threeHoursMs });
         } else {
           // 增加计数
           cached.count++;
         }
       } else {
         // 首次请求
-        requestCache.set(cacheKey, { count: 1, resetTime: now + hourMs });
+        requestCache.set(cacheKey, { count: 1, resetTime: now + threeHoursMs });
       }
     }
 

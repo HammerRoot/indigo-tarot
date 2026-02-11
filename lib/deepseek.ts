@@ -6,6 +6,10 @@ export interface DeepSeekResponse {
       content: string;
     };
   }>;
+  meta?: {
+    usingSystemKey: boolean;
+    remainingCalls: number | null;
+  };
 }
 
 export interface TarotReading {
@@ -16,24 +20,34 @@ export interface TarotReading {
 }
 
 // DeepSeek API调用函数
-export async function callDeepSeek(prompt: string): Promise<string> {
+export async function callDeepSeek(prompt: string, userApiKey?: string): Promise<{content: string, meta?: DeepSeekResponse['meta']}> {
   try {
     const response = await fetch('/api/deepseek', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt, userApiKey }),
     });
 
     if (!response.ok) {
+      const errorData = await response.json();
+      if (errorData.needApiKey) {
+        throw new Error(`API_KEY_NEEDED:${errorData.message}`);
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data: DeepSeekResponse = await response.json();
-    return data.choices[0]?.message?.content || '抱歉，未能获得解读结果。';
+    return {
+      content: data.choices[0]?.message?.content || '抱歉，未能获得解读结果。',
+      meta: data.meta
+    };
   } catch (error) {
     console.error('DeepSeek API调用失败:', error);
+    if (error instanceof Error && error.message.startsWith('API_KEY_NEEDED:')) {
+      throw error;
+    }
     throw new Error('AI解读服务暂时不可用，请稍后重试。');
   }
 }
@@ -41,8 +55,9 @@ export async function callDeepSeek(prompt: string): Promise<string> {
 // 生成塔罗解读
 export async function generateTarotReading(
   question: string,
-  cards: TarotCard[]
-): Promise<TarotReading> {
+  cards: TarotCard[],
+  userApiKey?: string
+): Promise<{reading: TarotReading, meta?: DeepSeekResponse['meta']}> {
   const cardInfo = cards.map((card, index) => 
     `第${index + 1}张牌：${card.name}(${card.nameEn})
     含义：${card.meaningUpright}
@@ -70,22 +85,29 @@ ${cardInfo}
 `;
 
   try {
-    const interpretation = await callDeepSeek(prompt);
+    const result = await callDeepSeek(prompt, userApiKey);
     
-    return {
+    const reading: TarotReading = {
       question,
       cards,
-      interpretation,
+      interpretation: result.content,
       advice: '相信自己的直觉，勇敢面对未来。'
     };
+
+    return { reading, meta: result.meta };
   } catch (error) {
     console.error('生成塔罗解读失败:', error);
+    // 如果是API密钥问题，重新抛出错误
+    if (error instanceof Error && error.message.startsWith('API_KEY_NEEDED:')) {
+      throw error;
+    }
     // 返回备用解读
-    return {
+    const reading: TarotReading = {
       question,
       cards,
       interpretation: '这次占卜显示了重要的信息。请仔细思考抽到的牌的含义，它们会为你指引方向。',
       advice: '相信自己的直觉，每一张牌都有它的深意。'
     };
+    return { reading };
   }
 }

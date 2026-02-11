@@ -55,6 +55,11 @@ interface TarotStore {
   isLoading: boolean;
   setLoading: (loading: boolean) => void;
   
+  // 剩余次数状态
+  remainingCalls: number | null;
+  usingSystemKey: boolean;
+  setApiUsage: (remainingCalls: number | null, usingSystemKey: boolean) => void;
+  
   // 重置状态
   resetSession: () => void;
   
@@ -118,6 +123,8 @@ export const useTarotStore = create<TarotStore>()(
       currentReading: null,
       readings: [],
       isLoading: false,
+      remainingCalls: null,
+      usingSystemKey: false,
 
       // 状态更新函数
       setQuestion: (question) => set({ question }),
@@ -139,6 +146,8 @@ export const useTarotStore = create<TarotStore>()(
       })),
       
       setLoading: (loading) => set({ isLoading: loading }),
+      
+      setApiUsage: (remainingCalls, usingSystemKey) => set({ remainingCalls, usingSystemKey }),
       
       resetSession: () => set({
         question: '',

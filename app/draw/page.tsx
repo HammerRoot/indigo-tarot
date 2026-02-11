@@ -16,11 +16,13 @@ export default function DrawPage() {
     recommendedSpread,
     drawnCards,
     isLoading,
+    apiKey,
     setRecommendedSpread,
     setDrawnCards,
     setCurrentReading,
     setLoading,
-    getRandomCards
+    getRandomCards,
+    setApiUsage
   } = useTarotStore();
 
   const [currentStep, setCurrentStep] = useState<'spread' | 'draw' | 'reveal'>('spread');
@@ -99,9 +101,15 @@ export default function DrawPage() {
     
     setLoading(true);
     try {
-      const reading = await generateTarotReading(question, drawnCards);
+      const result = await generateTarotReading(question, drawnCards, apiKey || undefined);
+      
+      // 更新剩余次数信息
+      if (result.meta) {
+        setApiUsage(result.meta.remainingCalls, result.meta.usingSystemKey);
+      }
+      
       const fullReading = {
-        ...reading,
+        ...result.reading,
         id: Date.now().toString(),
         spread: recommendedSpread,
         cardReversals: cardReversals,
@@ -112,7 +120,12 @@ export default function DrawPage() {
       router.push('/result');
     } catch (error) {
       console.error('获取解读失败:', error);
-      // 可以显示错误提示
+      // 处理API密钥相关错误
+      if (error instanceof Error && error.message.startsWith('API_KEY_NEEDED:')) {
+        alert('API调用失败: ' + error.message.split(':')[1]);
+      } else {
+        alert('获取解读失败，请稍后重试');
+      }
     } finally {
       setLoading(false);
     }
