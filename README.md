@@ -30,7 +30,7 @@
 
    ```bash
    git clone <repository-url>
-   cd taro-you
+   cd indigo-tarot
    ```
 
 2. **安装依赖**
@@ -57,6 +57,25 @@
 
    打开浏览器访问 [http://localhost:3000](http://localhost:3000)
 
+6. **代码质量检查**
+
+   ```bash
+   npm run lint          # ESLint检查
+   npm run lint:fix      # 自动修复ESLint问题
+   npm run type-check    # TypeScript类型检查
+   npm run pre-push      # 完整的推送前检查
+   ```
+
+### 🔒 自动代码质量检查
+
+项目配置了Git hooks，每次`git push`前会自动运行：
+
+- **TypeScript类型检查** - 确保类型安全
+- **ESLint代码规范** - 确保代码质量
+- **构建验证** - 确保代码能正常构建
+
+检查失败会阻止推送，保障代码质量。紧急情况可使用`git push --no-verify`跳过检查。
+
 ## 📖 使用指南
 
 ### 基础占卜流程
@@ -74,25 +93,6 @@
 - **celtic cross** - 凯尔特十字，适合复杂人生问题
 - **关系牌阵** - 专门用于情感和人际关系问题
 
-## 🗂️ 项目结构
-
-```
-tarot-you/
-├── app/                    # Next.js App Router
-│   ├── api/               # API 路由
-│   │   └── deepseek/      # AI解析接口
-│   ├── draw/              # 抽牌页面
-│   ├── result/            # 结果展示页面
-│   ├── globals.css        # 全局样式
-│   └── page.tsx           # 首页
-├── lib/                   # 工具库
-│   ├── deepseek.ts        # AI API调用
-│   ├── store.ts           # 状态管理
-│   └── tarot-data.ts      # 塔罗牌数据
-├── public/                # 静态资源
-└── ...配置文件
-```
-
 ## 🧩 塔罗牌体系
 
 本应用基于完整的**韦特塔罗78张**体系：
@@ -103,34 +103,6 @@ tarot-you/
   - 圣杯 (Cups): 水元素，代表情感和精神
   - 宝剑 (Swords): 风元素，代表思想和沟通
   - 钱币 (Pentacles): 土元素，代表物质和实践
-
-## 🔧 开发命令
-
-```bash
-# 开发环境启动
-npm run dev
-
-# 生产构建
-npm run build
-
-# 生产环境启动
-npm run start
-
-# 代码质量检查
-npm run lint          # ESLint检查
-npm run lint:fix      # 自动修复ESLint问题
-npm run type-check    # TypeScript类型检查
-npm run pre-push      # 完整的推送前检查
-```
-
-### 🔒 自动代码质量检查
-
-项目配置了Git hooks，每次`git push`前会自动运行：
-- **TypeScript类型检查** - 确保类型安全
-- **ESLint代码规范** - 确保代码质量  
-- **构建验证** - 确保代码能正常构建
-
-检查失败会阻止推送，保障代码质量。紧急情况可使用`git push --no-verify`跳过检查。
 
 ## 📝 API 文档
 
@@ -170,16 +142,12 @@ npm run pre-push      # 完整的推送前检查
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 开启 Pull Request
 
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
-
 ## 📞 联系方式
 
 如有问题或建议，请通过以下方式联系：
 
-- 项目地址: [GitHub Repository](https://github.com/HammerRoot/tarot-u.git)
-- 问题反馈: [GitHub Issues](https://github.com/HammerRoot/tarot-u/issues)
+- 项目地址: [GitHub Repository](https://github.com/HammerRoot/indigo-tarot.git)
+- 问题反馈: [GitHub Issues](https://github.com/HammerRoot/indigo-tarot/issues)
 
 ---
 
