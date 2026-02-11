@@ -122,7 +122,7 @@ export function ApiKeySettings({ onApiKeyChange, currentApiKey, remainingCalls, 
                     {usingSystemKey && remainingCalls !== null && (
                       <div>
                         <strong>剩余次数：</strong>
-                        <span className={`${remainingCalls === 0 ? 'text-red-600' : remainingCalls <= 2 ? 'text-orange-600' : 'text-green-600'}`}>
+                        <span className={`${remainingCalls === 0 ? 'text-red-600' : remainingCalls! <= 2 ? 'text-orange-600' : 'text-green-600'}`}>
                           {remainingCalls}/5 次
                         </span>
                       </div>
