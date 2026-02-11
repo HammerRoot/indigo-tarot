@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 interface UseImagePreloaderReturn {
   preloadImage: (src: string) => Promise<void>;

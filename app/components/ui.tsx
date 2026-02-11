@@ -44,7 +44,7 @@ export function MysticalInput({
   className,
   ...props
 }: React.ComponentProps<"input"> & React.ComponentProps<"textarea">) {
-  const Component = (props as any).rows ? "textarea" : "input";
+  const Component = (props as React.ComponentProps<"textarea">).rows ? "textarea" : "input";
   return (
     <Component className={cn(styles["mystical-input"], className)} {...props} />
   );

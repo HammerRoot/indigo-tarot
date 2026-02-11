@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Home, BookOpen, Share2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, BookOpen, Share2, RotateCcw } from 'lucide-react';
 import { useTarotStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
 import { ResultTarotCard } from '@/app/components/ResultTarotCard';
@@ -113,7 +113,7 @@ export default function ResultPage() {
             </h1>
             <div className="mystical-card p-8 md:p-10">
               <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">你的问题</h2>
-              <p className="text-gray-700 text-lg leading-relaxed">"{currentReading.question}"</p>
+              <p className="text-gray-700 text-lg leading-relaxed">&quot;{currentReading.question}&quot;</p>
             </div>
           </motion.div>
 

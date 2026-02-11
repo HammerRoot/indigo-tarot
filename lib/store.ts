@@ -114,7 +114,7 @@ export const tarotSpreads: TarotSpread[] = [
 // 创建状态管理器
 export const useTarotStore = create<TarotStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       // 初始状态
       question: '',
       apiKey: '',

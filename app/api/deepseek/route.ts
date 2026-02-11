@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
 
     let apiKey = userApiKey; // 优先使用用户提供的API KEY
     let usingSystemKey = false;
+    const isDevelopment = process.env.NODE_ENV === 'development';
 
     // 如果用户没有提供API KEY，使用系统默认的
     if (!apiKey) {
@@ -48,34 +49,36 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // 使用系统API KEY时进行频率限制
-      const cacheKey = `system_${clientIP}`;
-      const now = Date.now();
-      const threeHoursMs = 3 * 60 * 60 * 1000; // 3小时
-      
-      const cached = requestCache.get(cacheKey);
-      if (cached) {
-        if (now < cached.resetTime && cached.count >= 5) { // 每3小时限制5次
-          return NextResponse.json(
-            { 
-              error: '调用次数已达上限', 
-              message: '使用系统API密钥每3小时限制5次调用，请稍后再试或使用您自己的API密钥',
-              needApiKey: true
-            },
-            { status: 429 }
-          );
-        }
+      // 仅在生产环境下进行频率限制
+      if (!isDevelopment) {
+        const cacheKey = `system_${clientIP}`;
+        const now = Date.now();
+        const threeHoursMs = 3 * 60 * 60 * 1000; // 3小时
         
-        if (now >= cached.resetTime) {
-          // 重置计数器
-          requestCache.set(cacheKey, { count: 1, resetTime: now + threeHoursMs });
+        const cached = requestCache.get(cacheKey);
+        if (cached) {
+          if (now < cached.resetTime && cached.count >= 5) { // 每3小时限制5次
+            return NextResponse.json(
+              { 
+                error: '调用次数已达上限', 
+                message: '使用系统API密钥每3小时限制5次调用，请稍后再试或使用您自己的API密钥',
+                needApiKey: true
+              },
+              { status: 429 }
+            );
+          }
+          
+          if (now >= cached.resetTime) {
+            // 重置计数器
+            requestCache.set(cacheKey, { count: 1, resetTime: now + threeHoursMs });
+          } else {
+            // 增加计数
+            cached.count++;
+          }
         } else {
-          // 增加计数
-          cached.count++;
+          // 首次请求
+          requestCache.set(cacheKey, { count: 1, resetTime: now + threeHoursMs });
         }
-      } else {
-        // 首次请求
-        requestCache.set(cacheKey, { count: 1, resetTime: now + threeHoursMs });
       }
     }
 
@@ -116,7 +119,7 @@ export async function POST(request: NextRequest) {
       ...data,
       meta: {
         usingSystemKey,
-        remainingCalls: usingSystemKey ? 
+        remainingCalls: (usingSystemKey && !isDevelopment) ? 
           Math.max(0, 5 - (requestCache.get(`system_${clientIP}`)?.count || 0)) : 
           null
       }

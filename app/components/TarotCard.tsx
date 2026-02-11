@@ -15,43 +15,40 @@ interface TarotCardProps {
   isImageLoaded?: boolean;
 }
 
-export function TarotCard({
-  card,
-  isRevealed = false,
-  isReversed = false,
-  onClick,
-  size = "md",
-  showDetails = false,
-  isImageLoaded = true,
-}: TarotCardProps) {
-  const [imageError, setImageError] = useState(false);
-
-  const sizeClasses = {
-    sm: "w-24 h-36",
-    md: "w-32 h-48",
-    lg: "w-40 h-60",
-  };
-
-  const cardSizes = {
-    sm: { width: 96, height: 144 },
-    md: { width: 128, height: 192 },
-    lg: { width: 160, height: 240 },
-  };
-
-  // 生成卡牌背面
-  const CardBack = ({ className }: { className?: string }) => (
-    <div
-      className={`${className} bg-gradient-to-br from-purple-800 via-blue-900 to-purple-900 rounded-lg border-2 border-purple-300 shadow-lg flex items-center justify-center`}
-    >
-      <div className="text-center text-white/80">
-        <div className="text-2xl mb-2">🌟</div>
-        <div className="text-xs font-medium">TAROT</div>
-      </div>
+// 卡牌背面组件
+const CardBack = ({ className }: { className?: string }) => (
+  <div
+    className={`${className} bg-gradient-to-br from-purple-800 via-blue-900 to-purple-900 rounded-lg border-2 border-purple-300 shadow-lg flex items-center justify-center`}
+  >
+    <div className="text-center text-white/80">
+      <div className="text-2xl mb-2">🌟</div>
+      <div className="text-xs font-medium">TAROT</div>
     </div>
-  );
+  </div>
+);
 
-  // 生成卡牌正面（使用实际图片或占位符）
-  const CardFront = ({ className }: { className?: string }) => (
+// 卡牌正面组件
+const CardFront = ({ 
+  className, 
+  card, 
+  isReversed, 
+  isImageLoaded, 
+  imageError, 
+  setImageError, 
+  cardSizes, 
+  size, 
+  isRevealed 
+}: { 
+  className?: string;
+  card: TarotCardType;
+  isReversed: boolean;
+  isImageLoaded: boolean;
+  imageError: boolean;
+  setImageError: (error: boolean) => void;
+  cardSizes: Record<string, { width: number; height: number }>;
+  size: "sm" | "md" | "lg";
+  isRevealed: boolean;
+}) => (
     <div
       className={`${className} bg-gradient-to-b from-amber-50 to-purple-50 rounded-lg border-2 border-purple-300 shadow-lg overflow-hidden relative ${
         isReversed ? "rotate-180" : ""
@@ -122,7 +119,30 @@ export function TarotCard({
         </div>
       )}
     </div>
-  );
+);
+
+export function TarotCard({
+  card,
+  isRevealed = false,
+  isReversed = false,
+  onClick,
+  size = "md",
+  showDetails = false,
+  isImageLoaded = true,
+}: TarotCardProps) {
+  const [imageError, setImageError] = useState(false);
+
+  const sizeClasses = {
+    sm: "w-24 h-36",
+    md: "w-32 h-48",
+    lg: "w-40 h-60",
+  };
+
+  const cardSizes = {
+    sm: { width: 96, height: 144 },
+    md: { width: 128, height: 192 },
+    lg: { width: 160, height: 240 },
+  };
 
   return (
     <motion.div
@@ -142,7 +162,17 @@ export function TarotCard({
 
         {/* 正面 */}
         <div className="absolute inset-0 backface-hidden rotate-y-180">
-          <CardFront className="w-full h-full" />
+          <CardFront 
+            className="w-full h-full" 
+            card={card}
+            isReversed={isReversed}
+            isImageLoaded={isImageLoaded}
+            imageError={imageError}
+            setImageError={setImageError}
+            cardSizes={cardSizes}
+            size={size}
+            isRevealed={isRevealed}
+          />
         </div>
       </motion.div>
 

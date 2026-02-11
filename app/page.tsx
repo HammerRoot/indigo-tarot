@@ -19,6 +19,8 @@ export default function Home() {
   const [localQuestion, setLocalQuestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [localApiKey, setLocalApiKey] = useState("");
+  const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(true);
   const { setQuestion, resetSession, remainingCalls, usingSystemKey, setApiKey } = useTarotStore();
   const router = useRouter();
 
@@ -31,6 +33,40 @@ export default function Home() {
     }
   }, [setApiKey]);
 
+  // 获取推荐问题
+  useEffect(() => {
+    const fetchSuggestedQuestions = async () => {
+      try {
+        setLoadingSuggestions(true);
+        const response = await fetch('/api/suggested-questions');
+        const data = await response.json();
+        
+        if (response.ok) {
+          setSuggestedQuestions(data.questions);
+        } else {
+          // 使用后备问题
+          setSuggestedQuestions(data.questions || [
+            "我在感情方面应该如何选择？",
+            "我的事业发展前景如何？",
+            "如何改善我的人际关系？"
+          ]);
+        }
+      } catch (error) {
+        console.error('获取推荐问题失败:', error);
+        // 使用默认问题作为后备
+        setSuggestedQuestions([
+          "我在感情方面应该如何选择？",
+          "我的事业发展前景如何？",
+          "如何改善我的人际关系？"
+        ]);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    };
+
+    fetchSuggestedQuestions();
+  }, []);
+
   // 保存 API Key 到 localStorage
   const handleApiKeyChange = (newApiKey: string) => {
     setLocalApiKey(newApiKey);
@@ -42,12 +78,6 @@ export default function Home() {
     }
   };
 
-  // 智能生成的默认问题
-  const defaultQuestions = [
-    "我在感情方面应该如何选择？",
-    "我的事业发展前景如何？",
-    "如何改善我的人际关系？",
-  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,16 +195,33 @@ export default function Home() {
               猜你想问
             </h3>
             <div className="flex flex-col items-center space-y-2 max-w-md mx-auto">
-              {defaultQuestions.map((question, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => handleQuestionSelect(question)}
-                  className="px-6 py-3 text-gray-600 hover:text-gray-800 bg-purple-50 hover:bg-purple-100 rounded-full transition-all duration-200 border border-purple-200 hover:border-purple-300"
-                >
-                  {question}
-                </button>
-              ))}
+              {loadingSuggestions ? (
+                // 加载中的骨架屏
+                <div className="space-y-2 w-full">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="h-12 bg-purple-50 rounded-full animate-pulse border border-purple-200"
+                    />
+                  ))}
+                </div>
+              ) : (
+                suggestedQuestions.map((question, index) => (
+                  <motion.button
+                    key={`${question}-${index}`}
+                    type="button"
+                    onClick={() => handleQuestionSelect(question)}
+                    className="px-6 py-3 text-gray-600 hover:text-gray-800 bg-purple-50 hover:bg-purple-100 rounded-full transition-all duration-200 border border-purple-200 hover:border-purple-300"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {question}
+                  </motion.button>
+                ))
+              )}
             </div>
           </motion.div>
 
