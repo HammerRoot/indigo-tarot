@@ -36,7 +36,7 @@
 2. **安装依赖**
 
    ```bash
-   npm install
+   npm install  # 🎉 Git hooks 自动安装！
    ```
 
 3. **配置环境变量**
@@ -116,9 +116,21 @@ npm run build
 # 生产环境启动
 npm run start
 
-# 代码检查
-npm run lint
+# 代码质量检查
+npm run lint          # ESLint检查
+npm run lint:fix      # 自动修复ESLint问题
+npm run type-check    # TypeScript类型检查
+npm run pre-push      # 完整的推送前检查
 ```
+
+### 🔒 自动代码质量检查
+
+项目配置了Git hooks，每次`git push`前会自动运行：
+- **TypeScript类型检查** - 确保类型安全
+- **ESLint代码规范** - 确保代码质量  
+- **构建验证** - 确保代码能正常构建
+
+检查失败会阻止推送，保障代码质量。紧急情况可使用`git push --no-verify`跳过检查。
 
 ## 📝 API 文档
 
