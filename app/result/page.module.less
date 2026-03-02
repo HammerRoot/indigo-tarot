@@ -1,0 +1,334 @@
+// 结果页面样式
+
+.container {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.main {
+  position: relative;
+  z-index: 10;
+  min-height: 100vh;
+  padding: 1rem;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+// 加载状态
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .spinner {
+    animation: spin 1s linear infinite;
+    border-radius: 50%;
+    height: 8rem;
+    width: 8rem;
+    border: 2px solid transparent;
+    border-bottom-color: #fcd34d;
+    margin: 0 auto 1rem;
+  }
+
+  .text {
+    color: #d1d5db;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// 顶部导航
+.navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.navButton {
+  padding: 0.75rem;
+}
+
+.navButtons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+// 内容容器
+.contentContainer {
+  max-width: 56rem;
+  margin: 0 auto;
+}
+
+// 通用卡片样式
+.section {
+  margin-bottom: 2rem;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+
+  h1, h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+
+    @media (min-width: 768px) {
+      font-size: 1.875rem;
+    }
+  }
+}
+
+.sectionSubtitle {
+  color: #16a34a;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+// 问题部分
+.questionSection {
+  padding: 1.5rem;
+
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
+}
+
+.questionBox {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+
+  p {
+    color: #374151;
+    font-size: 1.125rem;
+    line-height: 1.625;
+    font-weight: 500;
+
+    @media (min-width: 768px) {
+      font-size: 1.25rem;
+    }
+  }
+}
+
+// 抽牌结果部分
+.cardsSection {
+  padding: 1.5rem;
+
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
+}
+
+.spreadInfo {
+  margin-bottom: 1.5rem;
+}
+
+.spreadBox {
+  background-color: #faf5ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 0.5rem;
+  padding: 1rem;
+
+  h3 {
+    font-weight: 700;
+    color: #581c87;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: #4b5563;
+    font-size: 0.875rem;
+    line-height: 1.625;
+  }
+}
+
+// 牌阵布局
+.cardsContainer {
+  max-width: 80rem;
+  margin: 0 auto;
+}
+
+.cardsGrid {
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+
+  // 默认4列布局
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  // 超过4张牌时的动态列数
+  &.cols-5 {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  
+  &.cols-6 {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  
+  &.cols-7 {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  &.cols-8 {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+
+  // 超过4张牌时启用两行布局
+  &.multiRow {
+    grid-template-rows: repeat(2, auto);
+  }
+}
+
+.cardItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.5s ease;
+  border-radius: 0.75rem;
+  padding: 1rem;
+
+  &.highlighted {
+    box-shadow: 0 0 0 4px rgb(147 51 234 / 0.5);
+    background-color: rgba(196, 181, 253, 0.3);
+  }
+
+  // 特殊布局调整
+  &.special5 {
+    grid-column-start: 2;
+  }
+
+  &.special7 {
+    grid-column-start: 2;
+  }
+}
+
+.cardAnnotation {
+  margin-top: 0.75rem;
+  text-align: center;
+  max-width: 120px;
+
+  .cardName {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1f2937;
+
+    .reversed {
+      color: #d97706;
+    }
+  }
+
+  .cardPosition {
+    font-size: 0.75rem;
+    color: #9333ea;
+    font-weight: 500;
+    margin-top: 0.25rem;
+  }
+}
+
+// AI分析部分
+.analysisSection {
+  padding: 1.5rem;
+
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
+}
+
+.analysisBox {
+  background: linear-gradient(to right, #faf5ff, #eff6ff);
+  border: 1px solid #e9d5ff;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
+}
+
+.analysisContent {
+  color: #374151;
+  font-size: 1rem;
+  line-height: 1.625;
+
+  @media (min-width: 768px) {
+    font-size: 1.125rem;
+  }
+}
+
+.cursor {
+  display: inline-block;
+  width: 0.5rem;
+  height: 1.25rem;
+  background-color: #8b5cf6;
+  margin-left: 0.25rem;
+}
+
+// 核心建议部分
+.adviceSection {
+  padding: 1.5rem;
+
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
+}
+
+.adviceBox {
+  background: linear-gradient(to right, #fefce8, #fed7aa, #fefce8);
+  border: 1px solid #fde68a;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+
+  p {
+    color: #1f2937;
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.625;
+
+    @media (min-width: 768px) {
+      font-size: 1.25rem;
+    }
+  }
+}
+
+// 底部操作
+.bottomActions {
+  text-align: center;
+  padding-top: 2rem;
+}
+
+.actionsContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  @media (min-width: 640px) {
+    flex-direction: row;
+  }
+}
+
+.homeButton {
+  background-color: #ffffff;
+  border: 2px solid #c084fc;
+  color: #9333ea;
+  border-radius: 0.75rem;
+  padding: 1rem 2rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: #faf5ff;
+  }
+}

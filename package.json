@@ -11,8 +11,8 @@
     "url": "https://github.com/HammerRoot/indigo-tarot.git"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
@@ -31,14 +31,18 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.18",
+    "@next/bundle-analyzer": "^16.1.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "css-loader": "^7.1.4",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "husky": "^9.1.7",
-    "tailwindcss": "^4.1.18",
+    "less": "^4.5.1",
+    "less-loader": "^12.3.1",
+    "next-with-less": "^3.0.1",
+    "style-loader": "^4.0.0",
     "typescript": "^5"
   }
 }

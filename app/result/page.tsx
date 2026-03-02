@@ -10,6 +10,8 @@ import { generateTarotReadingStream } from "@/lib/deepseek";
 import { ResultTarotCard } from "@/app/components/ResultTarotCard";
 import { MarkdownRenderer } from "@/app/components/MarkdownRenderer";
 import { imageCache } from "@/lib/imageCache";
+import { MysticalBg, MysticalCard, MysticalButton } from "@/app/components/ui";
+import styles from "./page.module.less";
 
 export default function ResultPage() {
   const router = useRouter();
@@ -175,70 +177,75 @@ export default function ResultPage() {
 
   if (!question || !recommendedSpread || !drawnCards.length) {
     return (
-      <div className="min-h-screen mystical-bg flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-300 mx-auto mb-4"></div>
-          <p className="text-gray-300">正在加载结果...</p>
+      <MysticalBg className={styles.container}>
+        <div className={styles.loading}>
+          <div className={styles.spinner}></div>
+          <p className={styles.text}>正在加载结果...</p>
         </div>
-      </div>
+      </MysticalBg>
     );
   }
 
   return (
-    <div className="min-h-screen mystical-bg relative overflow-hidden">
-      <div className="stars"></div>
-
-      <main className="relative z-10 min-h-screen px-4 py-8">
+    <MysticalBg className={styles.container}>
+      <main className={styles.main}>
         {/* 顶部导航 */}
-        <div className="flex justify-between items-center mb-8">
-          <motion.button
-            onClick={() => router.push("/")}
-            className="mystical-button p-3"
+        <div className={styles.navigation}>
+          <motion.div
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
-            <ArrowLeft className="w-5 h-5" />
-          </motion.button>
+            <MysticalButton
+              onClick={() => router.push("/")}
+              className={styles.navButton}
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </MysticalButton>
+          </motion.div>
 
-          <div className="flex gap-3">
-            <motion.button
-              onClick={handleShare}
-              className="mystical-button p-3"
+          <div className={styles.navButtons}>
+            <motion.div
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
             >
-              <Share2 className="w-5 h-5" />
-            </motion.button>
+              <MysticalButton
+                onClick={handleShare}
+                className={styles.navButton}
+              >
+                <Share2 className="w-5 h-5" />
+              </MysticalButton>
+            </motion.div>
 
-            <motion.button
-              onClick={handleStartNew}
-              className="mystical-button p-3"
+            <motion.div
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
             >
-              <RotateCcw className="w-5 h-5" />
-            </motion.button>
+              <MysticalButton
+                onClick={handleStartNew}
+                className={styles.navButton}
+              >
+                <RotateCcw className="w-5 h-5" />
+              </MysticalButton>
+            </motion.div>
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto">
+        <div className={styles.contentContainer}>
           {/* 1. 你的问题 */}
           <motion.section
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="mystical-card p-6 md:p-8"
+            className={styles.section}
           >
-            <div className="flex items-center mb-6">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
-                你的问题
-              </h1>
-            </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-              <p className="text-gray-700 text-lg md:text-xl leading-relaxed font-medium">
-                &quot;{question}&quot;
-              </p>
-            </div>
+            <MysticalCard className={styles.questionSection}>
+              <div className={styles.sectionTitle}>
+                <h1>你的问题</h1>
+              </div>
+              <div className={styles.questionBox}>
+                <p>&quot;{question}&quot;</p>
+              </div>
+            </MysticalCard>
           </motion.section>
 
           {/* 2. 抽牌结果 */}
@@ -249,78 +256,71 @@ export default function ResultPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -30 }}
                 transition={{ duration: 0.6 }}
-                className="mystical-card p-6 md:p-8"
+                className={styles.section}
               >
-                <div className="flex items-center mb-6">
-                  <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                    抽牌结果
-                  </h2>
-                </div>
-                <div className="mb-6">
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                    <h3 className="font-bold text-purple-800 mb-2">
-                      {recommendedSpread.name}
-                    </h3>
-                    <p className="text-gray-600 text-sm leading-relaxed">
-                      {recommendedSpread.description}
-                    </p>
+                <MysticalCard className={styles.cardsSection}>
+                  <div className={styles.sectionTitle}>
+                    <h2>抽牌结果</h2>
                   </div>
-                </div>
+                  <div className={styles.spreadInfo}>
+                    <div className={styles.spreadBox}>
+                      <h3>{recommendedSpread.name}</h3>
+                      <p>{recommendedSpread.description}</p>
+                    </div>
+                  </div>
 
-                {/* 牌阵布局 - 使用Grid布局 */}
-                <div className="max-w-5xl mx-auto">
-                  <div
-                    className={`grid gap-4 justify-items-center ${
-                      drawnCards.length > 4
-                        ? `grid-cols-${drawnCards.length}`
-                        : "grid-cols-4"
-                    } ${drawnCards.length > 4 ? "grid-rows-2" : ""}`}
-                  >
-                    {drawnCards.map((card, index) => (
-                      <motion.div
-                        key={card.id}
-                        className={`flex flex-col items-center transition-all duration-500 ${
-                          currentCardIndex === index
-                            ? "ring-4 ring-purple-400 ring-opacity-50 rounded-xl p-4 bg-purple-50/30"
-                            : ""
-                        } ${
-                          // 特殊布局调整
-                          drawnCards.length === 5 && index === 4
-                            ? "col-start-2"
-                            : drawnCards.length === 7 && index >= 4
-                              ? "col-start-2"
-                              : ""
-                        }`}
-                        initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                        animate={{
-                          opacity: 1,
-                          scale: currentCardIndex === index ? 1.05 : 1,
-                          y: 0,
-                        }}
-                        transition={{ delay: index * 0.2 }}
-                        id={`card-${index}`}
-                      >
-                        <ResultTarotCard
-                          card={card}
-                          index={index}
-                          isReversed={cardReversals[index] || false}
-                        />
-                        {/* 牌面标注 */}
-                        <div className="mt-3 text-center max-w-[120px]">
-                          <p className="text-sm font-semibold text-gray-800">
-                            {cardReversals[index] && (
-                              <span className="text-amber-600">(逆)</span>
-                            )}
-                            {card.name}
-                          </p>
-                          <p className="text-xs text-purple-600 font-medium mt-1">
-                            {recommendedSpread.positions[index]}
-                          </p>
-                        </div>
-                      </motion.div>
-                    ))}
+                  {/* 牌阵布局 - 使用Grid布局 */}
+                  <div className={styles.cardsContainer}>
+                    <div
+                      className={`${styles.cardsGrid} ${
+                        drawnCards.length > 4 ? styles[`cols-${drawnCards.length}`] : ''
+                      } ${drawnCards.length > 4 ? styles.multiRow : ''}`}
+                    >
+                      {drawnCards.map((card, index) => {
+                        const isHighlighted = currentCardIndex === index;
+                        const isSpecial5 = drawnCards.length === 5 && index === 4;
+                        const isSpecial7 = drawnCards.length === 7 && index >= 4;
+                        
+                        return (
+                          <motion.div
+                            key={card.id}
+                            className={`${styles.cardItem} ${
+                              isHighlighted ? styles.highlighted : ''
+                            } ${
+                              isSpecial5 ? styles.special5 : isSpecial7 ? styles.special7 : ''
+                            }`}
+                            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                            animate={{
+                              opacity: 1,
+                              scale: isHighlighted ? 1.05 : 1,
+                              y: 0,
+                            }}
+                            transition={{ delay: index * 0.2 }}
+                            id={`card-${index}`}
+                          >
+                            <ResultTarotCard
+                              card={card}
+                              index={index}
+                              isReversed={cardReversals[index] || false}
+                            />
+                            {/* 牌面标注 */}
+                            <div className={styles.cardAnnotation}>
+                              <p className={styles.cardName}>
+                                {cardReversals[index] && (
+                                  <span className={styles.reversed}>(逆)</span>
+                                )}
+                                {card.name}
+                              </p>
+                              <p className={styles.cardPosition}>
+                                {recommendedSpread.positions[index]}
+                              </p>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                </MysticalCard>
               </motion.section>
             )}
           </AnimatePresence>
@@ -333,36 +333,36 @@ export default function ResultPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -30 }}
                 transition={{ duration: 0.6 }}
-                className="mystical-card p-6 md:p-8"
+                className={styles.section}
               >
-                <div className="flex items-center mb-6">
-                  <div>
-                    <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                      🤖 AI深度解析
-                    </h2>
-                    {isStreaming && (
-                      <p className="text-green-600 text-sm font-medium">
-                        正在思考分析中...
-                      </p>
-                    )}
+                <MysticalCard className={styles.analysisSection}>
+                  <div className={styles.sectionTitle}>
+                    <div>
+                      <h2>🤖 AI深度解析</h2>
+                      {isStreaming && (
+                        <p className={styles.sectionSubtitle}>
+                          正在思考分析中...
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6 md:p-8">
-                  <div className="text-gray-700 text-base md:text-lg leading-relaxed">
-                    <MarkdownRenderer
-                      content={analysisContent || streamingContent}
-                      className="text-gray-700"
-                    />
-                    {isStreaming && (
-                      <motion.span
-                        className="inline-block w-2 h-5 bg-purple-500 ml-1"
-                        animate={{ opacity: [1, 0, 1] }}
-                        transition={{ duration: 1, repeat: Infinity }}
+                  <div className={styles.analysisBox}>
+                    <div className={styles.analysisContent}>
+                      <MarkdownRenderer
+                        content={analysisContent || streamingContent}
+                        className={styles.analysisContent}
                       />
-                    )}
+                      {isStreaming && (
+                        <motion.span
+                          className={styles.cursor}
+                          animate={{ opacity: [1, 0, 1] }}
+                          transition={{ duration: 1, repeat: Infinity }}
+                        />
+                      )}
+                    </div>
                   </div>
-                </div>
+                </MysticalCard>
               </motion.section>
             )}
           </AnimatePresence>
@@ -375,18 +375,16 @@ export default function ResultPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -30 }}
                 transition={{ duration: 0.6 }}
-                className="mystical-card p-6 md:p-8"
+                className={styles.section}
               >
-                <div className="flex items-center mb-6">
-                  <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                    核心建议
-                  </h2>
-                </div>
-                <div className="bg-gradient-to-r from-yellow-50 via-orange-50 to-yellow-50 border border-yellow-200 rounded-xl p-6">
-                  <p className="text-gray-800 text-lg md:text-xl font-semibold leading-relaxed">
-                    {coreAdvice || "正在生成核心建议..."}
-                  </p>
-                </div>
+                <MysticalCard className={styles.adviceSection}>
+                  <div className={styles.sectionTitle}>
+                    <h2>核心建议</h2>
+                  </div>
+                  <div className={styles.adviceBox}>
+                    <p>{coreAdvice || "正在生成核心建议..."}</p>
+                  </div>
+                </MysticalCard>
               </motion.section>
             )}
           </AnimatePresence>
@@ -394,24 +392,15 @@ export default function ResultPage() {
           {/* 底部操作 */}
           {streamComplete && (
             <motion.div
-              className="text-center pt-8"
+              className={styles.bottomActions}
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
             >
-              <div className="flex flex-col sm:flex-row justify-center">
-                {/* <motion.button
-                  onClick={handleStartNew}
-                  className="mystical-button px-8 py-4 text-lg font-bold"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  再次占卜
-                </motion.button> */}
-
+              <div className={styles.actionsContainer}>
                 <motion.button
                   onClick={() => router.push("/")}
-                  className="bg-white border-2 border-purple-300 text-purple-600 hover:bg-purple-50 rounded-xl px-8 py-4 text-lg font-bold transition-colors"
+                  className={styles.homeButton}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -422,6 +411,6 @@ export default function ResultPage() {
           )}
         </div>
       </main>
-    </div>
+    </MysticalBg>
   );
 }

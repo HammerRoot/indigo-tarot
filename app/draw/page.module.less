@@ -1,0 +1,613 @@
+// 抽牌页面样式
+
+.container {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.main {
+  position: relative;
+  z-index: 10;
+  min-height: 100vh;
+  padding: 1rem;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+.backButton {
+  position: fixed;
+  top: 1.5rem;
+  left: 1.5rem;
+  padding: 0.75rem;
+}
+
+.contentContainer {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding-top: 5rem;
+}
+
+// 步骤指示器
+.stepIndicator {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.stepList {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+
+  @media (min-width: 768px) {
+    gap: 2rem;
+  }
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+}
+
+.stepCircle {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 700;
+  transition: all 0.15s ease;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+  &.active {
+    border-color: #9333ea;
+    background-color: #9333ea;
+    color: #ffffff;
+  }
+
+  &.completed {
+    border-color: #c084fc;
+    background-color: #c084fc;
+    color: #ffffff;
+  }
+
+  &.inactive {
+    border-color: #d1d5db;
+    background-color: #ffffff;
+    color: #9ca3af;
+  }
+}
+
+.stepLabel {
+  margin-left: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: none;
+
+  @media (min-width: 640px) {
+    display: block;
+  }
+
+  &.active {
+    color: #9333ea;
+  }
+
+  &.completed {
+    color: #a855f7;
+  }
+
+  &.inactive {
+    color: #9ca3af;
+  }
+}
+
+.stepConnector {
+  width: 2rem;
+  height: 1px;
+  background-color: #d1d5db;
+  margin: 0 0.5rem;
+  display: none;
+
+  @media (min-width: 640px) {
+    display: block;
+  }
+
+  @media (min-width: 768px) {
+    width: 3rem;
+    margin: 0 1rem;
+  }
+}
+
+// 问题显示
+.questionSection {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.questionTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.75rem;
+
+  @media (min-width: 768px) {
+    font-size: 1.5rem;
+  }
+}
+
+.questionCard {
+  padding: 1rem;
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+.questionText {
+  color: #374151;
+  font-size: 1rem;
+  line-height: 1.625;
+}
+
+// 加载状态
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .spinner {
+    animation: spin 1s linear infinite;
+    border-radius: 50%;
+    height: 8rem;
+    width: 8rem;
+    border: 2px solid transparent;
+    border-bottom-color: #fcd34d;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// 牌阵推荐页面
+.spreadCard {
+  padding: 2rem;
+  text-align: center;
+}
+
+.spreadIcon {
+  width: 5rem;
+  height: 5rem;
+  margin: 0 auto 2rem;
+  background: linear-gradient(to right, #8b5cf6, #9333ea);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  svg {
+    width: 2.5rem;
+    height: 2.5rem;
+    color: #ffffff;
+  }
+}
+
+.spreadTitle {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 1.5rem;
+
+  @media (min-width: 768px) {
+    font-size: 2.25rem;
+  }
+}
+
+.spreadDescription {
+  color: #4b5563;
+  font-size: 1.125rem;
+  margin-bottom: 2rem;
+  line-height: 1.625;
+  max-width: 32rem;
+  margin-left: auto;
+  margin-right: auto;
+
+  @media (min-width: 768px) {
+    font-size: 1.25rem;
+  }
+}
+
+.positionsInfo {
+  background-color: #faf5ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.positionsTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.positionsList {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.positionTag {
+  background-color: #ffffff;
+  border: 1px solid #e9d5ff;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  text-align: center;
+}
+
+.startButton {
+  padding: 1rem 2.5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  background: linear-gradient(to right, #9333ea, #7c3aed);
+  color: #ffffff;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+  &:hover {
+    background: linear-gradient(to right, #7c3aed, #6d28d9);
+  }
+}
+
+// 抽牌阶段
+.drawSection {
+  text-align: center;
+}
+
+.drawTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+
+  @media (min-width: 768px) {
+    font-size: 1.875rem;
+  }
+}
+
+.drawProgress {
+  padding: 1rem;
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+
+.drawProgressText {
+  color: #9333ea;
+  font-weight: 600;
+  font-size: 1.125rem;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  max-width: 96rem;
+  margin: 0 auto;
+
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+}
+
+.cardSlot {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.cardBack {
+  width: 4rem;
+  height: 6rem;
+  background: linear-gradient(135deg, #581c87, #1e3a8a, #581c87);
+  border-radius: 0.5rem;
+  border: 2px solid;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  @media (min-width: 640px) {
+    width: 5rem;
+    height: 7.5rem;
+  }
+
+  @media (min-width: 768px) {
+    width: 6rem;
+    height: 9rem;
+  }
+
+  &.selected {
+    border-color: #fbbf24;
+    box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.5);
+    transform: scale(1.05);
+  }
+
+  &:not(.selected) {
+    border-color: #c084fc;
+
+    &:hover {
+      border-color: #a855f7;
+      transform: scale(1.05);
+    }
+  }
+}
+
+.cardContent {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+
+  .icon {
+    font-size: 1.125rem;
+    margin-bottom: 0.25rem;
+
+    @media (min-width: 768px) {
+      font-size: 1.5rem;
+    }
+  }
+
+  .text {
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+}
+
+.selectionBadge {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  background-color: #fbbf24;
+  color: #92400e;
+  border-radius: 50%;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+// 揭示阶段
+.revealSection {
+  text-align: center;
+}
+
+.revealTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 1rem;
+
+  @media (min-width: 768px) {
+    font-size: 1.875rem;
+  }
+}
+
+.revealProgress {
+  padding: 1rem;
+  display: inline-block;
+  margin-bottom: 2rem;
+}
+
+.revealProgressText {
+  color: #9333ea;
+  font-weight: 600;
+  font-size: 1.125rem;
+}
+
+.revealCards {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.revealCardContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.positionLabel {
+  background-color: #ffffff;
+  border: 1px solid #e9d5ff;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+
+  span {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+  }
+}
+
+.cardHint {
+  margin-top: 0.75rem;
+  text-align: center;
+  max-width: 8rem;
+
+  p {
+    font-size: 0.75rem;
+    color: #4b5563;
+    line-height: 1.625;
+  }
+}
+
+// 继续按钮区域
+.continueSection {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.continueButton {
+  padding: 1rem 2rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  background: linear-gradient(to right, #9333ea, #7c3aed);
+  color: #ffffff;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+  &:hover {
+    background: linear-gradient(to right, #7c3aed, #6d28d9);
+  }
+}
+
+.continueHint {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.75rem;
+}
+
+.loadingSection {
+  margin-top: 2rem;
+
+  .loadingContent {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .loadingSpinner {
+      animation: spin 1s linear infinite;
+      border-radius: 50%;
+      height: 2rem;
+      width: 2rem;
+      border: 2px solid transparent;
+      border-bottom-color: #fcd34d;
+      margin-right: 0.75rem;
+    }
+
+    span {
+      color: #4b5563;
+    }
+  }
+}
+
+// 全屏加载效果
+.fullScreenLoading {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(135deg, rgba(88, 28, 135, 0.95), rgba(30, 58, 138, 0.95), rgba(88, 28, 135, 0.95));
+  backdrop-filter: blur(4px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loadingContainer {
+  text-align: center;
+}
+
+.loadingAnimation {
+  position: relative;
+  margin-bottom: 2rem;
+
+  .outerSpinner {
+    width: 8rem;
+    height: 8rem;
+    border: 4px solid rgba(252, 211, 77, 0.3);
+    border-top-color: #fcd34d;
+    border-radius: 50%;
+  }
+
+  .innerSpinner {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    width: 6rem;
+    height: 6rem;
+    border: 4px solid rgba(196, 181, 253, 0.3);
+    border-bottom-color: #c4b5fd;
+    border-radius: 50%;
+  }
+
+  .centerIcon {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .icon {
+      font-size: 2.25rem;
+    }
+  }
+}
+
+.loadingText {
+  text-align: center;
+}
+
+.loadingTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 1rem;
+
+  @media (min-width: 768px) {
+    font-size: 1.875rem;
+  }
+}
+
+.loadingDescription {
+  font-size: 1.125rem;
+  color: #c084fc;
+  margin-bottom: 1.5rem;
+  max-width: 28rem;
+}
+
+.loadingDots {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.loadingDot {
+  width: 0.75rem;
+  height: 0.75rem;
+  background-color: #fcd34d;
+  border-radius: 50%;
+}

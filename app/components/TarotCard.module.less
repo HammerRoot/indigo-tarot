@@ -1,0 +1,202 @@
+// TarotCard 组件样式
+
+// 卡牌尺寸
+.cardSmall {
+  width: 6rem;
+  height: 9rem;
+}
+
+.cardMedium {
+  width: 8rem;
+  height: 12rem;
+}
+
+.cardLarge {
+  width: 10rem;
+  height: 15rem;
+}
+
+// 卡牌容器
+.cardContainer {
+  cursor: pointer;
+  perspective: 1000px;
+}
+
+.cardInner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.7s ease;
+
+  &.revealed {
+    transform: rotateY(180deg);
+  }
+}
+
+// 卡牌背面
+.cardBack {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  backface-visibility: hidden;
+  background: linear-gradient(135deg, #581c87, #1e3a8a, #581c87);
+  border-radius: 0.5rem;
+  border: 2px solid #c084fc;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cardBackContent {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+
+  .icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .text {
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+}
+
+// 卡牌正面
+.cardFront {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  backface-visibility: hidden;
+  transform: rotateY(180deg);
+  background: linear-gradient(to bottom, #fef3c7, #faf5ff);
+  border-radius: 0.5rem;
+  border: 2px solid #c084fc;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+
+  &.reversed {
+    transform: rotateY(180deg) rotate(180deg);
+  }
+}
+
+.cardImage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.reversedIndicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 2px solid #f59e0b;
+  border-radius: 0.5rem;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  opacity: 0.9;
+}
+
+// 占位符设计
+.placeholder {
+  width: 100%;
+  height: 100%;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.placeholderHeader {
+  text-align: center;
+
+  .arcana {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #581c87;
+    text-transform: uppercase;
+  }
+
+  .number {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #4c1d95;
+  }
+}
+
+.placeholderCenter {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholderIcon {
+  width: 4rem;
+  height: 4rem;
+  background-color: #e9d5ff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  span {
+    font-size: 1.5rem;
+  }
+}
+
+.placeholderFooter {
+  text-align: center;
+
+  .cardName {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #4c1d95;
+    line-height: 1.2;
+  }
+}
+
+// 卡牌详细信息
+.cardDetails {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+  h3 {
+    font-weight: 700;
+    color: #4c1d95;
+    margin-bottom: 0.25rem;
+  }
+
+  p {
+    font-size: 0.875rem;
+    color: #4b5563;
+    margin-bottom: 0.5rem;
+  }
+
+  .keywords {
+    font-size: 0.75rem;
+    color: #7c3aed;
+
+    strong {
+      font-weight: 600;
+    }
+  }
+}

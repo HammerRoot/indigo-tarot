@@ -6,6 +6,8 @@ import { ArrowLeft, Sparkles } from "lucide-react";
 import { useTarotStore, recommendSpread } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { TarotCard } from "@/app/components/TarotCard";
+import { MysticalBg, MysticalCard, MysticalButton } from "@/app/components/ui";
+import styles from "./page.module.less";
 
 export default function DrawPage() {
   const router = useRouter();
@@ -113,63 +115,49 @@ export default function DrawPage() {
 
   if (!recommendedSpread) {
     return (
-      <div className="min-h-screen mystical-bg flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-300"></div>
-      </div>
+      <MysticalBg className={styles.container}>
+        <div className={styles.loading}>
+          <div className={styles.spinner}></div>
+        </div>
+      </MysticalBg>
     );
   }
 
   return (
-    <div className="min-h-screen mystical-bg relative overflow-hidden">
-      <div className="stars"></div>
-
-      <main className="relative z-10 min-h-screen px-4 py-8">
+    <MysticalBg className={styles.container}>
+      <main className={styles.main}>
         {/* 返回按钮 */}
-        <motion.button
-          onClick={() => router.push("/")}
-          className="fixed top-6 left-6 mystical-button p-3"
+        <motion.div
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
         >
-          <ArrowLeft className="w-5 h-5" />
-        </motion.button>
+          <MysticalButton
+            onClick={() => router.push("/")}
+            className={styles.backButton}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </MysticalButton>
+        </motion.div>
 
-        <div className="max-w-4xl mx-auto pt-20">
+        <div className={styles.contentContainer}>
           {/* 步骤指示器 */}
-          <div className="flex justify-center mb-8">
-            <div className="flex flex-wrap justify-center gap-4 md:gap-8">
+          <div className={styles.stepIndicator}>
+            <div className={styles.stepList}>
               {["推荐牌阵", "选择卡牌", "揭示结果"].map((step, index) => {
                 const steps = ["spread", "draw", "reveal"];
                 const isActive = steps[index] === currentStep;
                 const isCompleted = steps.indexOf(currentStep) > index;
+                const stepState = isActive ? 'active' : isCompleted ? 'completed' : 'inactive';
 
                 return (
-                  <div key={step} className="flex items-center">
-                    <div
-                      className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all shadow-lg ${
-                        isActive
-                          ? "border-purple-500 bg-purple-500 text-white"
-                          : isCompleted
-                            ? "border-purple-300 bg-purple-300 text-white"
-                            : "border-gray-300 bg-white text-gray-400"
-                      }`}
-                    >
+                  <div key={step} className={styles.stepItem}>
+                    <div className={`${styles.stepCircle} ${styles[stepState]}`}>
                       {index + 1}
                     </div>
-                    <span
-                      className={`ml-3 text-sm font-semibold hidden sm:block ${
-                        isActive
-                          ? "text-purple-600"
-                          : isCompleted
-                            ? "text-purple-400"
-                            : "text-gray-400"
-                      }`}
-                    >
+                    <span className={`${styles.stepLabel} ${styles[stepState]}`}>
                       {step}
                     </span>
-                    {index < 2 && (
-                      <div className="w-8 md:w-12 h-px bg-gray-300 mx-2 md:mx-4 hidden sm:block" />
-                    )}
+                    {index < 2 && <div className={styles.stepConnector} />}
                   </div>
                 );
               })}
@@ -177,15 +165,15 @@ export default function DrawPage() {
           </div>
 
           {/* 问题显示 */}
-          <div className="text-center mb-6">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-800 mb-3">
+          <div className={styles.questionSection}>
+            <h1 className={styles.questionTitle}>
               你的问题
             </h1>
-            <div className="mystical-card p-4 max-w-2xl mx-auto">
-              <p className="text-gray-700 text-base leading-relaxed">
+            <MysticalCard className={styles.questionCard}>
+              <p className={styles.questionText}>
                 &quot;{question}&quot;
               </p>
-            </div>
+            </MysticalCard>
           </div>
 
           <AnimatePresence mode="wait">
@@ -196,40 +184,41 @@ export default function DrawPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="mystical-card p-8 text-center"
               >
-                <div className="w-20 h-20 mx-auto mb-8 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-10 h-10 text-white" />
-                </div>
-                <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-6">
-                  {recommendedSpread.name}
-                </h2>
-                <p className="text-gray-600 text-lg md:text-xl mb-8 leading-relaxed max-w-2xl mx-auto">
-                  {recommendedSpread.description}
-                </p>
-                <div className="bg-purple-50 border border-purple-200 rounded-xl p-6 mb-8">
-                  <p className="text-base font-semibold text-gray-700 mb-4 text-center">
-                    牌位含义：
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
-                    {recommendedSpread.positions.map((position, index) => (
-                      <span
-                        key={index}
-                        className="bg-white border border-purple-200 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 text-center"
-                      >
-                        {position}
-                      </span>
-                    ))}
+                <MysticalCard className={styles.spreadCard}>
+                  <div className={styles.spreadIcon}>
+                    <Sparkles />
                   </div>
-                </div>
-                <motion.button
-                  onClick={handleStartDraw}
-                  className="mystical-button px-10 py-4 text-xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  开始抽牌
-                </motion.button>
+                  <h2 className={styles.spreadTitle}>
+                    {recommendedSpread.name}
+                  </h2>
+                  <p className={styles.spreadDescription}>
+                    {recommendedSpread.description}
+                  </p>
+                  <div className={styles.positionsInfo}>
+                    <p className={styles.positionsTitle}>
+                      牌位含义：
+                    </p>
+                    <div className={styles.positionsList}>
+                      {recommendedSpread.positions.map((position, index) => (
+                        <span key={index} className={styles.positionTag}>
+                          {position}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <MysticalButton
+                      onClick={handleStartDraw}
+                      className={styles.startButton}
+                    >
+                      开始抽牌
+                    </MysticalButton>
+                  </motion.div>
+                </MysticalCard>
               </motion.div>
             )}
 
@@ -240,42 +229,40 @@ export default function DrawPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="text-center"
+                className={styles.drawSection}
               >
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+                <h2 className={styles.drawTitle}>
                   请选择 {recommendedSpread.cardCount} 张牌
                 </h2>
-                <div className="mystical-card p-4 inline-block mb-2">
-                  <p className="text-purple-600 font-semibold text-lg">
+                <MysticalCard className={styles.drawProgress}>
+                  <p className={styles.drawProgressText}>
                     已选择: {selectedCards.length} /{" "}
                     {recommendedSpread.cardCount}
                   </p>
-                </div>
+                </MysticalCard>
 
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 md:gap-4 max-w-6xl mx-auto">
+                <div className={styles.cardGrid}>
                   {Array.from({ length: 24 }, (_, index) => (
                     <motion.div
                       key={index}
-                      className="relative flex justify-center"
+                      className={styles.cardSlot}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
                     >
                       <div
-                        className={`w-16 h-24 sm:w-20 sm:h-30 md:w-24 md:h-36 bg-gradient-to-br from-purple-800 via-blue-900 to-purple-900 rounded-lg border-2 shadow-lg flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                          selectedCards.includes(index)
-                            ? "border-yellow-400 shadow-yellow-400/50 scale-105"
-                            : "border-purple-300 hover:border-purple-400 hover:scale-105"
+                        className={`${styles.cardBack} ${
+                          selectedCards.includes(index) ? styles.selected : ''
                         }`}
                         onClick={() => handleCardSelect(index)}
                       >
-                        <div className="text-center text-white/80">
-                          <div className="text-lg md:text-2xl mb-1">🌟</div>
-                          <div className="text-xs font-medium">TAROT</div>
+                        <div className={styles.cardContent}>
+                          <div className={styles.icon}>🌟</div>
+                          <div className={styles.text}>TAROT</div>
                         </div>
                         {selectedCards.includes(index) && (
                           <motion.div
-                            className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold"
+                            className={styles.selectionBadge}
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                           >
@@ -296,34 +283,34 @@ export default function DrawPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="text-center"
+                className={styles.revealSection}
               >
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">
+                <h2 className={styles.revealTitle}>
                   点击卡牌揭示结果
                 </h2>
-                <div className="mystical-card p-4 inline-block mb-8">
-                  <p className="text-purple-600 font-semibold text-lg">
+                <MysticalCard className={styles.revealProgress}>
+                  <p className={styles.revealProgressText}>
                     已揭示: {revealedCards.length} / {drawnCards.length}
                   </p>
-                </div>
+                </MysticalCard>
 
-                <div className="flex justify-center gap-6 flex-wrap">
+                <div className={styles.revealCards}>
                   {drawnCards.map((card, index) => (
                     <motion.div
                       key={card.id}
-                      className="flex flex-col items-center"
+                      className={styles.revealCardContainer}
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: index * 0.2 }}
                     >
                       {/* 牌位标签 */}
                       <motion.div
-                        className="bg-white border border-purple-200 rounded-lg px-4 py-2 mb-4 shadow-sm"
+                        className={styles.positionLabel}
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.2 + 0.1 }}
                       >
-                        <span className="text-sm font-semibold text-gray-700">
+                        <span>
                           {recommendedSpread.positions[index]}
                         </span>
                       </motion.div>
@@ -341,12 +328,12 @@ export default function DrawPage() {
                       {/* 卡牌提示 */}
                       {revealedCards.includes(index) && (
                         <motion.div
-                          className="mt-3 text-center max-w-32"
+                          className={styles.cardHint}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.3 }}
                         >
-                          <p className="text-xs text-gray-600 leading-relaxed">
+                          <p>
                             {(cardReversals[index]
                               ? card.keywordsReversed
                               : card.keywordsUpright
@@ -363,20 +350,23 @@ export default function DrawPage() {
                 {/* 继续按钮 - 全部卡牌揭示后显示 */}
                 {revealedCards.length === drawnCards.length && !isLoading && (
                   <motion.div
-                    className="mt-8 text-center"
+                    className={styles.continueSection}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
                   >
-                    <motion.button
-                      onClick={handleContinue}
-                      className="mystical-button px-8 py-4 text-xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg"
+                    <motion.div
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      🔮 获取AI解读
-                    </motion.button>
-                    <p className="text-sm text-gray-500 mt-3">
+                      <MysticalButton
+                        onClick={handleContinue}
+                        className={styles.continueButton}
+                      >
+                        🔮 获取AI解读
+                      </MysticalButton>
+                    </motion.div>
+                    <p className={styles.continueHint}>
                       点击按钮，让AI为你解读塔罗牌的奥秘
                     </p>
                   </motion.div>
@@ -384,13 +374,13 @@ export default function DrawPage() {
 
                 {isLoading && (
                   <motion.div
-                    className="mt-8"
+                    className={styles.loadingSection}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                   >
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-300 mr-3"></div>
-                      <span className="text-gray-600">
+                    <div className={styles.loadingContent}>
+                      <div className={styles.loadingSpinner}></div>
+                      <span>
                         🤖 AI正在为你解读...
                       </span>
                     </div>
@@ -409,23 +399,23 @@ export default function DrawPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-gradient-to-br from-purple-900/95 via-blue-900/95 to-purple-800/95 backdrop-blur-sm z-50 flex items-center justify-center"
+            className={styles.fullScreenLoading}
           >
-            <div className="text-center">
+            <div className={styles.loadingContainer}>
               {/* 主要加载动画 */}
               <motion.div
-                className="relative mb-8"
+                className={styles.loadingAnimation}
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.2 }}
               >
                 <motion.div
-                  className="w-32 h-32 border-4 border-yellow-300/30 border-t-yellow-300 rounded-full"
+                  className={styles.outerSpinner}
                   animate={{ rotate: 360 }}
                   transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                 />
                 <motion.div
-                  className="absolute inset-4 w-24 h-24 border-4 border-purple-300/30 border-b-purple-300 rounded-full"
+                  className={styles.innerSpinner}
                   animate={{ rotate: -360 }}
                   transition={{
                     duration: 1.5,
@@ -433,9 +423,9 @@ export default function DrawPage() {
                     ease: "linear",
                   }}
                 />
-                <div className="absolute inset-0 flex items-center justify-center">
+                <div className={styles.centerIcon}>
                   <motion.div
-                    className="text-4xl"
+                    className={styles.icon}
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 2, repeat: Infinity }}
                   >
@@ -449,13 +439,13 @@ export default function DrawPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="text-center"
+                className={styles.loadingText}
               >
-                <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
+                <h3 className={styles.loadingTitle}>
                   🚀 即将开始AI解析
                 </h3>
                 <motion.p
-                  className="text-lg text-purple-200 mb-6 max-w-md"
+                  className={styles.loadingDescription}
                   animate={{ opacity: [0.7, 1, 0.7] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
                 >
@@ -463,11 +453,11 @@ export default function DrawPage() {
                 </motion.p>
 
                 {/* 加载点动画 */}
-                <div className="flex justify-center space-x-2">
+                <div className={styles.loadingDots}>
                   {[0, 1, 2].map((index) => (
                     <motion.div
                       key={index}
-                      className="w-3 h-3 bg-yellow-300 rounded-full"
+                      className={styles.loadingDot}
                       animate={{
                         scale: [1, 1.2, 1],
                         opacity: [0.5, 1, 0.5],
@@ -485,6 +475,6 @@ export default function DrawPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </MysticalBg>
   );
 }

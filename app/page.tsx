@@ -14,6 +14,7 @@ import {
 import { ApiKeySettings } from "@/app/components/ApiKeySettings";
 import { TarotCard } from "@/app/components/TarotCard";
 import { tarotCards } from "@/lib/tarot-data";
+import styles from "./page.module.less";
 
 export default function Home() {
   const [localQuestion, setLocalQuestion] = useState("");
@@ -111,7 +112,7 @@ export default function Home() {
   };
 
   return (
-    <MysticalBg className="min-h-screen relative overflow-hidden">
+    <MysticalBg className={styles.container}>
       {/* API 设置 */}
       <ApiKeySettings
         currentApiKey={localApiKey}
@@ -119,25 +120,21 @@ export default function Home() {
         remainingCalls={remainingCalls}
         usingSystemKey={usingSystemKey}
       />
-      <main className="relative z-10 min-h-screen flex items-center justify-center px-4 py-8 md:py-12">
-        <div className="max-w-2xl w-full">
+      <main className={styles.main}>
+        <div className={styles.content}>
           {/* 标题区域 */}
           <motion.div
-            className="text-center mb-12"
+            className={styles.titleSection}
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <div className="flex items-center justify-center mb-8">
-              <Moon className="w-10 h-10 text-purple-500 mr-4" />
-              <h1 className="text-5xl md:text-7xl font-bold text-transparent bg-gradient-to-r from-purple-600 via-purple-500 to-purple-400 bg-clip-text">
-                神秘塔罗
-              </h1>
-              <Stars className="w-10 h-10 text-purple-500 ml-4" />
+            <div className={styles.titleIcon}>
+              <Moon className={styles.moon} />
+              <h1 className={styles.title}>神秘塔罗</h1>
+              <Stars className={styles.stars} />
             </div>
-            <p className="text-xl md:text-2xl text-gray-600 mb-6 font-medium">
-              倾听内心的声音，探寻命运的指引
-            </p>
+            <p className={styles.subtitle}>倾听内心的声音，探寻命运的指引</p>
           </motion.div>
 
           {/* 问题输入卡片 */}
@@ -146,13 +143,10 @@ export default function Home() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.3 }}
           >
-            <MysticalCard className="p-8 md:p-10">
+            <MysticalCard className={styles.questionCard}>
               <form onSubmit={handleSubmit}>
                 <div>
-                  <label
-                    htmlFor="question"
-                    className="block text-2xl font-bold text-center mb-6 text-gray-800"
-                  >
+                  <label htmlFor="question" className={styles.questionLabel}>
                     你的问题
                   </label>
                   <MysticalInput
@@ -160,13 +154,13 @@ export default function Home() {
                     value={localQuestion}
                     onChange={(e) => setLocalQuestion(e.target.value)}
                     placeholder="请输入你想要咨询的问题，比如：关于爱情、事业、人际关系等..."
-                    className="resize-none h-40 leading-relaxed border-2 shadow-lg"
+                    className={styles.questionInput}
                     rows={8}
                     required
                   />
                 </div>
 
-                <div className="mt-4">
+                <div className={styles.submitSection}>
                   <motion.div
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -174,12 +168,11 @@ export default function Home() {
                     <MysticalButton
                       type="submit"
                       disabled={isLoading || !localQuestion.trim()}
-                      className="w-full py-4 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed bg-purple-100 hover:bg-purple-200 text-purple-700 border-purple-200 shadow-sm"
-                      style={{ borderRadius: "8px" }}
+                      className={styles.submitButton}
                     >
                       {isLoading ? (
-                        <div className="flex items-center">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                        <div className={styles.loadingIcon}>
+                          <div className={styles.spinner}></div>
                           正在为你占卜...
                         </div>
                       ) : (
@@ -194,23 +187,18 @@ export default function Home() {
 
           {/* 猜你想问 */}
           <motion.div
-            className="mt-8"
+            className={styles.suggestionsSection}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
-            <h3 className="text-center text-lg font-semibold text-gray-500 mb-4">
-              猜你想问
-            </h3>
-            <div className="flex flex-col items-center space-y-2 max-w-md mx-auto">
+            <h3 className={styles.suggestionsTitle}>猜你想问</h3>
+            <div className={styles.suggestionsList}>
               {loadingSuggestions ? (
                 // 加载中的骨架屏
-                <div className="space-y-2 w-full">
+                <div className={styles.skeletonContainer}>
                   {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="h-12 bg-purple-50 rounded-full animate-pulse border border-purple-200"
-                    />
+                    <div key={i} className={styles.skeleton} />
                   ))}
                 </div>
               ) : (
@@ -219,7 +207,7 @@ export default function Home() {
                     key={`${question}-${index}`}
                     type="button"
                     onClick={() => handleQuestionSelect(question)}
-                    className="px-6 py-3 text-gray-600 hover:text-gray-800 bg-purple-50 hover:bg-purple-100 rounded-full transition-all duration-200 border border-purple-200 hover:border-purple-300"
+                    className={styles.suggestionButton}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
@@ -235,34 +223,35 @@ export default function Home() {
 
           {/* 塔罗牌预览 */}
           <motion.div
-            className="mt-16"
+            className={styles.previewSection}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
           >
-            <h3 className="text-center text-lg font-semibold text-gray-700 mb-8">
-              塔罗牌预览
-            </h3>
-            <div className="flex justify-center gap-4 flex-wrap">
+            <h3 className={styles.previewTitle}>塔罗牌预览</h3>
+            <div className={styles.previewCards}>
               {/* 展示3张示例卡牌 */}
               {tarotCards.slice(0, 3).map((card, index) => (
                 <motion.div
                   key={card.id}
+                  className={styles.previewCard}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 + index * 0.1 }}
                 >
-                  <TarotCard
-                    card={card}
-                    size="sm"
-                    isRevealed={true}
-                    isReversed={index === 1} // 中间的卡牌显示为逆位
-                    showDetails={false}
-                  />
+                  <div className={styles.cardContainer}>
+                    <TarotCard
+                      card={card}
+                      size="sm"
+                      isRevealed={true}
+                      isReversed={index === 1} // 中间的卡牌显示为逆位
+                      showDetails={false}
+                    />
+                  </div>
                 </motion.div>
               ))}
             </div>
-            <p className="text-center text-xs text-gray-500 mt-4 max-w-md mx-auto">
+            <p className={styles.previewDescription}>
               韦特塔罗牌，包含22张大阿尔卡纳和56张小阿尔卡纳，每张牌都有独特的含义和象征
             </p>
           </motion.div>

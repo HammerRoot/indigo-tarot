@@ -1,0 +1,111 @@
+// MarkdownRenderer 组件样式
+
+.prose {
+  max-width: none;
+
+  // 标题样式
+  :global(.md-h1) {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-top: 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  :global(.md-h2) {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #c084fc;
+    padding-bottom: 0.5rem;
+  }
+
+  :global(.md-h3) {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid #e9d5ff;
+    padding-bottom: 0.5rem;
+  }
+
+  // 文本样式
+  :global(.md-strong) {
+    font-weight: 700;
+    color: #111827;
+  }
+
+  :global(.md-em) {
+    font-style: italic;
+    color: #374151;
+  }
+
+  // 代码样式
+  :global(.md-code) {
+    background-color: #f3e8ff;
+    color: #581c87;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+
+  // 链接样式
+  :global(.md-link) {
+    color: #9333ea;
+    text-decoration: underline;
+    transition: color 0.15s ease;
+
+    &:hover {
+      color: #7c3aed;
+    }
+  }
+
+  // 列表样式
+  :global(.md-ul) {
+    margin-bottom: 1rem;
+
+    :global(.md-li) {
+      margin-left: 1.5rem;
+      margin-bottom: 0.5rem;
+      list-style-type: disc;
+    }
+  }
+
+  :global(.md-ol) {
+    margin-bottom: 1rem;
+
+    :global(.md-li) {
+      margin-left: 1.5rem;
+      margin-bottom: 0.5rem;
+      list-style-type: decimal;
+    }
+  }
+
+  // 引用样式
+  :global(.md-blockquote) {
+    border-left: 4px solid #c084fc;
+    padding-left: 1rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    margin: 1rem 0;
+    background-color: #faf5ff;
+    font-style: italic;
+    color: #374151;
+  }
+
+  // 分割线样式
+  :global(.md-hr) {
+    border-top: 2px solid #e9d5ff;
+    margin: 1.5rem 0;
+  }
+
+  // 段落样式
+  :global(.md-p) {
+    margin-bottom: 1rem;
+    line-height: 1.625;
+  }
+}
