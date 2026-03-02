@@ -17,7 +17,7 @@
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "type-check": "tsc --noEmit",
-    "pre-push": "npm run type-check && npm run lint && npm run build",
+    "pre-commit": "npm run type-check && npm run lint",
     "prepare": "husky"
   },
   "dependencies": {
