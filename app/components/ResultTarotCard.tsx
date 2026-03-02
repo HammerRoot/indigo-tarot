@@ -7,14 +7,12 @@ import Image from "next/image";
 
 interface ResultTarotCardProps {
   card: TarotCardType;
-  position: string;
   index: number;
   isReversed?: boolean;
 }
 
 export const ResultTarotCard = memo(function ResultTarotCard({
   card,
-  position,
   index,
   isReversed = false,
 }: ResultTarotCardProps) {
@@ -27,19 +25,9 @@ export const ResultTarotCard = memo(function ResultTarotCard({
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: 0.3 + index * 0.1 }}
     >
-      {/* 牌位标签 */}
-      {/* 位置说明 */}
-      <div className="mb-4">
-        <div className="inline-block bg-purple-100 border border-purple-300 rounded-lg px-4 py-2">
-          <span className="text-sm font-semibold text-purple-800">
-            {position}
-          </span>
-        </div>
-      </div>
-
       {/* 塔罗牌显示 */}
       <div
-        className={`w-36 h-56 md:w-40 md:h-60 bg-gradient-to-b from-amber-50 to-purple-50 rounded-lg border-2 border-purple-300 shadow-lg overflow-hidden relative group hover:scale-105 transition-transform ${
+        className={`w-28 h-44 bg-gradient-to-b from-amber-50 to-purple-50 rounded-lg border-2 border-purple-300 shadow-lg overflow-hidden relative group hover:scale-105 transition-transform ${
           isReversed ? "rotate-180" : ""
         }`}
       >
@@ -62,16 +50,20 @@ export const ResultTarotCard = memo(function ResultTarotCard({
             )}
 
             {/* 悬停时显示卡片名称 */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="absolute bottom-2 left-2 right-2 text-center">
-                <h3 className="text-white font-bold text-sm leading-tight">
-                  {card.name}
-                </h3>
-                <p className="text-white/80 text-xs mt-1">
-                  {(isReversed ? card.keywordsReversed : card.keywordsUpright)
-                    .slice(0, 2)
-                    .join(" · ")}
-                </p>
+            <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity ${
+              isReversed ? "rotate-180" : ""
+            }`}>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent">
+                <div className="absolute bottom-2 left-2 right-2 text-center">
+                  <h3 className="text-white font-bold text-sm leading-tight">
+                    {card.name}
+                  </h3>
+                  <p className="text-white/80 text-xs mt-1">
+                    {(isReversed ? card.keywordsReversed : card.keywordsUpright)
+                      .slice(0, 2)
+                      .join(" · ")}
+                  </p>
+                </div>
               </div>
             </div>
           </div>

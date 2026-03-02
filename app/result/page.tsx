@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Share2, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowLeft, Share2, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemoizedFn } from "ahooks";
 import { useTarotStore } from "@/lib/store";
 import { generateTarotReadingStream } from "@/lib/deepseek";
 import { ResultTarotCard } from "@/app/components/ResultTarotCard";
+import { MarkdownRenderer } from "@/app/components/MarkdownRenderer";
 import { imageCache } from "@/lib/imageCache";
 
 export default function ResultPage() {
@@ -29,6 +30,7 @@ export default function ResultPage() {
   const [analysisContent, setAnalysisContent] = useState("");
   const [showCards, setShowCards] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [currentCardIndex, setCurrentCardIndex] = useState(-1);
 
   // 使用 useRef 防止重复调用
   const hasStartedAnalysis = useRef(false);
@@ -63,6 +65,35 @@ export default function ResultPage() {
             );
             if (analysisMatch) {
               setAnalysisContent(analysisMatch[1]);
+            }
+
+            // 检测当前解析的牌面并自动滚动
+            const cardMatches = newContent.match(/### 牌面 (\d+)/g);
+            if (cardMatches) {
+              const latestCardMatch = cardMatches[cardMatches.length - 1];
+              const cardNumber = parseInt(
+                latestCardMatch.match(/\d+/)?.[0] || "0",
+                10,
+              );
+              if (cardNumber > 0 && cardNumber <= drawnCards.length) {
+                const newIndex = cardNumber - 1;
+                if (newIndex !== currentCardIndex) {
+                  setCurrentCardIndex(newIndex);
+                  // 滚动到对应的牌面位置
+                  setTimeout(() => {
+                    const cardElement = document.getElementById(
+                      `card-${newIndex}`,
+                    );
+                    if (cardElement) {
+                      cardElement.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center",
+                        inline: "center",
+                      });
+                    }
+                  }, 500);
+                }
+              }
             }
 
             return newContent;
@@ -191,24 +222,26 @@ export default function ResultPage() {
         </div>
 
         <div className="max-w-4xl mx-auto">
-          {/* 1. 问题 */}
+          {/* 1. 你的问题 */}
           <motion.section
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center"
+            className="mystical-card p-6 md:p-8"
           >
-            <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-gradient-to-r from-purple-600 via-purple-500 to-purple-400 bg-clip-text mb-4">
-              你的问题
-            </h1>
-            <div className="mystical-card p-6 md:p-8">
+            <div className="flex items-center mb-6">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
+                你的问题
+              </h1>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
               <p className="text-gray-700 text-lg md:text-xl leading-relaxed font-medium">
                 &quot;{question}&quot;
               </p>
             </div>
           </motion.section>
 
-          {/* 2. 塔罗概览 */}
+          {/* 2. 抽牌结果 */}
           <AnimatePresence>
             {showCards && (
               <motion.section
@@ -218,67 +251,75 @@ export default function ResultPage() {
                 transition={{ duration: 0.6 }}
                 className="mystical-card p-6 md:p-8"
               >
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 flex items-center justify-center gap-3">
-                    <Sparkles className="w-6 h-6 text-purple-500" />
-                    {recommendedSpread.name}
+                <div className="flex items-center mb-6">
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+                    抽牌结果
                   </h2>
-                  <p className="text-gray-600 text-lg leading-relaxed max-w-3xl mx-auto">
-                    {recommendedSpread.description}
-                  </p>
+                </div>
+                <div className="mb-6">
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <h3 className="font-bold text-purple-800 mb-2">
+                      {recommendedSpread.name}
+                    </h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">
+                      {recommendedSpread.description}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-                  {drawnCards.map((card, index) => (
-                    <motion.div
-                      key={card.id}
-                      className="text-center"
-                      initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      transition={{ delay: index * 0.2 }}
-                    >
-                      {/* 卡牌 */}
-                      <div className="mb-4 flex justify-center">
+                {/* 牌阵布局 - 使用Grid布局 */}
+                <div className="max-w-5xl mx-auto">
+                  <div
+                    className={`grid gap-4 justify-items-center ${
+                      drawnCards.length > 4
+                        ? `grid-cols-${drawnCards.length}`
+                        : "grid-cols-4"
+                    } ${drawnCards.length > 4 ? "grid-rows-2" : ""}`}
+                  >
+                    {drawnCards.map((card, index) => (
+                      <motion.div
+                        key={card.id}
+                        className={`flex flex-col items-center transition-all duration-500 ${
+                          currentCardIndex === index
+                            ? "ring-4 ring-purple-400 ring-opacity-50 rounded-xl p-4 bg-purple-50/30"
+                            : ""
+                        } ${
+                          // 特殊布局调整
+                          drawnCards.length === 5 && index === 4
+                            ? "col-start-2"
+                            : drawnCards.length === 7 && index >= 4
+                              ? "col-start-2"
+                              : ""
+                        }`}
+                        initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                        animate={{
+                          opacity: 1,
+                          scale: currentCardIndex === index ? 1.05 : 1,
+                          y: 0,
+                        }}
+                        transition={{ delay: index * 0.2 }}
+                        id={`card-${index}`}
+                      >
                         <ResultTarotCard
                           card={card}
-                          position={recommendedSpread.positions[index]}
                           index={index}
                           isReversed={cardReversals[index] || false}
                         />
-                      </div>
-
-                      {/* 卡牌信息 */}
-                      <div className="bg-white/50 rounded-lg p-4 border border-purple-200">
-                        <h3 className="font-bold text-gray-800 mb-2">
-                          {card.name}
-                          {cardReversals[index] && (
-                            <span className="ml-2 text-amber-600 text-sm">
-                              (逆位)
-                            </span>
-                          )}
-                        </h3>
-                        <div className="flex flex-wrap justify-center gap-1 text-xs">
-                          {(cardReversals[index]
-                            ? card.keywordsReversed
-                            : card.keywordsUpright
-                          )
-                            .slice(0, 3)
-                            .map((keyword, i) => (
-                              <span
-                                key={i}
-                                className={`px-2 py-1 rounded-full ${
-                                  cardReversals[index]
-                                    ? "bg-amber-100 text-amber-700"
-                                    : "bg-purple-100 text-purple-700"
-                                }`}
-                              >
-                                {keyword}
-                              </span>
-                            ))}
+                        {/* 牌面标注 */}
+                        <div className="mt-3 text-center max-w-[120px]">
+                          <p className="text-sm font-semibold text-gray-800">
+                            {cardReversals[index] && (
+                              <span className="text-amber-600">(逆)</span>
+                            )}
+                            {card.name}
+                          </p>
+                          <p className="text-xs text-purple-600 font-medium mt-1">
+                            {recommendedSpread.positions[index]}
+                          </p>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
               </motion.section>
             )}
@@ -295,15 +336,12 @@ export default function ResultPage() {
                 className="mystical-card p-6 md:p-8"
               >
                 <div className="flex items-center mb-6">
-                  <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center mr-4">
-                    <span className="text-white text-lg">🤖</span>
-                  </div>
                   <div>
                     <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                      AI深度解析
+                      🤖 AI深度解析
                     </h2>
                     {isStreaming && (
-                      <p className="text-purple-600 text-sm font-medium">
+                      <p className="text-green-600 text-sm font-medium">
                         正在思考分析中...
                       </p>
                     )}
@@ -311,17 +349,18 @@ export default function ResultPage() {
                 </div>
 
                 <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6 md:p-8">
-                  <div className="prose max-w-none">
-                    <div className="text-gray-700 text-base md:text-lg leading-relaxed whitespace-pre-wrap">
-                      {analysisContent || streamingContent}
-                      {isStreaming && (
-                        <motion.span
-                          className="inline-block w-2 h-5 bg-purple-500 ml-1"
-                          animate={{ opacity: [1, 0, 1] }}
-                          transition={{ duration: 1, repeat: Infinity }}
-                        />
-                      )}
-                    </div>
+                  <div className="text-gray-700 text-base md:text-lg leading-relaxed">
+                    <MarkdownRenderer
+                      content={analysisContent || streamingContent}
+                      className="text-gray-700"
+                    />
+                    {isStreaming && (
+                      <motion.span
+                        className="inline-block w-2 h-5 bg-purple-500 ml-1"
+                        animate={{ opacity: [1, 0, 1] }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                      />
+                    )}
                   </div>
                 </div>
               </motion.section>
@@ -336,23 +375,17 @@ export default function ResultPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -30 }}
                 transition={{ duration: 0.6 }}
-                className="text-center"
+                className="mystical-card p-6 md:p-8"
               >
-                <div className="bg-gradient-to-r from-yellow-100 via-orange-100 to-yellow-100 border-2 border-yellow-300 rounded-xl p-6 md:p-8 shadow-lg">
-                  <div className="flex items-center justify-center mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center mr-4">
-                      <span className="text-white text-xl">💡</span>
-                    </div>
-                    <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                      核心建议
-                    </h2>
-                  </div>
-
-                  <div className="bg-white/70 rounded-lg p-4 md:p-6">
-                    <p className="text-gray-800 text-lg md:text-xl font-semibold leading-relaxed">
-                      {coreAdvice || "正在生成核心建议..."}
-                    </p>
-                  </div>
+                <div className="flex items-center mb-6">
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+                    核心建议
+                  </h2>
+                </div>
+                <div className="bg-gradient-to-r from-yellow-50 via-orange-50 to-yellow-50 border border-yellow-200 rounded-xl p-6">
+                  <p className="text-gray-800 text-lg md:text-xl font-semibold leading-relaxed">
+                    {coreAdvice || "正在生成核心建议..."}
+                  </p>
                 </div>
               </motion.section>
             )}
