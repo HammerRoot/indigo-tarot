@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
                       content 
                     })}\n\n`);
                   }
-                } catch (e) {
+                } catch {
                   // 忽略解析错误
                 }
               }

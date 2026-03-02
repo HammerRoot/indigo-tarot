@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { useTarotStore, recommendSpread } from "@/lib/store";
-import { generateTarotReading } from "@/lib/deepseek";
 import { useRouter } from "next/navigation";
 import { TarotCard } from "@/app/components/TarotCard";
 
@@ -16,14 +15,10 @@ export default function DrawPage() {
     drawnCards,
     cardReversals,
     isLoading,
-    apiKey,
     setRecommendedSpread,
     setDrawnCards,
     setCardReversals,
-    setCurrentReading,
-    setLoading,
     getRandomCards,
-    setApiUsage,
   } = useTarotStore();
 
   const [currentStep, setCurrentStep] = useState<"spread" | "draw" | "reveal">(
@@ -108,12 +103,12 @@ export default function DrawPage() {
 
     // 显示短暂的过渡动画
     setShowFullScreenLoading(true);
-    
+
     // 立即跳转到结果页面，不等待API
     setTimeout(() => {
       setShowFullScreenLoading(false);
       router.push("/result");
-    }, 500); // 更短的过渡动画时间
+    }, 500);
   };
 
   if (!recommendedSpread) {

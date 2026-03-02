@@ -4,7 +4,6 @@ import { useState, memo } from "react";
 import { motion } from "framer-motion";
 import { TarotCard as TarotCardType } from "@/lib/tarot-data";
 import Image from "next/image";
-import { imageCache } from "@/lib/imageCache";
 
 interface ResultTarotCardProps {
   card: TarotCardType;

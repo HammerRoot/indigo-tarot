@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Share2, RotateCcw, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useMemoizedFn } from "ahooks";
 import { useTarotStore } from "@/lib/store";
 import { generateTarotReadingStream } from "@/lib/deepseek";
 import { ResultTarotCard } from "@/app/components/ResultTarotCard";
@@ -32,7 +33,7 @@ export default function ResultPage() {
   // 使用 useRef 防止重复调用
   const hasStartedAnalysis = useRef(false);
 
-  const startAnalysis = () => {
+  const startAnalysis = useMemoizedFn(() => {
     // 防止重复调用
     if (hasStartedAnalysis.current) return;
     hasStartedAnalysis.current = true;
@@ -83,7 +84,7 @@ export default function ResultPage() {
       apiKey || undefined,
       cardReversals,
     );
-  };
+  });
 
   const handleStartNew = () => {
     resetSession();
@@ -127,18 +128,19 @@ export default function ResultPage() {
 
     imageCache.preloadBatch(imageUrls).catch(console.warn);
 
-    // 立即显示卡牌并开始解析
+    // 立即显示卡牌，并立即分析
     setShowCards(true);
-    
-    // 很快开始分析，提升响应速度
-    const timer = setTimeout(() => {
-      if (!hasStartedAnalysis.current) {
-        startAnalysis();
-      }
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [question, recommendedSpread, drawnCards, cardReversals, router]);
+    if (!hasStartedAnalysis.current) {
+      startAnalysis();
+    }
+  }, [
+    question,
+    recommendedSpread,
+    drawnCards,
+    cardReversals,
+    router,
+    startAnalysis,
+  ]);
 
   if (!question || !recommendedSpread || !drawnCards.length) {
     return (

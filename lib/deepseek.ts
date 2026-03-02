@@ -158,7 +158,7 @@ ${cardInfo}
               callbacks.onError(parsed.error || 'Unknown error');
               return;
             }
-          } catch (e) {
+          } catch {
             console.warn('Failed to parse SSE data:', data);
           }
         }

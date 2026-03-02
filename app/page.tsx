@@ -21,7 +21,13 @@ export default function Home() {
   const [localApiKey, setLocalApiKey] = useState("");
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(true);
-  const { setQuestion, resetSession, remainingCalls, usingSystemKey, setApiKey } = useTarotStore();
+  const {
+    setQuestion,
+    resetSession,
+    remainingCalls,
+    usingSystemKey,
+    setApiKey,
+  } = useTarotStore();
   const router = useRouter();
 
   // 从 localStorage 加载 API Key
@@ -38,26 +44,28 @@ export default function Home() {
     const fetchSuggestedQuestions = async () => {
       try {
         setLoadingSuggestions(true);
-        const response = await fetch('/api/suggested-questions');
+        const response = await fetch("/api/suggested-questions");
         const data = await response.json();
-        
+
         if (response.ok) {
           setSuggestedQuestions(data.questions);
         } else {
           // 使用后备问题
-          setSuggestedQuestions(data.questions || [
-            "我在感情方面应该如何选择？",
-            "我的事业发展前景如何？",
-            "如何改善我的人际关系？"
-          ]);
+          setSuggestedQuestions(
+            data.questions || [
+              "我在感情方面应该如何选择？",
+              "我的事业发展前景如何？",
+              "如何改善我的人际关系？",
+            ],
+          );
         }
       } catch (error) {
-        console.error('获取推荐问题失败:', error);
+        console.error("获取推荐问题失败:", error);
         // 使用默认问题作为后备
         setSuggestedQuestions([
           "我在感情方面应该如何选择？",
           "我的事业发展前景如何？",
-          "如何改善我的人际关系？"
+          "如何改善我的人际关系？",
         ]);
       } finally {
         setLoadingSuggestions(false);
@@ -78,7 +86,6 @@ export default function Home() {
     }
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!localQuestion.trim()) return;
@@ -92,10 +99,11 @@ export default function Home() {
     setQuestion(localQuestion.trim());
 
     // 跳转到抽牌页面
-    setTimeout(() => {
+    const t = setTimeout(() => {
       setIsLoading(false);
+      clearTimeout(t);
       router.push("/draw");
-    }, 1000);
+    }, 666);
   };
 
   const handleQuestionSelect = (question: string) => {
@@ -232,7 +240,9 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
           >
-            <h3 className="text-center text-lg font-semibold text-gray-700 mb-8">塔罗牌预览</h3>
+            <h3 className="text-center text-lg font-semibold text-gray-700 mb-8">
+              塔罗牌预览
+            </h3>
             <div className="flex justify-center gap-4 flex-wrap">
               {/* 展示3张示例卡牌 */}
               {tarotCards.slice(0, 3).map((card, index) => (

@@ -4,7 +4,6 @@ interface UseImagePreloaderReturn {
   preloadImage: (src: string) => Promise<void>;
   isLoaded: (src: string) => boolean;
   isLoading: (src: string) => boolean;
-  loadedImages: Set<string>;
 }
 
 export function useImagePreloader(): UseImagePreloaderReturn {
@@ -75,6 +74,5 @@ export function useImagePreloader(): UseImagePreloaderReturn {
     preloadImage,
     isLoaded,
     isLoading,
-    loadedImages: loadedImagesRef.current,
   };
 }
