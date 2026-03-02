@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import { motion } from "framer-motion";
 import { TarotCard as TarotCardType } from "@/lib/tarot-data";
 import Image from "next/image";
+import { imageCache } from "@/lib/imageCache";
 
 interface TarotCardProps {
   card: TarotCardType;
@@ -12,7 +13,6 @@ interface TarotCardProps {
   onClick?: () => void;
   size?: "sm" | "md" | "lg";
   showDetails?: boolean;
-  isImageLoaded?: boolean;
 }
 
 // 卡牌背面组件
@@ -32,7 +32,6 @@ const CardFront = ({
   className, 
   card, 
   isReversed, 
-  isImageLoaded, 
   imageError, 
   setImageError, 
   cardSizes, 
@@ -42,7 +41,6 @@ const CardFront = ({
   className?: string;
   card: TarotCardType;
   isReversed: boolean;
-  isImageLoaded: boolean;
   imageError: boolean;
   setImageError: (error: boolean) => void;
   cardSizes: Record<string, { width: number; height: number }>;
@@ -54,7 +52,7 @@ const CardFront = ({
         isReversed ? "rotate-180" : ""
       }`}
     >
-      {!imageError && card.image && isImageLoaded ? (
+      {!imageError && card.image ? (
         <div className="relative w-full h-full">
           <Image
             src={card.image}
@@ -64,6 +62,7 @@ const CardFront = ({
             onError={() => setImageError(true)}
             priority={isRevealed}
             sizes={`${cardSizes[size].width}px`}
+            loading={isRevealed ? "eager" : "lazy"}
           />
 
           {/* 逆位指示器 - 仅边框效果 */}
@@ -121,14 +120,13 @@ const CardFront = ({
     </div>
 );
 
-export function TarotCard({
+export const TarotCard = memo(function TarotCard({
   card,
   isRevealed = false,
   isReversed = false,
   onClick,
   size = "md",
   showDetails = false,
-  isImageLoaded = true,
 }: TarotCardProps) {
   const [imageError, setImageError] = useState(false);
 
@@ -166,7 +164,6 @@ export function TarotCard({
             className="w-full h-full" 
             card={card}
             isReversed={isReversed}
-            isImageLoaded={isImageLoaded}
             imageError={imageError}
             setImageError={setImageError}
             cardSizes={cardSizes}
@@ -198,4 +195,4 @@ export function TarotCard({
       )}
     </motion.div>
   );
-}
+});

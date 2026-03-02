@@ -7,7 +7,6 @@ import { useTarotStore, recommendSpread } from "@/lib/store";
 import { generateTarotReading } from "@/lib/deepseek";
 import { useRouter } from "next/navigation";
 import { TarotCard } from "@/app/components/TarotCard";
-import { useImagePreloader } from "@/lib/useImagePreloader";
 
 export default function DrawPage() {
   const router = useRouter();
@@ -15,10 +14,12 @@ export default function DrawPage() {
     question,
     recommendedSpread,
     drawnCards,
+    cardReversals,
     isLoading,
     apiKey,
     setRecommendedSpread,
     setDrawnCards,
+    setCardReversals,
     setCurrentReading,
     setLoading,
     getRandomCards,
@@ -30,10 +31,7 @@ export default function DrawPage() {
   );
   const [selectedCards, setSelectedCards] = useState<number[]>([]);
   const [revealedCards, setRevealedCards] = useState<number[]>([]);
-  const [cardReversals, setCardReversals] = useState<boolean[]>([]);
   const [showFullScreenLoading, setShowFullScreenLoading] = useState(false);
-
-  const { preloadImage, isLoaded } = useImagePreloader();
 
   // 控制全屏加载时的滚动禁用
   useEffect(() => {
@@ -84,25 +82,15 @@ export default function DrawPage() {
 
     // 如果选够了卡牌，立即开始翻牌流程
     if (newSelected.length === recommendedSpread.cardCount) {
-      // 立即进行抽牌和图片预加载
-      (async () => {
-        const cards = getRandomCards(recommendedSpread.cardCount);
-        // 生成逆位状态（30%概率逆位）
-        const reversals = cards.map(() => Math.random() < 0.3);
+      // 立即进行抽牌
+      const cards = getRandomCards(recommendedSpread.cardCount);
+      // 生成逆位状态（30%概率逆位）
+      const reversals = cards.map(() => Math.random() < 0.3);
 
-        setDrawnCards(cards);
-        setCardReversals(reversals);
+      setDrawnCards(cards);
+      setCardReversals(reversals);
 
-        setCurrentStep("reveal");
-
-        // 预加载所有卡牌图片
-        const preloadPromises = cards.map((card) => preloadImage(card.image));
-        try {
-          await Promise.all(preloadPromises);
-        } catch (error) {
-          console.warn("Some images failed to preload:", error);
-        }
-      })();
+      setCurrentStep("reveal");
     }
   };
 
@@ -116,56 +104,16 @@ export default function DrawPage() {
 
   // 点击继续按钮
   const handleContinue = () => {
-    setShowFullScreenLoading(true);
-    // 延迟一下再调用API，让用户看到完整的加载动画
-    setTimeout(() => {
-      handleGetReading();
-    }, 800);
-  };
-
-  // 获取AI解读
-  const handleGetReading = async () => {
     if (!recommendedSpread || drawnCards.length === 0) return;
 
-    setLoading(true);
-    try {
-      const result = await generateTarotReading(
-        question,
-        drawnCards,
-        apiKey || undefined,
-      );
-
-      // 更新剩余次数信息
-      if (result.meta) {
-        setApiUsage(result.meta.remainingCalls, result.meta.usingSystemKey);
-      }
-
-      const fullReading = {
-        ...result.reading,
-        id: Date.now().toString(),
-        spread: recommendedSpread,
-        cardReversals: cardReversals,
-        timestamp: new Date(),
-      };
-
-      setCurrentReading(fullReading);
+    // 显示短暂的过渡动画
+    setShowFullScreenLoading(true);
+    
+    // 立即跳转到结果页面，不等待API
+    setTimeout(() => {
       setShowFullScreenLoading(false);
       router.push("/result");
-    } catch (error) {
-      console.error("获取解读失败:", error);
-      setShowFullScreenLoading(false);
-      // 处理API密钥相关错误
-      if (
-        error instanceof Error &&
-        error.message.startsWith("API_KEY_NEEDED:")
-      ) {
-        alert("API调用失败: " + error.message.split(":")[1]);
-      } else {
-        alert("获取解读失败，请稍后重试");
-      }
-    } finally {
-      setLoading(false);
-    }
+    }, 500); // 更短的过渡动画时间
   };
 
   if (!recommendedSpread) {
@@ -392,7 +340,6 @@ export default function DrawPage() {
                         isRevealed={revealedCards.includes(index)}
                         isReversed={cardReversals[index] || false}
                         showDetails={false}
-                        isImageLoaded={isLoaded(card.image)}
                         onClick={() => handleRevealCard(index)}
                       />
 
@@ -510,14 +457,14 @@ export default function DrawPage() {
                 className="text-center"
               >
                 <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
-                  🌟 命运正在为你解读
+                  🚀 即将开始AI解析
                 </h3>
                 <motion.p
                   className="text-lg text-purple-200 mb-6 max-w-md"
                   animate={{ opacity: [0.7, 1, 0.7] }}
-                  transition={{ duration: 2, repeat: Infinity }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
                 >
-                  AI正在深入分析你的塔罗牌阵，请稍候...
+                  准备进入解析页面，实时观看AI思考过程...
                 </motion.p>
 
                 {/* 加载点动画 */}

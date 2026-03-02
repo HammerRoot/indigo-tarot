@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 
 interface UseImagePreloaderReturn {
   preloadImage: (src: string) => Promise<void>;
@@ -8,67 +8,73 @@ interface UseImagePreloaderReturn {
 }
 
 export function useImagePreloader(): UseImagePreloaderReturn {
-  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
-  const [loadingImages, setLoadingImages] = useState<Set<string>>(new Set());
+  // 使用 useRef 避免依赖数组问题
+  const loadedImagesRef = useRef<Set<string>>(new Set());
+  const loadingImagesRef = useRef<Set<string>>(new Set());
+  const [, forceUpdate] = useState({});
 
-  const preloadImage = useCallback((src: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      // 如果已经加载过，直接返回
-      if (loadedImages.has(src)) {
-        resolve();
-        return;
-      }
+  // 强制重新渲染的函数
+  const triggerUpdate = () => forceUpdate({});
 
-      // 如果正在加载，等待加载完成
-      if (loadingImages.has(src)) {
+  const preloadImage = useCallback(async (src: string): Promise<void> => {
+    // 如果已经加载过，直接返回
+    if (loadedImagesRef.current.has(src)) {
+      return Promise.resolve();
+    }
+
+    // 如果正在加载，返回现有的 Promise
+    if (loadingImagesRef.current.has(src)) {
+      return new Promise((resolve) => {
         const checkLoaded = () => {
-          if (loadedImages.has(src)) {
+          if (loadedImagesRef.current.has(src)) {
             resolve();
           } else {
-            setTimeout(checkLoaded, 50);
+            setTimeout(checkLoaded, 100);
           }
         };
         checkLoaded();
-        return;
-      }
+      });
+    }
 
-      // 开始预加载
-      setLoadingImages(prev => new Set(prev).add(src));
+    // 开始预加载
+    loadingImagesRef.current.add(src);
+    triggerUpdate();
 
-      const img = new Image();
-      img.onload = () => {
-        setLoadedImages(prev => new Set(prev).add(src));
-        setLoadingImages(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(src);
-          return newSet;
-        });
-        resolve();
-      };
-      img.onerror = () => {
-        setLoadingImages(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(src);
-          return newSet;
-        });
-        reject(new Error(`Failed to load image: ${src}`));
-      };
-      img.src = src;
-    });
-  }, [loadedImages, loadingImages]);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          loadedImagesRef.current.add(src);
+          loadingImagesRef.current.delete(src);
+          triggerUpdate();
+          resolve();
+        };
+        img.onerror = () => {
+          loadingImagesRef.current.delete(src);
+          triggerUpdate();
+          reject(new Error(`Failed to load image: ${src}`));
+        };
+        img.src = src;
+      });
+    } catch (error) {
+      loadingImagesRef.current.delete(src);
+      triggerUpdate();
+      throw error;
+    }
+  }, []);
 
   const isLoaded = useCallback((src: string) => {
-    return loadedImages.has(src);
-  }, [loadedImages]);
+    return loadedImagesRef.current.has(src);
+  }, []);
 
   const isLoading = useCallback((src: string) => {
-    return loadingImages.has(src);
-  }, [loadingImages]);
+    return loadingImagesRef.current.has(src);
+  }, []);
 
   return {
     preloadImage,
     isLoaded,
     isLoading,
-    loadedImages,
+    loadedImages: loadedImagesRef.current,
   };
 }

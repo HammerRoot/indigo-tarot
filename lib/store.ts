@@ -42,6 +42,10 @@ interface TarotStore {
   drawnCards: TarotCard[];
   setDrawnCards: (cards: TarotCard[]) => void;
   
+  // 卡牌逆位状态
+  cardReversals: boolean[];
+  setCardReversals: (reversals: boolean[]) => void;
+  
   // 当前解读
   currentReading: TarotReading | null;
   setCurrentReading: (reading: TarotReading | null) => void;
@@ -120,6 +124,7 @@ export const useTarotStore = create<TarotStore>()(
       apiKey: '',
       recommendedSpread: null,
       drawnCards: [],
+      cardReversals: [],
       currentReading: null,
       readings: [],
       isLoading: false,
@@ -134,6 +139,8 @@ export const useTarotStore = create<TarotStore>()(
       setRecommendedSpread: (spread) => set({ recommendedSpread: spread }),
       
       setDrawnCards: (cards) => set({ drawnCards: cards }),
+      
+      setCardReversals: (reversals) => set({ cardReversals: reversals }),
       
       setCurrentReading: (reading) => set({ currentReading: reading }),
       
@@ -153,6 +160,7 @@ export const useTarotStore = create<TarotStore>()(
         question: '',
         recommendedSpread: null,
         drawnCards: [],
+        cardReversals: [],
         currentReading: null,
         isLoading: false
       }),

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import { motion } from "framer-motion";
 import { TarotCard as TarotCardType } from "@/lib/tarot-data";
 import Image from "next/image";
+import { imageCache } from "@/lib/imageCache";
 
 interface ResultTarotCardProps {
   card: TarotCardType;
@@ -12,7 +13,7 @@ interface ResultTarotCardProps {
   isReversed?: boolean;
 }
 
-export function ResultTarotCard({
+export const ResultTarotCard = memo(function ResultTarotCard({
   card,
   position,
   index,
@@ -28,9 +29,10 @@ export function ResultTarotCard({
       transition={{ delay: 0.3 + index * 0.1 }}
     >
       {/* 牌位标签 */}
+      {/* 位置说明 */}
       <div className="mb-4">
-        <div className="bg-purple-100 border border-purple-200 rounded-lg px-4 py-2 inline-block">
-          <span className="text-sm font-semibold text-gray-700">
+        <div className="inline-block bg-purple-100 border border-purple-300 rounded-lg px-4 py-2">
+          <span className="text-sm font-semibold text-purple-800">
             {position}
           </span>
         </div>
@@ -51,6 +53,8 @@ export function ResultTarotCard({
               className="object-cover"
               onError={() => setImageError(true)}
               sizes="160px"
+              loading="eager"
+              priority={index === 0}
             />
 
             {/* 逆位指示器 - 仅边框效果 */}
@@ -108,4 +112,4 @@ export function ResultTarotCard({
       </div>
     </motion.div>
   );
-}
+});

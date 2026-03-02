@@ -1,58 +1,146 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, BookOpen, Share2, RotateCcw } from 'lucide-react';
-import { useTarotStore } from '@/lib/store';
-import { useRouter } from 'next/navigation';
-import { ResultTarotCard } from '@/app/components/ResultTarotCard';
+import { useEffect, useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Share2, RotateCcw, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useTarotStore } from "@/lib/store";
+import { generateTarotReadingStream } from "@/lib/deepseek";
+import { ResultTarotCard } from "@/app/components/ResultTarotCard";
+import { imageCache } from "@/lib/imageCache";
 
 export default function ResultPage() {
   const router = useRouter();
   const {
-    currentReading,
-    addReading,
-    resetSession
+    question,
+    recommendedSpread,
+    drawnCards,
+    cardReversals,
+    apiKey,
+    resetSession,
+    setApiUsage,
   } = useTarotStore();
 
-  const [showFullInterpretation, setShowFullInterpretation] = useState(false);
+  const [streamingContent, setStreamingContent] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamComplete, setStreamComplete] = useState(false);
+  const [coreAdvice, setCoreAdvice] = useState("");
+  const [analysisContent, setAnalysisContent] = useState("");
+  const [showCards, setShowCards] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
 
-  useEffect(() => {
-    if (!currentReading) {
-      router.push('/');
-      return;
-    }
+  // 使用 useRef 防止重复调用
+  const hasStartedAnalysis = useRef(false);
 
-    // 保存到历史记录
-    addReading(currentReading);
-  }, [currentReading, addReading, router]);
+  const startAnalysis = () => {
+    // 防止重复调用
+    if (hasStartedAnalysis.current) return;
+    hasStartedAnalysis.current = true;
+
+    setShowAnalysis(true);
+    setIsStreaming(true);
+
+    generateTarotReadingStream(
+      question!,
+      drawnCards,
+      {
+        onContent: (content) => {
+          setStreamingContent((prev) => {
+            const newContent = prev + content;
+
+            // 提取核心建议（💡 符号后的内容）
+            const adviceMatch = newContent.match(
+              /## 💡 核心建议\s*\n\n([^\n]+)/,
+            );
+            if (adviceMatch) {
+              setCoreAdvice(adviceMatch[1]);
+            }
+
+            // 提取分析内容（🔮 符号后到 💡 符号前的内容）
+            const analysisMatch = newContent.match(
+              /## 🔮 深度解析过程([\s\S]*?)(?=## 💡|$)/,
+            );
+            if (analysisMatch) {
+              setAnalysisContent(analysisMatch[1]);
+            }
+
+            return newContent;
+          });
+        },
+        onComplete: () => {
+          setIsStreaming(false);
+          setStreamComplete(true);
+        },
+        onError: (error) => {
+          setIsStreaming(false);
+          console.error("Stream error:", error);
+          setStreamingContent("解析过程中遇到错误，请稍后重试。");
+        },
+        onMeta: (meta) => {
+          setApiUsage(meta.remainingCalls, meta.usingSystemKey);
+        },
+      },
+      apiKey || undefined,
+      cardReversals,
+    );
+  };
 
   const handleStartNew = () => {
     resetSession();
-    router.push('/');
+    router.push("/");
   };
 
   const handleShare = async () => {
+    const shareText = `我的塔罗占卜结果\n\n问题：${question}\n\n${coreAdvice || "正在解析中..."}`;
+
     if (navigator.share) {
       try {
         await navigator.share({
-          title: '我的塔罗占卜结果',
-          text: `问题：${currentReading?.question}\n\n解读：${currentReading?.interpretation.slice(0, 100)}...`,
-          url: window.location.origin
+          title: "我的塔罗占卜结果",
+          text: shareText,
+          url: window.location.origin,
         });
       } catch (error) {
-        console.log('分享失败:', error);
+        console.log("分享失败:", error);
       }
     } else {
-      // 复制到剪贴板
-      const text = `我的塔罗占卜结果\n\n问题：${currentReading?.question}\n\n解读：${currentReading?.interpretation}`;
-      navigator.clipboard.writeText(text).then(() => {
-        alert('结果已复制到剪贴板');
+      navigator.clipboard.writeText(shareText).then(() => {
+        alert("结果已复制到剪贴板");
       });
     }
   };
 
-  if (!currentReading) {
+  // 检查必要数据并开始解析
+  useEffect(() => {
+    if (
+      !question ||
+      !recommendedSpread ||
+      !drawnCards.length ||
+      !cardReversals.length
+    ) {
+      router.push("/");
+      return;
+    }
+
+    // 预加载图片
+    const imageUrls = drawnCards.map((card) => card.image).filter(Boolean);
+
+    imageCache.preloadBatch(imageUrls).catch(console.warn);
+
+    // 立即显示卡牌并开始解析
+    setShowCards(true);
+    
+    // 很快开始分析，提升响应速度
+    const timer = setTimeout(() => {
+      if (!hasStartedAnalysis.current) {
+        startAnalysis();
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [question, recommendedSpread, drawnCards, cardReversals, router]);
+
+  if (!question || !recommendedSpread || !drawnCards.length) {
     return (
       <div className="min-h-screen mystical-bg flex items-center justify-center">
         <div className="text-center">
@@ -66,19 +154,19 @@ export default function ResultPage() {
   return (
     <div className="min-h-screen mystical-bg relative overflow-hidden">
       <div className="stars"></div>
-      
+
       <main className="relative z-10 min-h-screen px-4 py-8">
         {/* 顶部导航 */}
         <div className="flex justify-between items-center mb-8">
           <motion.button
-            onClick={() => router.push('/')}
+            onClick={() => router.push("/")}
             className="mystical-button p-3"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
             <ArrowLeft className="w-5 h-5" />
           </motion.button>
-          
+
           <div className="flex gap-3">
             <motion.button
               onClick={handleShare}
@@ -88,7 +176,7 @@ export default function ResultPage() {
             >
               <Share2 className="w-5 h-5" />
             </motion.button>
-            
+
             <motion.button
               onClick={handleStartNew}
               className="mystical-button p-3"
@@ -101,213 +189,202 @@ export default function ResultPage() {
         </div>
 
         <div className="max-w-4xl mx-auto">
-          {/* 标题和问题 */}
-          <motion.div
-            className="text-center mb-8"
+          {/* 1. 问题 */}
+          <motion.section
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.6 }}
+            className="text-center"
           >
-            <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-gradient-to-r from-purple-600 via-purple-500 to-purple-400 bg-clip-text mb-8">
-              你的塔罗解读
+            <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-gradient-to-r from-purple-600 via-purple-500 to-purple-400 bg-clip-text mb-4">
+              你的问题
             </h1>
-            <div className="mystical-card p-8 md:p-10">
-              <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">你的问题</h2>
-              <p className="text-gray-700 text-lg leading-relaxed">&quot;{currentReading.question}&quot;</p>
-            </div>
-          </motion.div>
-
-          {/* 牌阵和卡牌 */}
-          <motion.div
-            className="mystical-card p-8 mb-8"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            <div className="text-center mb-10">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
-                {currentReading.spread.name}
-              </h2>
-              <p className="text-gray-600 text-lg md:text-xl leading-relaxed max-w-3xl mx-auto">
-                {currentReading.spread.description}
+            <div className="mystical-card p-6 md:p-8">
+              <p className="text-gray-700 text-lg md:text-xl leading-relaxed font-medium">
+                &quot;{question}&quot;
               </p>
             </div>
-            
-            <div className="flex justify-center gap-6 md:gap-8 flex-wrap">
-              {currentReading.cards.map((card, index) => (
-                <ResultTarotCard
-                  key={card.id}
-                  card={card}
-                  position={currentReading.spread.positions[index]}
-                  index={index}
-                  isReversed={currentReading.cardReversals?.[index] || false}
-                />
-              ))}
-            </div>
-          </motion.div>
+          </motion.section>
 
-          {/* AI解读 */}
-          <motion.div
-            className="mystical-card p-8 mb-8"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-          >
-            <div className="flex items-center justify-center mb-8">
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center mr-4">
-                <BookOpen className="w-6 h-6 text-white" />
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
-                智能解读
-              </h2>
-            </div>
-            
-            <div className="prose max-w-none">
-              <div className="text-gray-700 text-lg leading-relaxed whitespace-pre-wrap bg-purple-50 border border-purple-200 rounded-xl p-6 md:p-8">
-                {showFullInterpretation 
-                  ? currentReading.interpretation 
-                  : currentReading.interpretation.slice(0, 300) + (currentReading.interpretation.length > 300 ? '...' : '')
-                }
-              </div>
-              
-              {currentReading.interpretation.length > 300 && (
-                <div className="text-center mt-6">
-                  <motion.button
-                    onClick={() => setShowFullInterpretation(!showFullInterpretation)}
-                    className="text-purple-600 hover:text-purple-700 font-semibold transition-colors bg-white border border-purple-200 rounded-lg px-6 py-2"
-                    whileHover={{ scale: 1.02 }}
-                  >
-                    {showFullInterpretation ? '收起' : '展开完整解读'}
-                  </motion.button>
-                </div>
-              )}
-            </div>
-          </motion.div>
-
-          {/* 建议 */}
-          <motion.div
-            className="mystical-card p-8 mb-8"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.7 }}
-          >
-            <div className="flex items-center justify-center mb-6">
-              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
-                <span className="text-white text-lg">💡</span>
-              </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                给你的建议
-              </h2>
-            </div>
-            <div className="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-6 md:p-8">
-              <p className="text-gray-700 text-lg leading-relaxed">
-                {currentReading.advice}
-              </p>
-            </div>
-          </motion.div>
-
-          {/* 卡牌详细含义 */}
-          <motion.div
-            className="space-y-4"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.9 }}
-          >
-            <div className="text-center mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                卡牌详细含义
-              </h2>
-            </div>
-            
-            {currentReading.cards.map((card, index) => (
-              <motion.div 
-                key={card.id} 
-                className="mystical-card p-6 md:p-8 hover:scale-[1.02] transition-transform"
-                initial={{ opacity: 0, y: 20 }}
+          {/* 2. 塔罗概览 */}
+          <AnimatePresence>
+            {showCards && (
+              <motion.section
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
+                exit={{ opacity: 0, y: -30 }}
+                transition={{ duration: 0.6 }}
+                className="mystical-card p-6 md:p-8"
               >
-                <div className="flex flex-col md:flex-row items-start gap-6">
-                  <div className="flex-shrink-0 text-center">
-                    <div className="w-20 h-28 md:w-24 md:h-32 mystical-card p-3 flex flex-col items-center justify-center mb-3">
-                      <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center mb-2">
-                        <div className="text-white text-lg">✨</div>
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 flex items-center justify-center gap-3">
+                    <Sparkles className="w-6 h-6 text-purple-500" />
+                    {recommendedSpread.name}
+                  </h2>
+                  <p className="text-gray-600 text-lg leading-relaxed max-w-3xl mx-auto">
+                    {recommendedSpread.description}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                  {drawnCards.map((card, index) => (
+                    <motion.div
+                      key={card.id}
+                      className="text-center"
+                      initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      transition={{ delay: index * 0.2 }}
+                    >
+                      {/* 卡牌 */}
+                      <div className="mb-4 flex justify-center">
+                        <ResultTarotCard
+                          card={card}
+                          position={recommendedSpread.positions[index]}
+                          index={index}
+                          isReversed={cardReversals[index] || false}
+                        />
                       </div>
-                      <div className="text-xs font-semibold text-gray-600 text-center leading-tight">
-                        {currentReading.spread.positions[index]}
+
+                      {/* 卡牌信息 */}
+                      <div className="bg-white/50 rounded-lg p-4 border border-purple-200">
+                        <h3 className="font-bold text-gray-800 mb-2">
+                          {card.name}
+                          {cardReversals[index] && (
+                            <span className="ml-2 text-amber-600 text-sm">
+                              (逆位)
+                            </span>
+                          )}
+                        </h3>
+                        <div className="flex flex-wrap justify-center gap-1 text-xs">
+                          {(cardReversals[index]
+                            ? card.keywordsReversed
+                            : card.keywordsUpright
+                          )
+                            .slice(0, 3)
+                            .map((keyword, i) => (
+                              <span
+                                key={i}
+                                className={`px-2 py-1 rounded-full ${
+                                  cardReversals[index]
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-purple-100 text-purple-700"
+                                }`}
+                              >
+                                {keyword}
+                              </span>
+                            ))}
+                        </div>
                       </div>
-                    </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.section>
+            )}
+          </AnimatePresence>
+
+          {/* 3. AI思考过程 */}
+          <AnimatePresence>
+            {showAnalysis && (
+              <motion.section
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -30 }}
+                transition={{ duration: 0.6 }}
+                className="mystical-card p-6 md:p-8"
+              >
+                <div className="flex items-center mb-6">
+                  <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center mr-4">
+                    <span className="text-white text-lg">🤖</span>
                   </div>
-                  
-                  <div className="flex-1">
-                    <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">
-                      {card.name} <span className="text-gray-500 font-medium">({card.nameEn})</span>
-                    </h3>
-                    
-                    <div className="mb-6">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-base font-semibold text-gray-700">关键词:</span>
-                        {currentReading.cardReversals?.[index] && (
-                          <span className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-200 text-amber-700 text-xs px-2 py-1 rounded-full font-medium">
-                            <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
-                            逆位
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {(currentReading.cardReversals?.[index] ? card.keywordsReversed : card.keywordsUpright).map((keyword, i) => (
-                          <span 
-                            key={i} 
-                            className={`inline-block border rounded-full px-3 py-1 text-sm font-medium ${
-                              currentReading.cardReversals?.[index] 
-                                ? 'bg-amber-50 border-amber-200 text-amber-700' 
-                                : 'bg-purple-100 border-purple-200 text-purple-700'
-                            }`}
-                          >
-                            {keyword}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                      <p className="text-gray-700 leading-relaxed">
-                        {currentReading.cardReversals?.[index] ? card.meaningReversed : card.meaningUpright}
+                  <div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+                      AI深度解析
+                    </h2>
+                    {isStreaming && (
+                      <p className="text-purple-600 text-sm font-medium">
+                        正在思考分析中...
                       </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6 md:p-8">
+                  <div className="prose max-w-none">
+                    <div className="text-gray-700 text-base md:text-lg leading-relaxed whitespace-pre-wrap">
+                      {analysisContent || streamingContent}
+                      {isStreaming && (
+                        <motion.span
+                          className="inline-block w-2 h-5 bg-purple-500 ml-1"
+                          animate={{ opacity: [1, 0, 1] }}
+                          transition={{ duration: 1, repeat: Infinity }}
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
-              </motion.div>
-            ))}
-          </motion.div>
+              </motion.section>
+            )}
+          </AnimatePresence>
+
+          {/* 4. 核心建议 */}
+          <AnimatePresence>
+            {(coreAdvice || streamComplete) && (
+              <motion.section
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -30 }}
+                transition={{ duration: 0.6 }}
+                className="text-center"
+              >
+                <div className="bg-gradient-to-r from-yellow-100 via-orange-100 to-yellow-100 border-2 border-yellow-300 rounded-xl p-6 md:p-8 shadow-lg">
+                  <div className="flex items-center justify-center mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center mr-4">
+                      <span className="text-white text-xl">💡</span>
+                    </div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+                      核心建议
+                    </h2>
+                  </div>
+
+                  <div className="bg-white/70 rounded-lg p-4 md:p-6">
+                    <p className="text-gray-800 text-lg md:text-xl font-semibold leading-relaxed">
+                      {coreAdvice || "正在生成核心建议..."}
+                    </p>
+                  </div>
+                </div>
+              </motion.section>
+            )}
+          </AnimatePresence>
 
           {/* 底部操作 */}
-          <motion.div
-            className="text-center mt-12"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 1.1 }}
-          >
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <motion.button
-                onClick={handleStartNew}
-                className="mystical-button px-10 py-4 text-lg font-bold"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                再次占卜
-              </motion.button>
-              
-              <motion.button
-                onClick={() => router.push('/')}
-                className="bg-white border-2 border-purple-300 text-purple-600 hover:bg-purple-50 rounded-xl px-10 py-4 text-lg font-bold transition-colors"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                返回首页
-              </motion.button>
-            </div>
-          </motion.div>
+          {streamComplete && (
+            <motion.div
+              className="text-center pt-8"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+            >
+              <div className="flex flex-col sm:flex-row justify-center">
+                {/* <motion.button
+                  onClick={handleStartNew}
+                  className="mystical-button px-8 py-4 text-lg font-bold"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  再次占卜
+                </motion.button> */}
+
+                <motion.button
+                  onClick={() => router.push("/")}
+                  className="bg-white border-2 border-purple-300 text-purple-600 hover:bg-purple-50 rounded-xl px-8 py-4 text-lg font-bold transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  返回首页
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
         </div>
       </main>
     </div>
