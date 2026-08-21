@@ -35,16 +35,25 @@ export async function redisCommand(
   commands: unknown[][],
 ): Promise<RedisCommandResult[]> {
   const { url, token } = getRedisConfig();
-  const res = await fetch(url, {
+  const base = url.replace(/\/+$/, "");
+  const isPipeline = commands.length > 1;
+  // Upstash REST：单命令 POST 基础 URL；pipeline POST /pipeline
+  const endpoint = isPipeline ? `${base}/pipeline` : base;
+  const body = isPipeline ? commands : commands[0];
+
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(commands),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
-    throw new Error(`Redis error: ${res.status}`);
+    const text = await res.text();
+    throw new Error(`Redis error: ${res.status}: ${text.slice(0, 200)}`);
   }
-  return res.json() as Promise<RedisCommandResult[]>;
+  const data = await res.json();
+  // 单命令返回 {result}，pipeline 返回 [{result},...]
+  return isPipeline ? data : [data];
 }
