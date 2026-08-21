@@ -4,7 +4,7 @@
 // - Redis 版：INCR + EXPIRE（滑动窗口，跨实例一致），通过 Upstash REST 直连
 // - 工厂 getRateLimiter()：有 UPSTASH_* 环境变量返回 Redis 版，否则内存版
 
-import { redisCommand } from "./upstash";
+import { hasRedisConfig, redisCommand } from "./upstash";
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -96,9 +96,7 @@ let cachedLimiter: RateLimiter | null = null;
 /** 工厂（单例；force 用于测试重建） */
 export function getRateLimiter(force = false): RateLimiter {
   if (cachedLimiter && !force) return cachedLimiter;
-  const hasRedis = Boolean(
-    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
-  );
+  const hasRedis = hasRedisConfig();
   cachedLimiter = hasRedis
     ? createRedisRateLimiter({ limit: 5, windowMs: 3 * 60 * 60 * 1000 })
     : createRateLimiter({ limit: 5, windowMs: 3 * 60 * 60 * 1000 });

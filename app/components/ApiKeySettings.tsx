@@ -7,20 +7,37 @@ import { motion, AnimatePresence } from "framer-motion";
 interface ApiKeySettingsProps {
   onApiKeyChange: (apiKey: string, remember?: boolean) => void;
   currentApiKey: string;
-  remainingCalls?: number | null;
-  usingSystemKey?: boolean;
   trialUsed?: boolean;
+  /** 受控打开（首页在试用用完时自动弹出） */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** 弹窗顶部提示文案 */
+  notice?: string | null;
 }
 
-export function ApiKeySettings({ onApiKeyChange, currentApiKey, remainingCalls, usingSystemKey, trialUsed }: ApiKeySettingsProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function ApiKeySettings({
+  onApiKeyChange,
+  currentApiKey,
+  trialUsed,
+  open,
+  onOpenChange,
+  notice,
+}: ApiKeySettingsProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const [apiKey, setApiKey] = useState(currentApiKey);
   const [showKey, setShowKey] = useState(false);
   const [remember, setRemember] = useState(true);
 
+  const isControlled = open !== undefined;
+  const isOpen = isControlled ? open : internalOpen;
+  const setOpen = (v: boolean) => {
+    if (isControlled) onOpenChange?.(v);
+    else setInternalOpen(v);
+  };
+
   const handleSave = () => {
     onApiKeyChange(apiKey, remember);
-    setIsOpen(false);
+    setOpen(false);
   };
 
   const handleClear = () => {
@@ -32,7 +49,7 @@ export function ApiKeySettings({ onApiKeyChange, currentApiKey, remainingCalls, 
     <>
       {/* 设置按钮 */}
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={() => setOpen(true)}
         className="fixed top-4 right-4 z-50 p-3 bg-white border border-purple-200 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:bg-purple-50"
         title="API设置"
       >
@@ -49,7 +66,7 @@ export function ApiKeySettings({ onApiKeyChange, currentApiKey, remainingCalls, 
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-              onClick={() => setIsOpen(false)}
+              onClick={() => setOpen(false)}
             >
               {/* 弹窗内容 */}
               <motion.div
@@ -68,12 +85,19 @@ export function ApiKeySettings({ onApiKeyChange, currentApiKey, remainingCalls, 
                     </h3>
                   </div>
                   <button
-                    onClick={() => setIsOpen(false)}
+                    onClick={() => setOpen(false)}
                     className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
                   >
                     <X className="w-5 h-5 text-gray-500" />
                   </button>
                 </div>
+
+                {/* 提示条（如试用用完） */}
+                {notice && (
+                  <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700 leading-relaxed">
+                    {notice}
+                  </div>
+                )}
 
                 {/* 说明 */}
                 <div className="mb-6 p-4 bg-purple-50 rounded-lg">
@@ -81,9 +105,18 @@ export function ApiKeySettings({ onApiKeyChange, currentApiKey, remainingCalls, 
                     💡 API密钥说明
                   </h4>
                   <ul className="text-xs text-purple-700 space-y-1">
-                    <li>• 未配置密钥：使用系统密钥，每3小时限制5次</li>
+                    <li>• 未配置密钥：可免费试用 1 次（每个设备仅一次）</li>
                     <li>• 配置个人密钥：无限制，费用自承担</li>
-                    <li>• 获取密钥：访问 <a href="https://platform.deepseek.com" target="_blank" className="underline">DeepSeek官网</a></li>
+                    <li>
+                      • 获取密钥：访问{" "}
+                      <a
+                        href="https://platform.deepseek.com"
+                        target="_blank"
+                        className="underline"
+                      >
+                        DeepSeek官网
+                      </a>
+                    </li>
                   </ul>
                 </div>
 
@@ -138,7 +171,9 @@ export function ApiKeySettings({ onApiKeyChange, currentApiKey, remainingCalls, 
                       {currentApiKey ? (
                         <span className="text-green-600">使用个人密钥</span>
                       ) : (
-                        <span className="text-orange-600">使用系统密钥（限制5次/3小时）</span>
+                        <span className="text-orange-600">
+                          使用系统密钥（免费试用 1 次）
+                        </span>
                       )}
                     </div>
                     <div>
@@ -151,14 +186,6 @@ export function ApiKeySettings({ onApiKeyChange, currentApiKey, remainingCalls, 
                         <span className="text-green-600">可用 1 次</span>
                       )}
                     </div>
-                    {usingSystemKey && remainingCalls !== null && (
-                      <div>
-                        <strong>剩余次数：</strong>
-                        <span className={`${remainingCalls === 0 ? 'text-red-600' : remainingCalls! <= 2 ? 'text-orange-600' : 'text-green-600'}`}>
-                          {remainingCalls}/5 次
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </div>
 

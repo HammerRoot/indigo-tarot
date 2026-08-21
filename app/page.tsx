@@ -21,11 +21,11 @@ export default function Home() {
   const [localApiKey, setLocalApiKey] = useState("");
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsNotice, setSettingsNotice] = useState<string | null>(null);
   const {
     setQuestion,
     resetSession,
-    remainingCalls,
-    usingSystemKey,
     trialUsed,
     setApiKey,
   } = useTarotStore();
@@ -84,11 +84,23 @@ export default function Home() {
   const handleApiKeyChange = (newApiKey: string, remember?: boolean) => {
     setLocalApiKey(newApiKey);
     setApiKey(newApiKey, remember); // store 内部加密持久化
+    if (newApiKey) {
+      setSettingsNotice(null); // 已填入 Key，清除试用提示
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!localQuestion.trim()) return;
+
+    // 试用已用完且未填个人 Key → 弹出 API 设置并提示
+    if (trialUsed && !localApiKey) {
+      setSettingsNotice(
+        "免费试用次数已用完，请填入你的 DeepSeek API Key 后继续占卜。",
+      );
+      setSettingsOpen(true);
+      return;
+    }
 
     setIsLoading(true);
 
@@ -116,9 +128,10 @@ export default function Home() {
       <ApiKeySettings
         currentApiKey={localApiKey}
         onApiKeyChange={handleApiKeyChange}
-        remainingCalls={remainingCalls}
-        usingSystemKey={usingSystemKey}
         trialUsed={trialUsed}
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        notice={settingsNotice}
       />
       <main className="relative z-10 min-h-screen flex items-center justify-center px-4 py-8 md:py-12">
         <div className="max-w-2xl w-full">

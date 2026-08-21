@@ -5,7 +5,7 @@
 // - 开关可关闭/开启：关闭期间不计数不熔断；重新开启后从关闭时刻的计数继续（不清零）；
 // - Redis（Upstash）跨实例 + 持久化（重启不清零）；未配置回退内存（单实例，开发用）。
 
-import { redisCommand } from "./upstash";
+import { hasRedisConfig, redisCommand } from "./upstash";
 
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 const DEFAULT_LIMIT = 50;
@@ -149,9 +149,7 @@ let cachedGuard: QuotaGuard | null = null;
 /** 工厂（单例；force 用于测试重建） */
 export function getQuotaGuard(force = false): QuotaGuard {
   if (cachedGuard && !force) return cachedGuard;
-  const hasRedis = Boolean(
-    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
-  );
+  const hasRedis = hasRedisConfig();
   cachedGuard = hasRedis ? createRedisQuotaGuard() : createQuotaGuard();
   return cachedGuard;
 }

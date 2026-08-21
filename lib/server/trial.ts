@@ -5,7 +5,7 @@
 // - Redis（生产）跨实例一致；未配置回退内存（单实例，诚实降级）；
 // - 边界：清除 localStorage / 换浏览器 / 无痕可绕过（D9），IP 限流为辅助防线。
 
-import { redisCommand } from "./upstash";
+import { hasRedisConfig, redisCommand } from "./upstash";
 
 export const TRIAL_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 天
 const TRIAL_TTL_S = Math.floor(TRIAL_TTL_MS / 1000);
@@ -69,9 +69,7 @@ let cachedGuard: TrialGuard | null = null;
 /** 工厂（单例；force 用于测试重建） */
 export function getTrialGuard(force = false): TrialGuard {
   if (cachedGuard && !force) return cachedGuard;
-  const hasRedis = Boolean(
-    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
-  );
+  const hasRedis = hasRedisConfig();
   cachedGuard = hasRedis ? createRedisTrialGuard() : createTrialGuard();
   return cachedGuard;
 }
