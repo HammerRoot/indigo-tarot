@@ -1,4 +1,5 @@
 import { TarotCard } from './tarot-data';
+import { getOrCreateDeviceId } from './deviceId';
 
 export interface DeepSeekResponse {
   choices: Array<{
@@ -57,7 +58,11 @@ export interface StreamCallbacks {
   onContent: (content: string) => void;
   onComplete: () => void;
   onError: (error: string) => void;
-  onMeta?: (meta: { usingSystemKey: boolean; remainingCalls: number | null }) => void;
+  onMeta?: (meta: {
+    usingSystemKey: boolean;
+    remainingCalls: number | null;
+    trialUsed?: boolean;
+  }) => void;
 }
 
 // 流式生成塔罗解读
@@ -108,12 +113,21 @@ ${cardInfo}
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-Device-Id': getOrCreateDeviceId(),
       },
       body: JSON.stringify({ prompt, userApiKey }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
+      // 免费试用已用完 / 每日配额熔断：专用错误码，由 UI 展示引导文案
+      if (
+        errorData.error === 'trial_used' ||
+        errorData.error === 'quota_exhausted'
+      ) {
+        callbacks.onError(errorData.error);
+        return;
+      }
       if (errorData.needApiKey) {
         throw new Error(`API_KEY_NEEDED:${errorData.message}`);
       }
@@ -149,7 +163,8 @@ ${cardInfo}
             } else if (parsed.type === 'meta') {
               callbacks.onMeta?.({
                 usingSystemKey: parsed.usingSystemKey,
-                remainingCalls: parsed.remainingCalls
+                remainingCalls: parsed.remainingCalls,
+                trialUsed: parsed.trialUsed,
               });
             } else if (parsed.type === 'complete') {
               callbacks.onComplete();

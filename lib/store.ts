@@ -1,6 +1,24 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { TarotCard, tarotCards } from './tarot-data';
+import {
+  decryptApiKey,
+  encryptApiKey,
+  generateSessionKey,
+  importSessionKey,
+} from './apiKeyCrypto';
+
+// 会话密钥在 sessionStorage 中的键名（会话级，关闭浏览器即失效）
+const SESSION_KEY_NAME = 'tarot-session-key';
+
+async function ensureSessionKey(): Promise<CryptoKey> {
+  let b64 = sessionStorage.getItem(SESSION_KEY_NAME);
+  if (!b64) {
+    b64 = await generateSessionKey();
+    sessionStorage.setItem(SESSION_KEY_NAME, b64);
+  }
+  return importSessionKey(b64);
+}
 
 // 牌阵类型定义
 export interface TarotSpread {
@@ -32,7 +50,12 @@ interface TarotStore {
   
   // API Key
   apiKey: string;
-  setApiKey: (apiKey: string) => void;
+  // 加密后的 API Key（localStorage 持久化；明文 apiKey 仅存内存）
+  encryptedApiKey: string | null;
+  setApiKey: (apiKey: string, remember?: boolean) => Promise<void>;
+  // 从存储恢复：同一会话（sessionStorage 密钥在）→ 解密恢复；否则清空并返回 false
+  initApiKeyFromStorage: () => Promise<boolean>;
+  clearStoredKey: () => Promise<void>;
   
   // 推荐的牌阵
   recommendedSpread: TarotSpread | null;
@@ -62,7 +85,8 @@ interface TarotStore {
   // 剩余次数状态
   remainingCalls: number | null;
   usingSystemKey: boolean;
-  setApiUsage: (remainingCalls: number | null, usingSystemKey: boolean) => void;
+  trialUsed: boolean;
+  setApiUsage: (remainingCalls: number | null, usingSystemKey: boolean, trialUsed?: boolean) => void;
   
   // 重置状态
   resetSession: () => void;
@@ -118,10 +142,11 @@ export const tarotSpreads: TarotSpread[] = [
 // 创建状态管理器
 export const useTarotStore = create<TarotStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // 初始状态
       question: '',
       apiKey: '',
+      encryptedApiKey: null,
       recommendedSpread: null,
       drawnCards: [],
       cardReversals: [],
@@ -130,11 +155,51 @@ export const useTarotStore = create<TarotStore>()(
       isLoading: false,
       remainingCalls: null,
       usingSystemKey: false,
+      trialUsed: false,
 
       // 状态更新函数
       setQuestion: (question) => set({ question }),
       
-      setApiKey: (apiKey) => set({ apiKey }),
+      setApiKey: async (apiKey, remember = true) => {
+        set({ apiKey });
+        if (remember && apiKey) {
+          try {
+            const key = await ensureSessionKey();
+            const encrypted = await encryptApiKey(apiKey, key);
+            set({ encryptedApiKey: encrypted });
+          } catch (error) {
+            console.error('API Key 加密保存失败:', error);
+            set({ encryptedApiKey: null });
+          }
+        } else {
+          set({ encryptedApiKey: null });
+        }
+      },
+
+      initApiKeyFromStorage: async () => {
+        const sessionKeyB64 = sessionStorage.getItem(SESSION_KEY_NAME);
+        const stored = get().encryptedApiKey;
+        if (!sessionKeyB64 || !stored) {
+          // 会话密钥缺失（如关闭浏览器后）→ 密文不可解，清空并提示重输
+          set({ encryptedApiKey: null, apiKey: '' });
+          return false;
+        }
+        try {
+          const key = await importSessionKey(sessionKeyB64);
+          const plain = await decryptApiKey(stored, key);
+          set({ apiKey: plain });
+          return true;
+        } catch (error) {
+          console.error('API Key 解密失败，已清除存储:', error);
+          set({ encryptedApiKey: null, apiKey: '' });
+          return false;
+        }
+      },
+
+      clearStoredKey: async () => {
+        sessionStorage.removeItem(SESSION_KEY_NAME);
+        set({ encryptedApiKey: null });
+      },
       
       setRecommendedSpread: (spread) => set({ recommendedSpread: spread }),
       
@@ -154,7 +219,11 @@ export const useTarotStore = create<TarotStore>()(
       
       setLoading: (loading) => set({ isLoading: loading }),
       
-      setApiUsage: (remainingCalls, usingSystemKey) => set({ remainingCalls, usingSystemKey }),
+      setApiUsage: (remainingCalls, usingSystemKey, trialUsed) => set({
+        remainingCalls,
+        usingSystemKey,
+        trialUsed: trialUsed ?? false,
+      }),
       
       resetSession: () => set({
         question: '',
@@ -173,8 +242,18 @@ export const useTarotStore = create<TarotStore>()(
     }),
     {
       name: 'tarot-store',
-      // 持久化历史记录和API Key
-      partialize: (state) => ({ readings: state.readings, apiKey: state.apiKey })
+      // 持久化历史记录与加密后的 API Key（明文 apiKey 不落盘）
+      partialize: (state) => ({
+        readings: state.readings,
+        encryptedApiKey: state.encryptedApiKey,
+      }),
+      // 丢弃旧版本持久化中的明文 apiKey 字段，防止明文进入内存态
+      merge: (persisted, current) => {
+        const persistedState = (persisted ?? {}) as Partial<TarotStore>;
+        const { apiKey: _legacyPlainApiKey, ...rest } = persistedState;
+        void _legacyPlainApiKey;
+        return { ...current, ...rest };
+      },
     }
   )
 );

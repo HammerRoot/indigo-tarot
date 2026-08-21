@@ -41,17 +41,21 @@
 
 3. **配置环境变量**
 
-   创建 `.env.local` 文件：
+   复制 `.env.example` 为 `.env.local` 并填写：
 
-   ```env
-   DEEPSEEK_API_KEY=your_deepseek_api_key_here
+   ```bash
+   cp .env.example .env.local
    ```
+
+   必填变量：`DEEPSEEK_API_KEY`（系统 Key）、`ADMIN_TOKEN`（管理接口认证）。完整清单见 `.env.example`。
 
 4. **启动开发服务器**
 
    ```bash
    npm run dev
    ```
+
+> 📦 **部署到 Vercel**：见 [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)（环境变量配置、Upstash、成本控制、管理接口）。
 
 5. **访问应用**
 
@@ -130,8 +134,9 @@
 
 ## 🔒 隐私与数据
 
-- **本地存储**: 历史记录仅保存在用户浏览器本地
-- **API安全**: DeepSeek API密钥仅在服务端使用
+- **本地存储**: 历史记录与 API Key 仅保存在用户浏览器本地；API Key 经 **AES-GCM 加密**后存储，加密密钥仅存于当前会话（关闭浏览器后需重新输入）
+- **API安全**: DeepSeek API 密钥仅在服务端调用时使用；未配置个人密钥时使用系统密钥（生产环境每 3 小时限 5 次）
+- **加密边界**: 浏览器端加密可防静态窃取（扩展扫描/磁盘取证），**无法防恶意脚本/浏览器扩展**；AI 解析内容渲染前经消毒处理
 - **无用户追踪**: 不收集任何个人敏感信息
 
 ## 🤝 贡献指南

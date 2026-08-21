@@ -5,19 +5,21 @@ import { Settings, Key, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ApiKeySettingsProps {
-  onApiKeyChange: (apiKey: string) => void;
+  onApiKeyChange: (apiKey: string, remember?: boolean) => void;
   currentApiKey: string;
   remainingCalls?: number | null;
   usingSystemKey?: boolean;
+  trialUsed?: boolean;
 }
 
-export function ApiKeySettings({ onApiKeyChange, currentApiKey, remainingCalls, usingSystemKey }: ApiKeySettingsProps) {
+export function ApiKeySettings({ onApiKeyChange, currentApiKey, remainingCalls, usingSystemKey, trialUsed }: ApiKeySettingsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [apiKey, setApiKey] = useState(currentApiKey);
   const [showKey, setShowKey] = useState(false);
+  const [remember, setRemember] = useState(true);
 
   const handleSave = () => {
-    onApiKeyChange(apiKey);
+    onApiKeyChange(apiKey, remember);
     setIsOpen(false);
   };
 
@@ -108,6 +110,26 @@ export function ApiKeySettings({ onApiKeyChange, currentApiKey, remainingCalls, 
                   </div>
                 </div>
 
+                {/* 记住 Key（加密保存） */}
+                <div className="mb-6">
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={remember}
+                      onChange={(e) => setRemember(e.target.checked)}
+                      className="mt-1 accent-purple-600"
+                    />
+                    <span className="text-sm text-gray-700">
+                      在本设备记住 Key（加密保存）
+                    </span>
+                  </label>
+                  <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                    加密保存可防止静态窃取（如浏览器扩展扫描、磁盘取证），
+                    但无法防恶意脚本/浏览器扩展在会话期间的读取。
+                    关闭后 Key 仅保存在当前会话，刷新页面需重新输入。
+                  </p>
+                </div>
+
                 {/* 当前状态 */}
                 <div className="mb-6 p-3 bg-gray-50 rounded-lg">
                   <div className="text-sm text-gray-600 space-y-1">
@@ -117,6 +139,16 @@ export function ApiKeySettings({ onApiKeyChange, currentApiKey, remainingCalls, 
                         <span className="text-green-600">使用个人密钥</span>
                       ) : (
                         <span className="text-orange-600">使用系统密钥（限制5次/3小时）</span>
+                      )}
+                    </div>
+                    <div>
+                      <strong>免费试用：</strong>
+                      {trialUsed ? (
+                        <span className="text-orange-600">
+                          已用完（请输入个人密钥继续）
+                        </span>
+                      ) : (
+                        <span className="text-green-600">可用 1 次</span>
                       )}
                     </div>
                     {usingSystemKey && remainingCalls !== null && (

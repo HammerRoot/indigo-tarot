@@ -26,18 +26,23 @@ export default function Home() {
     resetSession,
     remainingCalls,
     usingSystemKey,
+    trialUsed,
     setApiKey,
   } = useTarotStore();
   const router = useRouter();
 
-  // 从 localStorage 加载 API Key
+  // 从加密存储恢复 API Key（同一会话刷新自动恢复；失败则提示重输）
   useEffect(() => {
-    const savedApiKey = localStorage.getItem("deepseek_api_key");
-    if (savedApiKey) {
-      setLocalApiKey(savedApiKey);
-      setApiKey(savedApiKey); // 同时更新store中的API key
-    }
-  }, [setApiKey]);
+    const restoreApiKey = async () => {
+      const ok = await useTarotStore.getState().initApiKeyFromStorage();
+      if (ok) {
+        setLocalApiKey(useTarotStore.getState().apiKey);
+      }
+      // 旧数据迁移：清理历史版本手动存储的明文 deepseek_api_key
+      localStorage.removeItem("deepseek_api_key");
+    };
+    restoreApiKey();
+  }, []);
 
   // 获取推荐问题
   useEffect(() => {
@@ -75,15 +80,10 @@ export default function Home() {
     fetchSuggestedQuestions();
   }, []);
 
-  // 保存 API Key 到 localStorage
-  const handleApiKeyChange = (newApiKey: string) => {
+  // 保存 API Key（加密存储由 store 内部处理，仅经单一来源）
+  const handleApiKeyChange = (newApiKey: string, remember?: boolean) => {
     setLocalApiKey(newApiKey);
-    setApiKey(newApiKey); // 同时更新store中的API key
-    if (newApiKey) {
-      localStorage.setItem("deepseek_api_key", newApiKey);
-    } else {
-      localStorage.removeItem("deepseek_api_key");
-    }
+    setApiKey(newApiKey, remember); // store 内部加密持久化
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,6 +118,7 @@ export default function Home() {
         onApiKeyChange={handleApiKeyChange}
         remainingCalls={remainingCalls}
         usingSystemKey={usingSystemKey}
+        trialUsed={trialUsed}
       />
       <main className="relative z-10 min-h-screen flex items-center justify-center px-4 py-8 md:py-12">
         <div className="max-w-2xl w-full">
