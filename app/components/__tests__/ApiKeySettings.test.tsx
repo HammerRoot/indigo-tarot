@@ -53,7 +53,7 @@ describe("R1-D ApiKeySettings 掩码与记住开关", () => {
     const onChange = vi.fn();
     render(<ApiKeySettings currentApiKey="sk-1" onApiKeyChange={onChange} />);
     openModal();
-    fireEvent.click(screen.getByText("清除"));
+    fireEvent.click(screen.getByText("清除已保存的api key"));
     expect(onChange).toHaveBeenCalledWith("");
   });
 

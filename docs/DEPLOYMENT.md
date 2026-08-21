@@ -34,16 +34,29 @@ vercel
 
 ### 2. 配置环境变量
 
-控制台：项目 → **Settings → Environment Variables**，逐个添加（见上表），环境勾选 **Production**（Preview 按需）。
+**方式 A（控制台）**：项目 → **Settings → Environment Variables**，逐个添加（见上表），环境勾选 **Production**（Preview 按需）。
 
-⚠️ 配置完成后回到 **Deployments → 最新部署 → ⋯ → Redeploy**，环境变量**重新部署后才生效**。
+**方式 B（CLI，推荐脚本化）**：
 
-### 3. 获取 Upstash Redis（生产强烈推荐）
+```bash
+# 注意：vercel 部署命令的 --env 参数是「临时」的（仅当次构建生效，不持久化）。
+# 持久化环境变量必须用 vercel env add：
+npx vercel env add DEEPSEEK_API_KEY production --value "sk-xxx" --sensitive
+npx vercel env add ADMIN_TOKEN production --value "$(openssl rand -hex 16)" --sensitive
+npx vercel env add QUOTA_DAILY_LIMIT production --value "50" --no-sensitive
 
-不配置 Upstash 时，试用/限流/配额计数走**单实例内存**：多实例部署下不共享、重启即清零（含免费试用"一人一次"和每日 50 次配额都会失效）。
+# 覆盖已存在的变量加 --force：
+npx vercel env add DEEPSEEK_API_KEY production --value "sk-new" --sensitive --force
+```
 
-- 方式 A（最省事）：Vercel 项目 → **Integrations → Marketplace** → 搜索 **Upstash** → 安装，自动创建 Redis 并注入两个变量。
-- 方式 B：https://console.upstash.com → 创建 Redis → 复制 **REST URL**（`https://xxx.upstash.io`）与 **REST Token** → 手动填入 Vercel。
+⚠️ 无论哪种方式，配置完成后回到 **Deployments → 最新部署 → ⋯ → Redeploy**，环境变量**重新部署后才生效**。
+
+### 3. 获取 Redis（Vercel KV / Upstash，生产强烈推荐）
+
+不配置 Redis 时，试用/限流/配额计数走**单实例内存**：多实例部署下不共享、重启即清零（含免费试用"一人一次"和每日 50 次配额都会失效）。
+
+- **方式 A（最省事，推荐）**：Vercel 项目 → **Integrations → Marketplace** → 搜索 **Upstash** → 安装「Upstash for Redis」→ 配置区域 → 添加产品。Vercel 会自动创建 Redis 并注入变量。注意：Vercel 集成注入的变量名是 **`KV_REST_API_URL` / `KV_REST_API_TOKEN`**（代码已兼容，优先识别；同时兼容 `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`）。
+- 方式 B：https://console.upstash.com → 创建 Redis → 复制 **REST URL**（`https://xxx.upstash.io`）与 **REST Token** → 用 `vercel env add UPSTASH_REDIS_REST_URL production --value "..." --sensitive` 等命令手动注入。
 
 ## 三、成本控制（重要）
 

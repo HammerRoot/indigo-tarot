@@ -163,8 +163,16 @@ export function ApiKeySettings({
                   </p>
                 </div>
 
+                {/* 保存按钮（当前状态上方，全宽） */}
+                <button
+                  onClick={handleSave}
+                  className="w-full mb-4 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                >
+                  保存
+                </button>
+
                 {/* 当前状态 */}
-                <div className="mb-6 p-3 bg-gray-50 rounded-lg">
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                   <div className="text-sm text-gray-600 space-y-1">
                     <div>
                       <strong>当前状态：</strong>
@@ -189,21 +197,13 @@ export function ApiKeySettings({
                   </div>
                 </div>
 
-                {/* 按钮组 */}
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleClear}
-                    className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    清除
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                  >
-                    保存
-                  </button>
-                </div>
+                {/* 清除按钮（当前状态下方，全宽） */}
+                <button
+                  onClick={handleClear}
+                  className="w-full px-4 py-3 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  清除已保存的api key
+                </button>
               </motion.div>
             </motion.div>
           </>
