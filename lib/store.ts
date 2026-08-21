@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { TarotCard, tarotCards } from './tarot-data';
+import { shuffle } from './shuffle';
+import { recommendSpreadId } from './spread';
 import {
   decryptApiKey,
   encryptApiKey,
@@ -234,11 +236,8 @@ export const useTarotStore = create<TarotStore>()(
         isLoading: false
       }),
       
-      // 工具函数
-      getRandomCards: (count) => {
-        const shuffled = [...tarotCards].sort(() => Math.random() - 0.5);
-        return shuffled.slice(0, count);
-      }
+      // 工具函数（Fisher-Yates 均匀洗牌，规格 O4）
+      getRandomCards: (count) => shuffle(tarotCards).slice(0, count),
     }),
     {
       name: 'tarot-store',
@@ -258,33 +257,8 @@ export const useTarotStore = create<TarotStore>()(
   )
 );
 
-// 牌阵推荐逻辑
+// 牌阵推荐逻辑（评分制，规格 G1：委托 lib/spread.ts 纯函数）
 export function recommendSpread(question: string): TarotSpread {
-  const lowerQuestion = question.toLowerCase();
-  
-  // 关键词匹配
-  if (lowerQuestion.includes('爱情') || lowerQuestion.includes('恋爱') || 
-      lowerQuestion.includes('感情') || lowerQuestion.includes('关系') ||
-      lowerQuestion.includes('喜欢') || lowerQuestion.includes('爱')) {
-    return tarotSpreads.find(s => s.id === 'relationship-cross') || tarotSpreads[1];
-  }
-  
-  if (lowerQuestion.includes('选择') || lowerQuestion.includes('决定') || 
-      lowerQuestion.includes('应该') || lowerQuestion.includes('还是') ||
-      lowerQuestion.includes('工作') || lowerQuestion.includes('事业')) {
-    return tarotSpreads.find(s => s.id === 'decision-making') || tarotSpreads[3];
-  }
-  
-  if (lowerQuestion.includes('未来') || lowerQuestion.includes('将来') || 
-      lowerQuestion.includes('发展') || lowerQuestion.includes('趋势')) {
-    return tarotSpreads.find(s => s.id === 'past-present-future') || tarotSpreads[1];
-  }
-  
-  if (lowerQuestion.includes('人生') || lowerQuestion.includes('命运') || 
-      lowerQuestion.includes('指引') || question.length > 50) {
-    return tarotSpreads.find(s => s.id === 'life-guidance') || tarotSpreads[4];
-  }
-  
-  // 默认返回单张牌
-  return tarotSpreads[0];
+  const spreadId = recommendSpreadId(question);
+  return tarotSpreads.find((s) => s.id === spreadId) ?? tarotSpreads[0];
 }

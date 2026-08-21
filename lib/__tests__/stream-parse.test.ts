@@ -80,6 +80,17 @@ describe("O3 parseStreamContent", () => {
     expect(r.coreAdvice).toBeNull();
   });
 
+  it("仅核心建议节（无 🔮 节）→ analysis 为 null（G2 降级场景）", () => {
+    const onlyAdvice = [
+      "## 💡 核心建议",
+      "",
+      "一句话建议。",
+    ].join("\n");
+    const r = parseStreamContent(onlyAdvice);
+    expect(r.analysis).toBeNull();
+    expect(r.coreAdvice).toContain("一句话建议。");
+  });
+
   it("半截标题容错（不抛错）", () => {
     const cases = [
       "## 💡",

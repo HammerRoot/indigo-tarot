@@ -11,6 +11,7 @@ import { ResultTarotCard } from "@/app/components/ResultTarotCard";
 import { MarkdownRenderer } from "@/app/components/MarkdownRenderer";
 import { imageCache } from "@/lib/imageCache";
 import { parseStreamContent, stripAdviceSection } from "@/lib/stream-parse";
+import { gridClassFor } from "@/lib/utils";
 
 export default function ResultPage() {
   const router = useRouter();
@@ -256,11 +257,9 @@ export default function ResultPage() {
                 {/* 牌阵布局 - 使用Grid布局 */}
                 <div className="max-w-5xl mx-auto">
                   <div
-                    className={`grid gap-4 justify-items-center ${
-                      drawnCards.length > 4
-                        ? `grid-cols-${drawnCards.length}`
-                        : "grid-cols-4"
-                    } ${drawnCards.length > 4 ? "grid-rows-2" : ""}`}
+                    className={`grid gap-4 justify-items-center ${gridClassFor(
+                      drawnCards.length,
+                    )} ${drawnCards.length > 4 ? "grid-rows-2" : ""}`}
                   >
                     {drawnCards.map((card, index) => (
                       <motion.div
@@ -375,6 +374,11 @@ export default function ResultPage() {
                   {parsed.coreAdvice ? (
                     // Markdown 渲染：AI 输出的 **粗体**/换行正常展示（规格 R3）
                     <MarkdownRenderer content={parsed.coreAdvice} />
+                  ) : streamComplete ? (
+                    // 流完成但 AI 未输出 💡 节 → 优雅降级兜底文案（规格 G2）
+                    <p className="text-gray-800 text-lg md:text-xl font-semibold leading-relaxed">
+                      请结合以上解析，听从内心的声音
+                    </p>
                   ) : (
                     <p className="text-gray-800 text-lg md:text-xl font-semibold leading-relaxed">
                       正在生成核心建议...

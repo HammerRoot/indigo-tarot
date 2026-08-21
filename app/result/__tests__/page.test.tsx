@@ -115,4 +115,38 @@ describe("O3 结果页流式解析与展示", () => {
     // 页面中不应出现原样星号
     expect(screen.queryByText(/\*\*/)).toBeNull();
   });
+
+  it("G2 完成后无 💡 节 → 核心建议区显示兜底文案", async () => {
+    const callbacks = await renderAndGetCallbacks();
+    act(() => {
+      callbacks.onContent("## 🔮 深度解析过程\n\n分析正文，但模型没有输出核心建议小节。\n\n");
+      callbacks.onComplete();
+    });
+    // 兜底文案（streamComplete && !coreAdvice）
+    expect(screen.getByText(/请结合以上解析，听从内心的声音/)).toBeInTheDocument();
+  });
+
+  it("O1 五张牌阵容器包含字面量 grid-cols-5", async () => {
+    streamMock.mockClear();
+    useTarotStore.setState({
+      question: "选择问题",
+      recommendedSpread: {
+        id: "decision-making",
+        name: "选择之路",
+        description: "五张牌阵",
+        cardCount: 5,
+        positions: ["现状", "选项A", "选项B", "影响因素", "建议"],
+        category: [],
+      },
+      drawnCards: tarotCards.slice(0, 5),
+      cardReversals: [false, false, false, false, false],
+      apiKey: "",
+      encryptedApiKey: null,
+    });
+    render(<ResultPage />);
+    await waitFor(() => expect(streamMock).toHaveBeenCalled());
+    // 容器类名包含字面量 grid-cols-5（Tailwind 可扫描生成）
+    const grid = document.querySelector(".grid.justify-items-center");
+    expect(grid?.className).toContain("grid-cols-5");
+  });
 });

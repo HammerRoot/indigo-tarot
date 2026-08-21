@@ -23,11 +23,11 @@
 | R1 | API Key 安全加固（XSS 消毒 + 加密存储 + 纵深防御） | 🔴 | 安全 | ✅ 完成 |
 | R3 | 系统 Key 保护：免费试用一次 + 限流加固 | 🔴 | 安全 | ✅ 完成 |
 | R4 | 移除模块级 setInterval | 🔴 | 安全 | ✅ 完成 |
-| O1 | 结果页动态 grid 类名失效 | 🟠 | 功能缺陷 | ⬜ 待开发 |
-| O2 | draw/result 页 mystical-* 类不生效 | 🟠 | 功能缺陷 | ⬜ 待开发 |
+| O1 | 结果页动态 grid 类名失效 | 🟠 | 功能缺陷 | ✅ 完成 |
+| O2 | draw/result 页 mystical-* 类不生效 | 🟠 | 功能缺陷 | ✅ 完成 |
 | O3 | 结果页 setState-in-updater 反模式 + AI 输出容错解析 | 🟠 | 功能缺陷 | ✅ 完成 |
-| O4 | 洗牌算法有偏 | 🟠 | 功能缺陷 | ⬜ 待开发 |
-| O5 | SSE Content-Type 错误 | 🟠 | 功能缺陷 | ⬜ 待开发 |
+| O4 | 洗牌算法有偏 | 🟠 | 功能缺陷 | ✅ 完成 |
+| O5 | SSE Content-Type 错误 | 🟠 | 功能缺陷 | ✅ 完成 |
 | Y1 | 实现最小版历史记录页 | 🟡 | 小功能 | ⬜ 待开发 |
 | Y2 | 死代码清理 | 🟡 | 重构 | ⬜ 待开发 |
 | Y3 | README 更新 | 🟡 | 文档 | ⬜ 待开发 |
@@ -35,8 +35,8 @@
 | Y5 | API Key 双份存储统一 | 🟡 | 重构 | ✅ 已并入 R1 |
 | Y6 | 图片目录整理 + 数据完整性测试 | 🟡 | 重构 | ⬜ 待开发 |
 | Y7 | 路由重复逻辑抽取 | 🟡 | 重构 | ✅ 核心完成（共享模块随 R3 落地） |
-| G1 | 牌阵推荐逻辑增强（评分制） | 🟢 | 质量提升 | ⬜ 待开发 |
-| G2 | AI 解析健壮性（降级提取 + prompt 加固） | 🟢 | 质量提升 | ⬜ 待开发 |
+| G1 | 牌阵推荐逻辑增强（评分制） | 🟢 | 质量提升 | ✅ 完成 |
+| G2 | AI 解析健壮性（降级提取 + prompt 加固） | 🟢 | 质量提升 | ✅ 完成 |
 | G3 | .env.example 与部署文档 | 🟢 | 文档 | ✅ 完成 |
 | G4 | 收尾：依赖审计、分支处置、可选 CI | 🟢 | 质量提升 | ⬜ 待开发 |
 | G5 | 每日熔断配额 + 管理开关接口 | 🟢 | 质量提升（成本控制） | ✅ 完成 |
@@ -113,11 +113,17 @@ F0（测试设施，先行）
 | 🔴 安全 | 免费试用一次 | R3 | `lib/server/trial.ts` + `lib/deviceId.ts`（每设备 1 次） |
 | 🔴 安全 | IP 限流（跨实例 + 惰性清理） | R3/R4 | `lib/server/rate-limit.ts`（Redis/内存，无 setInterval） |
 | 🟠 功能 | 结果页流式解析容错 | O3 | `lib/stream-parse.ts`（标题格式兼容 + 完整建议 + 剥离 💡） |
+| 🟠 功能 | 结果页 grid 类名字面量映射 | O1 | `gridClassFor`（`lib/utils.ts`，Tailwind 可扫描生成） |
+| 🟠 功能 | mystical-* 设计系统类迁移全局 | O2 | `app/globals.css`（单一来源；`ui.module.css` 删除） |
+| 🟠 功能 | Fisher-Yates 均匀洗牌 | O4 | `lib/shuffle.ts`（替代 sort+random 有偏算法） |
+| 🟠 功能 | SSE Content-Type 符合规范 | O5 | `text/event-stream; charset=utf-8`（测试锁定） |
 | 🟡 重构 | 服务端共享模块 | Y7 | `lib/server/{deepseek,rate-limit,trial,upstash}.ts` |
+| 🟢 质量 | 牌阵推荐评分制 | G1 | `lib/spread.ts`（强关系信号优先 + 关键词计分 + 默认单张） |
+| 🟢 质量 | AI 解析健壮性降级 | G2 | 兜底文案 + prompt 结构约束（`lib/deepseek.ts`） |
 | 🟢 成本 | 每日熔断配额 + 管理开关接口 | G5 | `lib/server/quota.ts` + `app/api/admin/quota`（每天 50 次，可关/开） |
 | 🟢 文档 | 部署文档 + .env.example | G3 | `docs/DEPLOYMENT.md` + `.env.example` |
 
-**测试规模**：86 个测试 / 16 个文件，`type-check` / `lint` / `build` 全绿。
+**测试规模**：114 个测试 / 21 个文件，`type-check` / `lint` / `test:run` 全绿。
 
 ### 决策记录（Assumptions & Decisions，D1–D9）
 
@@ -128,6 +134,8 @@ F0（测试设施，先行）
 
 ### 待开发条目
 
-⬜ O1（结果页动态 grid 类名）、O2（mystical-* 样式）、O4（洗牌有偏）、O5（SSE Content-Type）、Y1（历史记录页）、Y2（死代码清理）、Y3（README 完善）、Y4（layout metadata）、Y6（图片目录整理）、G1（牌阵推荐评分制）、G2（AI 解析健壮性）、G4（依赖审计/CI）。
+⬜ Y1（历史记录页）、Y2（死代码清理）、Y3（README 完善）、Y4（layout metadata）、Y6（图片目录整理）、G4（依赖审计/CI）。
 
 > 完成顺序严格按上方依赖图执行；每个条目完成后更新本表与对应文档状态。
+
+> **2026-08 推进记录**：O1/O2/O4/O5/G1/G2 六个条目按 TDD 红→绿完成（commit 35554b8 后新增，未提交）。O5 代码此前已就位，本次补齐精确断言并登记状态。

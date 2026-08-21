@@ -217,4 +217,34 @@ describe("R3 /api/deepseek-stream 试用 + 限流 + 流式", () => {
     expect(text).toContain('"trialUsed":true');
     expect(text).toContain('"type":"complete"');
   });
+
+  it("O5 Content-Type 以 text/event-stream 开头（SSE 规范）", async () => {
+    resolveApiKeyMock.mockReturnValue({ apiKey: "sk-sys", usingSystemKey: true });
+    chatCompletionMock.mockResolvedValue(sseResponse(deepseekChunks));
+    const res = await POST(
+      makeRequest({ prompt: "p" }, { "X-Device-Id": "dev-1" }),
+    );
+    expect(res.status).toBe(200);
+    const ct = res.headers.get("content-type") ?? "";
+    expect(ct.startsWith("text/event-stream")).toBe(true);
+    expect(ct).toContain("charset=utf-8");
+  });
+
+  it("O5 事件帧为 data: {json}\n\n 格式（meta → content* → complete）", async () => {
+    resolveApiKeyMock.mockReturnValue({ apiKey: "sk-sys", usingSystemKey: true });
+    chatCompletionMock.mockResolvedValue(sseResponse(deepseekChunks));
+    const res = await POST(
+      makeRequest({ prompt: "p" }, { "X-Device-Id": "dev-1" }),
+    );
+    const text = await res.text();
+    const frames = text
+      .split("\n\n")
+      .map((f) => f.trim())
+      .filter(Boolean);
+    // 首帧 meta，中间 content 帧，末帧 complete
+    expect(frames[0]).toMatch(/^data: {"type":"meta"/);
+    expect(frames.some((f) => f === 'data: {"type":"content","content":"你好"}')).toBe(true);
+    expect(frames.some((f) => f === 'data: {"type":"content","content":"世界"}')).toBe(true);
+    expect(frames[frames.length - 1]).toBe('data: {"type":"complete"}');
+  });
 });
