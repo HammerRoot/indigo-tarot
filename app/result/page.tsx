@@ -23,6 +23,7 @@ export default function ResultPage() {
     apiKey,
     resetSession,
     setApiUsage,
+    addReading,
   } = useTarotStore();
 
   const [streamingContent, setStreamingContent] = useState("");
@@ -35,6 +36,8 @@ export default function ResultPage() {
   const hasStartedAnalysis = useRef(false);
   // 记录已滚动到的牌面索引，防止重复触发滚动
   const lastScrolledCardIndex = useRef<number | null>(null);
+  // 完整流式内容（供 onComplete 保存历史记录；streamingContent 状态为异步更新）
+  const contentRef = useRef("");
 
   // 派生解析结果：流式内容为唯一状态源，解析为纯函数（规格 O3）
   const parsed = useMemo(
@@ -57,10 +60,30 @@ export default function ResultPage() {
         onContent: (content) => {
           // updater 内零副作用，仅拼接累积内容（解析由 useMemo 派生）
           setStreamingContent((prev) => prev + content);
+          contentRef.current += content;
         },
         onComplete: () => {
           setIsStreaming(false);
           setStreamComplete(true);
+          // 流式完成后自动保存历史记录（规格 Y1）；空内容不保存
+          const fullContent = contentRef.current;
+          if (fullContent && recommendedSpread && drawnCards.length) {
+            // 直接同步解析完整内容取核心建议（不依赖 useMemo 的异步状态时序）
+            const finalParsed = parseStreamContent(fullContent);
+            addReading({
+              id:
+                typeof crypto !== "undefined" && crypto.randomUUID
+                  ? crypto.randomUUID()
+                  : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              question: question ?? "",
+              spread: recommendedSpread,
+              cards: drawnCards,
+              cardReversals,
+              interpretation: fullContent,
+              advice: finalParsed.coreAdvice ?? "正在生成核心建议...",
+              timestamp: new Date(),
+            });
+          }
         },
         onError: (error) => {
           setIsStreaming(false);
@@ -397,15 +420,16 @@ export default function ResultPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
             >
-              <div className="flex flex-col sm:flex-row justify-center">
-                {/* <motion.button
-                  onClick={handleStartNew}
-                  className="mystical-button px-8 py-4 text-lg font-bold"
+              <div className="flex flex-col sm:flex-row justify-center gap-3">
+                {/* 历史记录入口（规格 Y1） */}
+                <motion.button
+                  onClick={() => router.push("/history")}
+                  className="bg-white border-2 border-purple-300 text-purple-600 hover:bg-purple-50 rounded-xl px-8 py-4 text-lg font-bold transition-colors"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  再次占卜
-                </motion.button> */}
+                  📚 历史记录
+                </motion.button>
 
                 <motion.button
                   onClick={() => router.push("/")}

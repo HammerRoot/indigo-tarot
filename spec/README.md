@@ -28,12 +28,12 @@
 | O3 | 结果页 setState-in-updater 反模式 + AI 输出容错解析 | 🟠 | 功能缺陷 | ✅ 完成 |
 | O4 | 洗牌算法有偏 | 🟠 | 功能缺陷 | ✅ 完成 |
 | O5 | SSE Content-Type 错误 | 🟠 | 功能缺陷 | ✅ 完成 |
-| Y1 | 实现最小版历史记录页 | 🟡 | 小功能 | ⬜ 待开发 |
-| Y2 | 死代码清理 | 🟡 | 重构 | ⬜ 待开发 |
-| Y3 | README 更新 | 🟡 | 文档 | ⬜ 待开发 |
-| Y4 | layout metadata 定制 | 🟡 | 文档 | ⬜ 待开发 |
+| Y1 | 实现最小版历史记录页 | 🟡 | 小功能 | ✅ 完成 |
+| Y2 | 死代码清理 | 🟡 | 重构 | ✅ 完成 |
+| Y3 | README 更新 | 🟡 | 文档 | ✅ 完成 |
+| Y4 | layout metadata 定制 | 🟡 | 文档 | ✅ 完成 |
 | Y5 | API Key 双份存储统一 | 🟡 | 重构 | ✅ 已并入 R1 |
-| Y6 | 图片目录整理 + 数据完整性测试 | 🟡 | 重构 | ⬜ 待开发 |
+| Y6 | 图片目录整理 + 数据完整性测试 | 🟡 | 重构 | ✅ 完成 |
 | Y7 | 路由重复逻辑抽取 | 🟡 | 重构 | ✅ 核心完成（共享模块随 R3 落地） |
 | G1 | 牌阵推荐逻辑增强（评分制） | 🟢 | 质量提升 | ✅ 完成 |
 | G2 | AI 解析健壮性（降级提取 + prompt 加固） | 🟢 | 质量提升 | ✅ 完成 |
@@ -120,10 +120,15 @@ F0（测试设施，先行）
 | 🟡 重构 | 服务端共享模块 | Y7 | `lib/server/{deepseek,rate-limit,trial,upstash}.ts` |
 | 🟢 质量 | 牌阵推荐评分制 | G1 | `lib/spread.ts`（强关系信号优先 + 关键词计分 + 默认单张） |
 | 🟢 质量 | AI 解析健壮性降级 | G2 | 兜底文案 + prompt 结构约束（`lib/deepseek.ts`） |
+| 🟡 功能 | 历史记录页 | Y1 | `app/history/page.tsx` + 结果页自动 `addReading`（上限 50 条） |
+| 🟡 重构 | 死代码清理 | Y2 | 删除 `/api/deepseek`、`useImagePreloader`、`callDeepSeek`/`generateTarotReading`、`currentReading` |
+| 🟡 文档 | README 与代码事实同步 | Y3 | 技术栈/API 文档/commit hooks/隐私边界/env 清单 |
+| 🟡 文档 | layout metadata 定制 | Y4 | `lang="zh-CN"` + 中文品牌标题 |
+| 🟡 重构 | 图片目录整理 + 完整性测试 | Y6 | `minor/<suit>/` 目录 + kebab-case + 8 项数据契约测试 |
 | 🟢 成本 | 每日熔断配额 + 管理开关接口 | G5 | `lib/server/quota.ts` + `app/api/admin/quota`（每天 50 次，可关/开） |
 | 🟢 文档 | 部署文档 + .env.example | G3 | `docs/DEPLOYMENT.md` + `.env.example` |
 
-**测试规模**：114 个测试 / 21 个文件，`type-check` / `lint` / `test:run` 全绿。
+**测试规模**：139 个测试 / 25 个文件，`type-check` / `lint` / `test:run` 全绿。
 
 ### 决策记录（Assumptions & Decisions，D1–D9）
 
@@ -134,8 +139,8 @@ F0（测试设施，先行）
 
 ### 待开发条目
 
-⬜ Y1（历史记录页）、Y2（死代码清理）、Y3（README 完善）、Y4（layout metadata）、Y6（图片目录整理）、G4（依赖审计/CI）。
+⬜ G4（依赖审计/分支处置/可选 CI）。
 
 > 完成顺序严格按上方依赖图执行；每个条目完成后更新本表与对应文档状态。
 
-> **2026-08 推进记录**：O1/O2/O4/O5/G1/G2 六个条目按 TDD 红→绿完成（commit 35554b8 后新增，未提交）。O5 代码此前已就位，本次补齐精确断言并登记状态。
+> **2026-08 推进记录**：O1/O2/O4/O5/G1/G2 六个条目按 TDD 红→绿完成（commit 33fbf38）。本轮 Y1/Y2/Y3/Y4/Y6 五个条目完成（commit 35554b8 后新增，未提交）：历史记录页、死代码清理、README 同步、layout metadata、图片目录整理+完整性测试。

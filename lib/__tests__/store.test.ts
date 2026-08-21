@@ -57,3 +57,59 @@ describe("R1-B/C store API Key 加密存储", () => {
     expect(useTarotStore.getState().apiKey).toBe("");
   });
 });
+
+describe("Y1 store readings 历史记录", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    useTarotStore.setState({ readings: [] });
+  });
+
+  function makeReading(id: string) {
+    return {
+      id,
+      question: `问题${id}`,
+      spread: {
+        id: "single-card",
+        name: "单张牌指引",
+        description: "d",
+        cardCount: 1,
+        positions: ["核心指引"],
+        category: [],
+      },
+      cards: [],
+      cardReversals: [],
+      interpretation: "解析内容",
+      advice: "建议",
+      timestamp: new Date(),
+    };
+  }
+
+  it("addReading 头部插入（最新在前）", () => {
+    useTarotStore.getState().addReading(makeReading("r1"));
+    useTarotStore.getState().addReading(makeReading("r2"));
+    const readings = useTarotStore.getState().readings;
+    expect(readings[0].id).toBe("r2");
+    expect(readings[1].id).toBe("r1");
+  });
+
+  it("上限 50 条：添加 55 条后保留最新 50 条", () => {
+    for (let i = 0; i < 55; i++) {
+      useTarotStore.getState().addReading(makeReading(`r${i}`));
+    }
+    const readings = useTarotStore.getState().readings;
+    expect(readings.length).toBe(50);
+    // 最新的 50 条保留（r54 最新在头部，r4 最旧）
+    expect(readings[0].id).toBe("r54");
+    expect(readings[49].id).toBe("r5");
+  });
+
+  it("removeReading 按 id 删除", () => {
+    useTarotStore.getState().addReading(makeReading("r1"));
+    useTarotStore.getState().addReading(makeReading("r2"));
+    useTarotStore.getState().removeReading("r1");
+    const readings = useTarotStore.getState().readings;
+    expect(readings.length).toBe(1);
+    expect(readings[0].id).toBe("r2");
+  });
+});

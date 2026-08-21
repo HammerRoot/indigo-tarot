@@ -71,10 +71,6 @@ interface TarotStore {
   cardReversals: boolean[];
   setCardReversals: (reversals: boolean[]) => void;
   
-  // 当前解读
-  currentReading: TarotReading | null;
-  setCurrentReading: (reading: TarotReading | null) => void;
-  
   // 历史记录
   readings: TarotReading[];
   addReading: (reading: TarotReading) => void;
@@ -152,7 +148,6 @@ export const useTarotStore = create<TarotStore>()(
       recommendedSpread: null,
       drawnCards: [],
       cardReversals: [],
-      currentReading: null,
       readings: [],
       isLoading: false,
       remainingCalls: null,
@@ -209,8 +204,6 @@ export const useTarotStore = create<TarotStore>()(
       
       setCardReversals: (reversals) => set({ cardReversals: reversals }),
       
-      setCurrentReading: (reading) => set({ currentReading: reading }),
-      
       addReading: (reading) => set((state) => ({
         readings: [reading, ...state.readings].slice(0, 50) // 最多保存50条记录
       })),
@@ -232,7 +225,6 @@ export const useTarotStore = create<TarotStore>()(
         recommendedSpread: null,
         drawnCards: [],
         cardReversals: [],
-        currentReading: null,
         isLoading: false
       }),
       

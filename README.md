@@ -11,10 +11,11 @@
 
 ## 🛠️ 技术栈
 
-- **前端框架**: Next.js 14 (React) + TypeScript
-- **样式设计**: Tailwind CSS + Framer Motion
+- **前端框架**: Next.js 16 (React 19) + TypeScript
+- **样式设计**: Tailwind CSS 4 + Framer Motion
 - **状态管理**: Zustand
-- **AI服务**: DeepSeek API
+- **测试**: Vitest + React Testing Library
+- **AI服务**: DeepSeek API（流式 SSE）
 - **部署平台**: Vercel
 
 ## 🚀 快速开始
@@ -47,7 +48,7 @@
    cp .env.example .env.local
    ```
 
-   必填变量：`DEEPSEEK_API_KEY`（系统 Key）、`ADMIN_TOKEN`（管理接口认证）。完整清单见 `.env.example`。
+   必填变量：`DEEPSEEK_API_KEY`（系统 Key）、`ADMIN_TOKEN`（管理接口认证）。完整清单（含可选的 `DEEPSEEK_API_URL`、`QUOTA_DAILY_LIMIT`、`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`，及 Vercel KV 注入的 `KV_REST_API_URL` / `KV_REST_API_TOKEN`）见 [`.env.example`](./.env.example) 与 [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)。
 
 4. **启动开发服务器**
 
@@ -67,18 +68,18 @@
    npm run lint          # ESLint检查
    npm run lint:fix      # 自动修复ESLint问题
    npm run type-check    # TypeScript类型检查
-   npm run pre-push      # 完整的推送前检查
+   npm run test:run      # 运行全量测试（Vitest）
+   npm run pre-commit    # 完整的提交前检查（type-check + lint）
    ```
 
 ### 🔒 自动代码质量检查
 
-项目配置了Git hooks，每次`git push`前会自动运行：
+项目配置了Git hooks，每次`git commit`时自动运行（`.husky/pre-commit` 执行 `npm run pre-commit` = type-check + lint）：
 
 - **TypeScript类型检查** - 确保类型安全
 - **ESLint代码规范** - 确保代码质量
-- **构建验证** - 确保代码能正常构建
 
-检查失败会阻止推送，保障代码质量。紧急情况可使用`git push --no-verify`跳过检查。
+检查失败会阻止提交，保障代码质量。紧急情况可使用`git commit --no-verify`跳过检查。
 
 ## 📖 使用指南
 
@@ -92,10 +93,13 @@
 
 ### 塔罗牌阵类型
 
-- **单张牌** - 适合简单问题或日常指引
-- **三牌阵** - 过去-现在-未来，适合时间线问题
-- **celtic cross** - 凯尔特十字，适合复杂人生问题
-- **关系牌阵** - 专门用于情感和人际关系问题
+- **单张牌指引** - 1 张牌，适合简单问题或日常指引
+- **时间之流** - 3 张牌（过去-现在-未来），适合时间线问题
+- **情感十字** - 4 张牌，专门解读爱情与人际关系
+- **选择之路** - 5 张牌，帮助做出重要决定
+- **生命指引** - 7 张牌，全面的人生指导
+
+> 牌阵由 AI 根据问题内容智能推荐（评分制，规格 G1）。
 
 ## 🧩 塔罗牌体系
 
@@ -110,33 +114,37 @@
 
 ## 📝 API 文档
 
-### DeepSeek AI 解析接口
+### DeepSeek AI 解析接口（流式 SSE）
 
-**POST** `/api/deepseek`
+**POST** `/api/deepseek-stream`
 
 请求体：
 
 ```json
 {
-  "question": "用户的问题",
-  "cards": ["卡牌1", "卡牌2", "卡牌3"],
-  "layout": "牌阵类型"
+  "prompt": "AI 提示词（含问题与抽牌信息）",
+  "userApiKey": "用户自带的 DeepSeek API Key（可选）"
 }
 ```
 
-响应：
+响应：`text/event-stream` 流式事件，帧格式 `data: {json}\n\n`：
 
-```json
-{
-  "interpretation": "AI解析结果"
-}
-```
+- `{ "type": "meta", "usingSystemKey": true, "remainingCalls": 5, "trialUsed": false }` — 开头元信息
+- `{ "type": "content", "content": "文本片段" }` — AI 增量内容
+- `{ "type": "complete" }` — 流结束
+
+系统 Key 路径的守卫顺序：免费试用（每设备 1 次）→ IP 限流（3 小时 5 次）→ 每日配额熔断（默认 50 次/天）。用户自带 Key 不经过以上限制。
+
+### 建议问题接口
+
+**GET** `/api/suggested-questions` — 返回按类别分组的预设问题库（love / career / relationships / life）。
 
 ## 🔒 隐私与数据
 
-- **本地存储**: 历史记录与 API Key 仅保存在用户浏览器本地；API Key 经 **AES-GCM 加密**后存储，加密密钥仅存于当前会话（关闭浏览器后需重新输入）
-- **API安全**: DeepSeek API 密钥仅在服务端调用时使用；未配置个人密钥时使用系统密钥（生产环境每 3 小时限 5 次）
-- **加密边界**: 浏览器端加密可防静态窃取（扩展扫描/磁盘取证），**无法防恶意脚本/浏览器扩展**；AI 解析内容渲染前经消毒处理
+- **本地存储**: 历史记录与 API Key 仅保存在用户浏览器本地；API Key 经 **AES-GCM 加密**后存储（密文在 localStorage，会话密钥在 sessionStorage，关闭浏览器后需重新输入）
+- **API安全**: DeepSeek API 密钥仅在服务端调用时使用；未配置个人密钥时使用系统密钥（免费试用每设备 1 次 + IP 限流 3 小时 5 次 + 每日配额默认 50 次，见 [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)）
+- **加密边界**: 浏览器端加密可防静态窃取（扩展扫描/磁盘取证），**无法防恶意脚本/浏览器扩展**（解密在客户端进行）——这就是 R1 同时做 AI 输出 XSS 消毒（`react-markdown` 默认转义、无 `dangerouslySetInnerHTML`）的原因；生产环境启用 CSP（`next.config.ts`）限制脚本来源
+- **免费试用边界**: 无登录系统，"每人一次"为尽力而为——清除 localStorage / 换浏览器 / 无痕模式可绕过，IP 限流作为辅助防线
 - **无用户追踪**: 不收集任何个人敏感信息
 
 ## 🤝 贡献指南

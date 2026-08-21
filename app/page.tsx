@@ -297,10 +297,15 @@ export default function Home() {
                 <span>✨</span>
                 <span>AI解析</span>
               </div>
-              <div className="flex items-center gap-1">
+              {/* 历史记录入口（规格 Y1） */}
+              <button
+                onClick={() => router.push("/history")}
+                className="flex items-center gap-1 hover:text-purple-600 transition-colors cursor-pointer"
+                aria-label="历史记录"
+              >
                 <span>📚</span>
                 <span>历史记录</span>
-              </div>
+              </button>
             </div>
           </motion.div>
 

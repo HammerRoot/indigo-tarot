@@ -116,6 +116,32 @@ describe("O3 结果页流式解析与展示", () => {
     expect(screen.queryByText(/\*\*/)).toBeNull();
   });
 
+  it("Y1 完成后自动保存记录（addReading 字段完整）", async () => {
+    useTarotStore.setState({ readings: [] });
+    const callbacks = await renderAndGetCallbacks();
+    act(() => {
+      callbacks.onContent("## 🔮 深度解析过程\n\n完整解析内容。\n\n");
+      callbacks.onContent("## 💡 核心建议\n\n一句话建议。\n\n");
+      callbacks.onComplete();
+    });
+    const readings = useTarotStore.getState().readings;
+    expect(readings.length).toBe(1);
+    const r = readings[0];
+    expect(r.question).toBe("测试问题");
+    expect(r.interpretation).toContain("完整解析内容");
+    expect(r.advice).toContain("一句话建议");
+    expect(r.cards.length).toBe(1);
+  });
+
+  it("Y1 流式失败不保存记录", async () => {
+    useTarotStore.setState({ readings: [] });
+    const callbacks = await renderAndGetCallbacks();
+    act(() => {
+      callbacks.onError("AI解读服务暂时不可用，请稍后重试。");
+    });
+    expect(useTarotStore.getState().readings.length).toBe(0);
+  });
+
   it("G2 完成后无 💡 节 → 核心建议区显示兜底文案", async () => {
     const callbacks = await renderAndGetCallbacks();
     act(() => {
