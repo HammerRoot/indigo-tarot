@@ -10,7 +10,7 @@
 | G2 | AI 解析健壮性（降级提取 + prompt 加固） | 质量提升 | ✅ 完成 |
 | G3 | .env.example 与部署文档 | 质量提升 | ✅ 完成 |
 | G4 | 收尾：依赖审计、分支处置、可选 CI | 质量提升 | ⬜ 待开发 |
-| G6 | 牌桌抽牌体验升级（78 张铺开 + 缩放 + 盲选抽取） | 质量提升（交互） | ⬜ 待开发 |
+| G6 | 牌桌抽牌体验升级（78 张铺开 + 缩放 + 盲选抽取） | 质量提升（交互） | ✅ 完成 |
 | G7 | 结果页 UI 视觉升级（深邃夜空风） | 质量提升（视觉） | ✅ 完成 |
 
 ---
@@ -353,3 +353,72 @@ export function recommendSpread(question: string): TarotSpread {
 - 风险1：深色结果页与浅色首页/draw 的视觉跳变——本条目仅结果页，全站统一可另立条目。
 - 风险2：AnimatePresence exit 在 jsdom 延迟移除节点——测试用 `waitFor`。
 - 风险3：CSP 不受影响（未新增外联字体）。
+
+
+---
+
+## [G6] 牌桌抽牌体验升级（78 张铺开 + 整桌缩放 + 严格盲选）
+
+- **优先级**: 🟢
+- **类别**: 质量提升（交互）
+- **状态**: ✅ 完成
+- **关联条目**: O4（Fisher-Yates 洗牌）、G7（结果页视觉，独立条目）
+
+### 问题描述
+
+- 现状：选牌步骤铺开的是 `Array.from({ length: 24 })` 装饰占位（非真实牌），点击位置与结果无关——选满后 `getRandomCards` 随机抽牌，用户"选了却抽到别的牌"，体验割裂、无仪式感。
+- 影响：占卜最核心的"凭直觉选牌"环节失真。
+
+### 目标
+
+选牌步骤铺开 **78 张真实牌（CSS 牌背，用户确认不需要真实背面图片）**，支持**整桌缩放浏览**（桌面滚轮/移动双指 + 拖拽平移），**严格盲选**（只显示牌背），点击第 N 张牌背 → 抽中的就是 `tarotCards[N]`（一一对应）。
+
+### 验收标准（用户确认）
+
+- [ ] 选牌步骤渲染 78 张 CSS 牌背（`data-card-back="true"`，非占位）
+- [ ] 严格盲选：无牌面图片/名称泄露
+- [ ] 点击第 N 张牌背 → `drawnCards` 中该张 = `tarotCards[N]`（pickCardsByIndex）
+- [ ] 整桌缩放：桌面滚轮以指针为中心缩放 + 拖拽平移；移动端双指捏合缩放 + 单指拖拽
+- [ ] 拖拽与点击用位移阈值（>5px）区分，拖拽不误触选牌
+- [ ] 缩放控件（放大/缩小/重置）可见可点
+- [ ] 选满 cardCount 自动进入 reveal 翻牌步骤；已选牌不可重复选
+- [ ] `npm run test:run` / `type-check` / `lint` 三绿
+
+### 技术方案
+
+1. **`lib/pick.ts`（新增）**：`pickCardsByIndex(deck, indexes)` 纯函数——按点击索引取真实牌，保持点击顺序、重复索引去重、越界忽略。
+2. **`lib/useSpreadZoom.ts`（新增）**：整桌缩放 hook——scale/x/y state；pointer events 管理多指（单指拖拽平移、双指捏合缩放以中点为心）；滚轮以指针为中心缩放（0.35–2.5 倍）；位移阈值 5px 区分拖拽与点击（`ignoreClick()` 供选牌判断）；`registerContainerRef` 回调注册容器（避免 React Compiler 规则对渲染期 ref 访问的报错）。
+3. **`app/draw/page.tsx`**：
+   - 移除 `getRandomCards` 调用与 24 占位；`handleCardSelect(index)` 用 `pickCardsByIndex(tarotCards, newSelected)` 取牌（30% 逆位保留）；
+   - draw 步骤渲染 `tarotCards.map` 78 张 CSS 牌背（紫蓝渐变 + 🌟 + TAROT），`data-card-back`/`data-index` 标记；
+   - 牌桌容器绑定缩放 hook（`touch-none select-none`），内层 `translate+scale` 变换；
+   - 顶部缩放控件（ZoomOut/重置 Maximize/ZoomIn + 提示文案"滚轮/双指缩放 · 拖拽浏览 · 点击选牌"）；
+   - 底部提示"78 张牌背朝上铺开，凭直觉选择 N 张"。
+
+### TDD 测试计划
+
+| 测试文件 | 测试名 | 断言要点 |
+|---|---|---|
+| `lib/__tests__/pick.test.ts` | 按索引取牌一一对应 | `pickCardsByIndex(tarotCards,[0,1])` → `[tarotCards[0],tarotCards[1]]` |
+| | 保持点击顺序 | `[5,2,10]` → 顺序保持 |
+| | 重复索引去重 | `[1,1,2]` → 2 张不重复 |
+| | 空数组/越界/超量 | 空→`[]`；越界忽略；100 次取全 78 无重复 |
+| `app/draw/__tests__/page.test.tsx` | 渲染 78 张 CSS 牌背 | waitFor 后 `[data-card-back="true"]` 数量 78 |
+| | 严格盲选无牌面 | 无 `img[alt="愚者"]` |
+| | 点击第 N 张 → 抽中该张 | 点 index=7 → `drawnCards[0].id === tarotCards[7].id` |
+| | 选满自动进入 reveal | 2 张牌阵选满 → "点击卡牌揭示结果"（waitFor） |
+| | 已选不可重复 | 重复点击不进入 reveal、计数不变 |
+| | 缩放控件存在 | `spread-zoom-controls` testid 可见 |
+
+### 影响范围
+
+- 新增：`lib/pick.ts`、`lib/useSpreadZoom.ts`、`lib/__tests__/pick.test.ts`、`app/draw/__tests__/page.test.tsx`
+- 修改：`app/draw/page.tsx`（draw 步骤重写 + 缩放 + 盲选）
+- 备注：`lib/store.ts` 的 `getRandomCards` 自此无调用方（接口保留，待 Y2/G4 评估移除）
+
+### 风险与假设
+
+- 假设：手写 pointer events + framer-motion 足够实现整桌缩放，不引入第三方依赖（符合项目轻依赖风格）。
+- 风险1：React Compiler 规则（`react-hooks/refs`）禁止渲染期访问 ref——hook 用 `registerContainerRef` 回调 + 组件内解构局部变量规避。
+- 风险2：jsdom 无法模拟真实触摸/滚轮——缩放交互以手动验收为准；测试覆盖数据流与 DOM 结构。
+- 风险3：78 张 `next/image` 不涉及（CSS 牌背无图片请求）；结果页仍用真实牌图（G7 不变）。

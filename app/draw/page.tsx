@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles, ZoomIn, ZoomOut, Maximize } from "lucide-react";
 import { useTarotStore, recommendSpread } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { TarotCard } from "@/app/components/TarotCard";
+import { tarotCards } from "@/lib/tarot-data";
+import { pickCardsByIndex } from "@/lib/pick";
+import { useSpreadZoom } from "@/lib/useSpreadZoom";
 
 export default function DrawPage() {
   const router = useRouter();
@@ -18,7 +21,6 @@ export default function DrawPage() {
     setRecommendedSpread,
     setDrawnCards,
     setCardReversals,
-    getRandomCards,
   } = useTarotStore();
 
   const [currentStep, setCurrentStep] = useState<"spread" | "draw" | "reveal">(
@@ -27,6 +29,23 @@ export default function DrawPage() {
   const [selectedCards, setSelectedCards] = useState<number[]>([]);
   const [revealedCards, setRevealedCards] = useState<number[]>([]);
   const [showFullScreenLoading, setShowFullScreenLoading] = useState(false);
+
+  // G6:整桌缩放(滚轮/双指 + 拖拽)
+  const {
+    scale: spreadScale,
+    x: spreadX,
+    y: spreadY,
+    registerContainerRef: spreadContainerRef,
+    ignoreClick: spreadIgnoreClick,
+    onPointerDown: spreadPointerDown,
+    onPointerMove: spreadPointerMove,
+    onPointerUp: spreadPointerUp,
+    onPointerCancel: spreadPointerCancel,
+    onWheel: spreadWheel,
+    resetView: spreadReset,
+    zoomIn: spreadZoomIn,
+    zoomOut: spreadZoomOut,
+  } = useSpreadZoom(1);
 
   // 控制全屏加载时的滚动禁用
   useEffect(() => {
@@ -63,8 +82,10 @@ export default function DrawPage() {
     setCurrentStep("draw");
   };
 
-  // 选择卡牌
+  // 选择卡牌(G6:点击的真实牌 = 抽到的牌,不再随机)
   const handleCardSelect = (index: number) => {
+    // 拖拽后抑制点击,保证盲选点击准确
+    if (spreadIgnoreClick()) return;
     if (
       selectedCards.includes(index) ||
       !recommendedSpread ||
@@ -75,10 +96,9 @@ export default function DrawPage() {
     const newSelected = [...selectedCards, index];
     setSelectedCards(newSelected);
 
-    // 如果选够了卡牌，立即开始翻牌流程
+    // 如果选够了卡牌,用点击索引从真实牌组取牌
     if (newSelected.length === recommendedSpread.cardCount) {
-      // 立即进行抽牌
-      const cards = getRandomCards(recommendedSpread.cardCount);
+      const cards = pickCardsByIndex(tarotCards, newSelected);
       // 生成逆位状态（30%概率逆位）
       const reversals = cards.map(() => Math.random() < 0.3);
 
@@ -252,40 +272,103 @@ export default function DrawPage() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 md:gap-4 max-w-6xl mx-auto">
-                  {Array.from({ length: 24 }, (_, index) => (
-                    <motion.div
-                      key={index}
-                      className="relative flex justify-center"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.03 }}
-                    >
-                      <div
-                        className={`w-16 h-24 sm:w-20 sm:h-30 md:w-24 md:h-36 bg-gradient-to-br from-purple-800 via-blue-900 to-purple-900 rounded-lg border-2 shadow-lg flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                          selectedCards.includes(index)
-                            ? "border-yellow-400 shadow-yellow-400/50 scale-105"
-                            : "border-purple-300 hover:border-purple-400 hover:scale-105"
-                        }`}
-                        onClick={() => handleCardSelect(index)}
-                      >
-                        <div className="text-center text-white/80">
-                          <div className="text-lg md:text-2xl mb-1">🌟</div>
-                          <div className="text-xs font-medium">TAROT</div>
-                        </div>
-                        {selectedCards.includes(index) && (
-                          <motion.div
-                            className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                          >
-                            ✓
-                          </motion.div>
-                        )}
-                      </div>
-                    </motion.div>
-                  ))}
+                {/* G6:78 张真实牌 CSS 牌背 + 整桌缩放 + 严格盲选 */}
+                <div
+                  data-testid="spread-zoom-controls"
+                  className="flex justify-center gap-3 mb-4"
+                >
+                  <button
+                    onClick={spreadZoomOut}
+                    className="p-2 rounded-full bg-white/80 border border-gray-300 hover:bg-purple-50 transition-colors"
+                    aria-label="缩小"
+                    title="缩小"
+                  >
+                    <ZoomOut className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={spreadReset}
+                    className="px-3 py-2 rounded-full bg-white/80 border border-gray-300 hover:bg-purple-50 transition-colors text-sm font-medium text-gray-600"
+                    aria-label="重置视图"
+                    title="重置视图"
+                  >
+                    <Maximize className="w-4 h-4 inline mr-1" />
+                    重置
+                  </button>
+                  <button
+                    onClick={spreadZoomIn}
+                    className="p-2 rounded-full bg-white/80 border border-gray-300 hover:bg-purple-50 transition-colors"
+                    aria-label="放大"
+                    title="放大"
+                  >
+                    <ZoomIn className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs text-gray-500 self-center ml-2">
+                    滚轮/双指缩放 · 拖拽浏览 · 点击选牌
+                  </span>
                 </div>
+
+                <div
+                  ref={spreadContainerRef}
+                  className="relative overflow-hidden rounded-2xl border border-purple-200/60 bg-gradient-to-b from-purple-50/50 to-transparent touch-none select-none"
+                  style={{ height: 420 }}
+                  onWheel={spreadWheel}
+                  onPointerDown={spreadPointerDown}
+                  onPointerMove={spreadPointerMove}
+                  onPointerUp={spreadPointerUp}
+                  onPointerCancel={spreadPointerCancel}
+                >
+                  {/* 牌桌内容:缩放/平移作用于内层 */}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      transform: `translate(${spreadX}px, ${spreadY}px) scale(${spreadScale})`,
+                      transformOrigin: "0 0",
+                      transition: "transform 0.1s ease-out",
+                    }}
+                  >
+                    <div className="grid grid-cols-8 sm:grid-cols-10 lg:grid-cols-13 gap-2 md:gap-3 p-4 w-max">
+                      {tarotCards.map((card, index) => (
+                        <motion.div
+                          key={card.id}
+                          className="relative flex justify-center"
+                          initial={{ opacity: 0, scale: 0.6 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: Math.min(index * 0.008, 0.6) }}
+                        >
+                          <div
+                            data-card-back="true"
+                            data-index={index}
+                            onClick={() => handleCardSelect(index)}
+                            className={`w-12 h-18 sm:w-14 sm:h-21 md:w-16 md:h-24 bg-gradient-to-br from-purple-800 via-blue-900 to-purple-900 rounded-lg border-2 shadow-lg flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                              selectedCards.includes(index)
+                                ? "border-yellow-400 shadow-yellow-400/50 scale-110 z-10"
+                                : "border-purple-300 hover:border-purple-400 hover:scale-110 hover:z-10"
+                            }`}
+                          >
+                            <div className="text-center text-white/80">
+                              <div className="text-xs md:text-base mb-1">🌟</div>
+                              <div className="text-[10px] md:text-xs font-medium tracking-wider">
+                                TAROT
+                              </div>
+                            </div>
+                            {selectedCards.includes(index) && (
+                              <motion.div
+                                className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 rounded-full w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-xs md:text-sm font-bold"
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                              >
+                                ✓
+                              </motion.div>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-3">
+                  78 张牌背朝上铺开,凭直觉选择 {recommendedSpread.cardCount} 张(选中即揭晓)
+                </p>
               </motion.div>
             )}
 
