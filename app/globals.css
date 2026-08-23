@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* 夜空风主题色（规格 G7）:Tailwind v4 @theme 注册自定义颜色 */
+@theme {
+  --color-gold: #d4af37;
+  --color-gold-light: #e8c86a;
+  --color-astro-deep: #171231;
+  --color-astro-mid: #241a4d;
+}
+
 /* === 基础变量定义 === */
 @layer base {
   :root {
@@ -28,6 +36,13 @@
     /* 装饰渐变辅助色（mystical-bg/stars 使用） */
     --secondary: #c4b5fd;
     --accent: #f0abfc;
+
+    /* 夜空风主题（规格 G7 结果页） */
+    --gold: #d4af37;
+    --gold-light: #e8c86a;
+    --astro-deep: #171231;
+    --astro-mid: #241a4d;
+    --astro-glow: rgba(212, 175, 55, 0.15);
 
     /* 功能色 */
     --success: #10b981;
@@ -353,6 +368,127 @@
       margin: 0 0.75rem;
       padding: 1.25rem !important;
     }
+  }
+
+  /* === 夜空风主题（规格 G7 结果页专属，不污染浅色 mystical 体系） === */
+
+  /* 深邃夜空背景:深紫→藏蓝渐变 + 微光晕 */
+  .astro-bg {
+    position: relative;
+    background:
+      radial-gradient(
+        ellipse 120% 80% at 50% -10%,
+        rgba(139, 92, 246, 0.25) 0%,
+        transparent 60%
+      ),
+      linear-gradient(180deg, var(--astro-deep) 0%, #1b1740 45%, #0f0a2a 100%);
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  /* 夜空星点(深色版) */
+  .astro-stars {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .astro-stars::before {
+    content: "";
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow:
+      120px 180px 0 0 rgba(255, 255, 255, 0.6),
+      240px 90px 0 0 rgba(212, 175, 55, 0.7),
+      340px 260px 0 0 rgba(255, 255, 255, 0.4),
+      60px 320px 0 0 rgba(212, 175, 55, 0.5),
+      460px 140px 0 0 rgba(255, 255, 255, 0.5),
+      200px 400px 0 0 rgba(255, 255, 255, 0.3),
+      520px 300px 0 0 rgba(212, 175, 55, 0.4),
+      150px 480px 0 0 rgba(255, 255, 255, 0.35);
+    animation: twinkle 4s ease-in-out infinite;
+  }
+
+  /* 玻璃拟态卡片 */
+  .astro-card {
+    position: relative;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  }
+
+  .astro-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--gold) 50%,
+      transparent
+    );
+    opacity: 0.5;
+  }
+
+  /* 小节标题:小号大写 + 金线 */
+  .astro-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .astro-card-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--gold), transparent);
+    opacity: 0.5;
+  }
+
+  /* 玻璃按钮 */
+  .astro-button {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+
+  .astro-button:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: var(--gold);
+    color: var(--gold-light);
+    box-shadow: 0 4px 20px var(--astro-glow);
+  }
+
+  /* 区块细分隔线 */
+  .astro-divider {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.12) 30%,
+      rgba(255, 255, 255, 0.12) 70%,
+      transparent
+    );
   }
 
   /* 3D 翻转效果样式 */

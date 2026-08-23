@@ -10,6 +10,8 @@
 | G2 | AI 解析健壮性（降级提取 + prompt 加固） | 质量提升 | ✅ 完成 |
 | G3 | .env.example 与部署文档 | 质量提升 | ✅ 完成 |
 | G4 | 收尾：依赖审计、分支处置、可选 CI | 质量提升 | ⬜ 待开发 |
+| G6 | 牌桌抽牌体验升级（78 张铺开 + 缩放 + 盲选抽取） | 质量提升（交互） | ⬜ 待开发 |
+| G7 | 结果页 UI 视觉升级（深邃夜空风） | 质量提升（视觉） | ✅ 完成 |
 
 ---
 
@@ -285,3 +287,69 @@ export function recommendSpread(question: string): TarotSpread {
 
 - 假设：自然日以 Asia/Shanghai（UTC+8）为界；计数按"成功解析次数"，token 消耗监控留作后续。
 - 风险：内存版重启即清零（仅开发）；生产必须配置 Upstash 才能持久化。
+
+
+---
+
+## [G7] 结果页 UI 视觉升级（深邃夜空风）
+
+- **优先级**: 🟢
+- **类别**: 质量提升（视觉）
+- **状态**: ✅ 完成
+- **关联条目**: G6（抽牌交互，独立条目）；Y3（README 视觉描述）
+
+### 问题描述
+
+- 现状（用户反馈 2026-08）：结果页视觉松散、缺乏高级审美——
+  - **俄罗斯套娃卡片**：每个区块 `mystical-card` 外层再套彩色圆角盒（`bg-blue-50`/`bg-purple-50`/黄橙渐变），三层边框+阴影叠加，层级混乱；
+  - **标题失衡**：四块全是 `text-2xl md:text-3xl font-bold` 巨标题 + `mb-6`，标题区挤压内容；
+  - **色板混乱**：蓝（问题）/紫（牌阵）/紫蓝渐变（解析）/黄橙（建议）/琥珀（逆位）5+ 色系并置；
+  - **牌展示弱**：`w-28 h-44` 小牌夹在卡片里，非视觉中心；
+  - **按钮风格分裂**：顶部紫渐变圆钮 vs 底部白底描边方钮。
+- 影响：结果页是占卜体验的终点，视觉质量直接决定产品观感。
+
+### 目标
+
+结果页整体重构为**深邃夜空风**（深紫/藏蓝渐变背景 + 玻璃拟态卡片 + 金紫点缀），保留四块信息结构并统一为连贯叙事流；抽牌结果**轻量呈现 + 点击放大（标注牌位）**；功能逻辑与现有结果页测试全部保持绿。
+
+### 验收标准（用户确认）
+
+- [ ] 视觉方向：深邃夜空风（深紫/藏蓝渐变 + 玻璃拟态 + 金紫点缀）
+- [ ] 牌展示：轻量小图 + 点击放大，放大时标注该牌在牌阵中的位置
+- [ ] 信息结构：保留四块（问题/抽牌/解析/建议），统一为叙事流
+- [ ] 四块均为 `astro-card` 玻璃卡片 + `astro-card-title` 小号大写标题 + 金线
+- [ ] 点击任意牌 → CardModal 放大显示牌位名+牌名+正逆位+关键词；遮罩/ESC/关闭按钮均可关闭
+- [ ] 解析正文深色可读（`MarkdownRenderer variant="dark"`），行宽收窄、流式光标金色
+- [ ] 历史页（浅色）不受影响（variant 默认 light）
+- [ ] `npm run test:run` / `type-check` / `lint` 三绿
+
+### 技术方案
+
+1. **`app/globals.css`**：`:root` 新增 `--gold`/`--gold-light`/`--astro-deep`/`--astro-mid`/`--astro-glow`；`@theme` 注册 gold 色系；`@layer components` 新增 `.astro-bg`（深紫→藏蓝渐变）、`.astro-stars`（深色星点）、`.astro-card`（玻璃拟态 + 金线）、`.astro-card-title`（小号大写 + 金线）、`.astro-button`（玻璃按钮）、`.astro-divider`。
+2. **`app/components/CardModal.tsx`（新增）**：全屏深色遮罩 + 居中放大牌图 + 牌位徽章 + 牌名/正逆位/关键词；遮罩/ESC/按钮关闭，内容区点击不关闭；`data-testid` 供测试。
+3. **`app/result/page.tsx`**：`astro-bg` + `astro-stars`；四块 `astro-card` + `astro-card-title`；问题区去内层盒、衬线大字；牌阵区轻量小图 + 点击打开 CardModal；解析区 `max-w-2xl` + `variant="dark"`；建议区金色氛围；底部按钮统一 `astro-button`。
+4. **`app/components/MarkdownRenderer.tsx`**：新增 `variant?: "light" | "dark"`，dark 白字/金强调，默认 light 兼容历史页。
+5. **字体**：标题/问题/建议用系统衬线栈 `font-serif`（不新增 next/font 依赖与 CSP/mock 风险）。
+
+### TDD 测试计划
+
+| 测试文件 | 测试名 | 断言要点 |
+|---|---|---|
+| `app/components/__tests__/CardModal.test.tsx` | 显示牌图/牌名/牌位/正逆位/关键词 | 渲染 → 各文本可见 |
+| | 逆位标注 | isReversed → "逆位" |
+| | 遮罩点击关闭 / ESC 关闭 / 内容区点击不关闭 | onClose 调用与否 |
+| `app/result/__tests__/page.test.tsx` | 点击牌 → 放大模态显示牌位标注，关闭后消失 | 点第一张牌 → 模态含 positions[0] 与牌名；点遮罩 → waitFor 消失 |
+| | 现有用例保持绿 | `.prose` 与 grid 类名结构保留 |
+
+### 影响范围
+
+- 新增：`app/components/CardModal.tsx`、`app/components/__tests__/CardModal.test.tsx`
+- 修改：`app/result/page.tsx`、`app/globals.css`、`app/components/MarkdownRenderer.tsx`、`app/result/__tests__/page.test.tsx`
+- 不动：`lib/` 全部逻辑、store、路由、历史页
+
+### 风险与假设
+
+- 假设：系统衬线栈 `font-serif` 提供足够高级感；若需更强字体可另立条目用 next/font（Cormorant Garamond）。
+- 风险1：深色结果页与浅色首页/draw 的视觉跳变——本条目仅结果页，全站统一可另立条目。
+- 风险2：AnimatePresence exit 在 jsdom 延迟移除节点——测试用 `waitFor`。
+- 风险3：CSP 不受影响（未新增外联字体）。

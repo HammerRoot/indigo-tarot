@@ -9,6 +9,7 @@ import { useTarotStore } from "@/lib/store";
 import { generateTarotReadingStream } from "@/lib/deepseek";
 import { ResultTarotCard } from "@/app/components/ResultTarotCard";
 import { MarkdownRenderer } from "@/app/components/MarkdownRenderer";
+import { CardModal } from "@/app/components/CardModal";
 import { imageCache } from "@/lib/imageCache";
 import { parseStreamContent, stripAdviceSection } from "@/lib/stream-parse";
 import { gridClassFor } from "@/lib/utils";
@@ -31,6 +32,8 @@ export default function ResultPage() {
   const [streamComplete, setStreamComplete] = useState(false);
   const [showCards, setShowCards] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
+  // G7:当前放大的牌索引(点击牌面 → 模态)
+  const [modalCardIndex, setModalCardIndex] = useState<number | null>(null);
 
   // 使用 useRef 防止重复调用
   const hasStartedAnalysis = useRef(false);
@@ -185,27 +188,28 @@ export default function ResultPage() {
 
   if (!question || !recommendedSpread || !drawnCards.length) {
     return (
-      <div className="min-h-screen mystical-bg flex items-center justify-center">
+      <div className="min-h-screen astro-bg flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-300 mx-auto mb-4"></div>
-          <p className="text-gray-300">正在加载结果...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold mx-auto mb-4"></div>
+          <p className="text-white/70">正在加载结果...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen mystical-bg relative overflow-hidden">
-      <div className="stars"></div>
+    <div className="min-h-screen astro-bg relative overflow-hidden">
+      <div className="astro-stars"></div>
 
       <main className="relative z-10 min-h-screen px-4 py-8">
         {/* 顶部导航 */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-10">
           <motion.button
             onClick={() => router.push("/")}
-            className="mystical-button p-3"
+            className="astro-button p-3"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
+            aria-label="返回首页"
           >
             <ArrowLeft className="w-5 h-5" />
           </motion.button>
@@ -213,45 +217,44 @@ export default function ResultPage() {
           <div className="flex gap-3">
             <motion.button
               onClick={handleShare}
-              className="mystical-button p-3"
+              className="astro-button p-3"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
+              aria-label="分享结果"
             >
               <Share2 className="w-5 h-5" />
             </motion.button>
 
             <motion.button
               onClick={handleStartNew}
-              className="mystical-button p-3"
+              className="astro-button p-3"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
+              aria-label="重新占卜"
             >
               <RotateCcw className="w-5 h-5" />
             </motion.button>
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto space-y-6">
           {/* 1. 你的问题 */}
           <motion.section
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="mystical-card p-6 md:p-8"
+            className="astro-card p-6 md:p-8"
           >
-            <div className="flex items-center mb-6">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
-                你的问题
-              </h1>
+            <div className="astro-card-title mb-5">
+              <span className="text-gold">✦</span>
+              <span>你的问题</span>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-              <p className="text-gray-700 text-lg md:text-xl leading-relaxed font-medium">
-                &quot;{question}&quot;
-              </p>
-            </div>
+            <p className="text-white/90 text-xl md:text-2xl leading-relaxed font-serif">
+              &quot;{question}&quot;
+            </p>
           </motion.section>
 
-          {/* 2. 抽牌结果 */}
+          {/* 2. 抽牌结果(轻量呈现 + 点击放大) */}
           <AnimatePresence>
             {showCards && (
               <motion.section
@@ -259,25 +262,22 @@ export default function ResultPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -30 }}
                 transition={{ duration: 0.6 }}
-                className="mystical-card p-6 md:p-8"
+                className="astro-card p-6 md:p-8"
               >
-                <div className="flex items-center mb-6">
-                  <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                    抽牌结果
-                  </h2>
+                <div className="astro-card-title mb-2">
+                  <span className="text-gold">🃏</span>
+                  <span>抽牌结果</span>
                 </div>
-                <div className="mb-6">
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                    <h3 className="font-bold text-purple-800 mb-2">
-                      {recommendedSpread.name}
-                    </h3>
-                    <p className="text-gray-600 text-sm leading-relaxed">
-                      {recommendedSpread.description}
-                    </p>
-                  </div>
+                <div className="flex items-center gap-2 mb-6">
+                  <span className="text-xs bg-white/10 border border-gold/30 rounded-full px-3 py-1 text-gold-light">
+                    {recommendedSpread.name}
+                  </span>
+                  <span className="text-xs text-white/50">
+                    {recommendedSpread.description}
+                  </span>
                 </div>
 
-                {/* 牌阵布局 - 使用Grid布局 */}
+                {/* 牌阵布局(轻量:小图 + 点击放大) */}
                 <div className="max-w-5xl mx-auto">
                   <div
                     className={`grid gap-4 justify-items-center ${gridClassFor(
@@ -287,9 +287,9 @@ export default function ResultPage() {
                     {drawnCards.map((card, index) => (
                       <motion.div
                         key={card.id}
-                        className={`flex flex-col items-center transition-all duration-500 ${
+                        className={`flex flex-col items-center transition-all duration-500 cursor-pointer ${
                           parsed.currentCardIndex === index
-                            ? "ring-4 ring-purple-400 ring-opacity-50 rounded-xl p-4 bg-purple-50/30"
+                            ? "rounded-xl p-3 bg-white/5 ring-1 ring-gold/40"
                             : ""
                         } ${
                           // 特殊布局调整
@@ -307,33 +307,37 @@ export default function ResultPage() {
                         }}
                         transition={{ delay: index * 0.2 }}
                         id={`card-${index}`}
+                        onClick={() => setModalCardIndex(index)}
                       >
-                        <ResultTarotCard
-                          card={card}
-                          index={index}
-                          isReversed={cardReversals[index] || false}
-                        />
-                        {/* 牌面标注 */}
-                        <div className="mt-3 text-center max-w-[120px]">
-                          <p className="text-sm font-semibold text-gray-800">
+                        {/* 牌面小图(轻量呈现) */}
+                        <div className="pointer-events-none">
+                          <ResultTarotCard
+                            card={card}
+                            index={index}
+                            isReversed={cardReversals[index] || false}
+                          />
+                        </div>
+                        {/* 极简标注 */}
+                        <div className="mt-2 text-center max-w-[110px]">
+                          <p className="text-xs text-white/80 font-medium">
                             {cardReversals[index] && (
-                              <span className="text-amber-600">(逆)</span>
+                              <span className="text-gold/80 mr-1">逆</span>
                             )}
                             {card.name}
-                          </p>
-                          <p className="text-xs text-purple-600 font-medium mt-1">
-                            {recommendedSpread.positions[index]}
                           </p>
                         </div>
                       </motion.div>
                     ))}
                   </div>
+                  <p className="text-center text-xs text-white/40 mt-4">
+                    点击任意牌可放大查看牌位含义
+                  </p>
                 </div>
               </motion.section>
             )}
           </AnimatePresence>
 
-          {/* 3. AI思考过程 */}
+          {/* 3. AI深度解析 */}
           <AnimatePresence>
             {showAnalysis && (
               <motion.section
@@ -341,38 +345,35 @@ export default function ResultPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -30 }}
                 transition={{ duration: 0.6 }}
-                className="mystical-card p-6 md:p-8"
+                className="astro-card p-6 md:p-8"
               >
-                <div className="flex items-center mb-6">
-                  <div>
-                    <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                      🤖 AI深度解析
-                    </h2>
-                    {isStreaming && (
-                      <p className="text-green-600 text-sm font-medium">
-                        正在思考分析中...
-                      </p>
-                    )}
+                <div className="flex items-center justify-between mb-5">
+                  <div className="astro-card-title">
+                    <span className="text-gold">🔮</span>
+                    <span>AI 深度解析</span>
                   </div>
+                  {isStreaming && (
+                    <p className="text-gold/80 text-sm font-medium">
+                      ✨ 正在思考分析中...
+                    </p>
+                  )}
                 </div>
 
-                <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6 md:p-8">
-                  <div className="text-gray-700 text-base md:text-lg leading-relaxed">
-                    <MarkdownRenderer
-                      content={
-                        parsed.analysis ??
-                        stripAdviceSection(streamingContent)
-                      }
-                      className="text-gray-700"
+                <div className="max-w-2xl mx-auto text-white/85 leading-8">
+                  <MarkdownRenderer
+                    content={
+                      parsed.analysis ?? stripAdviceSection(streamingContent)
+                    }
+                    variant="dark"
+                    className="text-white/85"
+                  />
+                  {isStreaming && (
+                    <motion.span
+                      className="inline-block w-2 h-5 bg-gold ml-1"
+                      animate={{ opacity: [1, 0, 1] }}
+                      transition={{ duration: 1, repeat: Infinity }}
                     />
-                    {isStreaming && (
-                      <motion.span
-                        className="inline-block w-2 h-5 bg-purple-500 ml-1"
-                        animate={{ opacity: [1, 0, 1] }}
-                        transition={{ duration: 1, repeat: Infinity }}
-                      />
-                    )}
-                  </div>
+                  )}
                 </div>
               </motion.section>
             )}
@@ -386,24 +387,27 @@ export default function ResultPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -30 }}
                 transition={{ duration: 0.6 }}
-                className="mystical-card p-6 md:p-8"
+                className="astro-card p-6 md:p-8 border-gold/30 shadow-[0_0_40px_rgba(212,175,55,0.1)]"
               >
-                <div className="flex items-center mb-6">
-                  <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                    核心建议
-                  </h2>
+                <div className="astro-card-title mb-5">
+                  <span className="text-gold">💡</span>
+                  <span>核心建议</span>
                 </div>
-                <div className="bg-gradient-to-r from-yellow-50 via-orange-50 to-yellow-50 border border-yellow-200 rounded-xl p-6">
+                <div className="text-center">
                   {parsed.coreAdvice ? (
-                    // Markdown 渲染：AI 输出的 **粗体**/换行正常展示（规格 R3）
-                    <MarkdownRenderer content={parsed.coreAdvice} />
+                    <div className="max-w-2xl mx-auto text-gold-light">
+                      <MarkdownRenderer
+                        content={parsed.coreAdvice}
+                        variant="dark"
+                        className="text-gold-light font-serif text-lg"
+                      />
+                    </div>
                   ) : streamComplete ? (
-                    // 流完成但 AI 未输出 💡 节 → 优雅降级兜底文案（规格 G2）
-                    <p className="text-gray-800 text-lg md:text-xl font-semibold leading-relaxed">
+                    <p className="text-gold-light text-xl font-serif leading-relaxed">
                       请结合以上解析，听从内心的声音
                     </p>
                   ) : (
-                    <p className="text-gray-800 text-lg md:text-xl font-semibold leading-relaxed">
+                    <p className="text-white/60 text-lg font-semibold leading-relaxed">
                       正在生成核心建议...
                     </p>
                   )}
@@ -415,16 +419,15 @@ export default function ResultPage() {
           {/* 底部操作 */}
           {streamComplete && (
             <motion.div
-              className="text-center pt-8"
+              className="text-center pt-6"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
             >
               <div className="flex flex-col sm:flex-row justify-center gap-3">
-                {/* 历史记录入口（规格 Y1） */}
                 <motion.button
                   onClick={() => router.push("/history")}
-                  className="bg-white border-2 border-purple-300 text-purple-600 hover:bg-purple-50 rounded-xl px-8 py-4 text-lg font-bold transition-colors"
+                  className="astro-button px-8 py-4 text-lg font-bold"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -433,7 +436,7 @@ export default function ResultPage() {
 
                 <motion.button
                   onClick={() => router.push("/")}
-                  className="bg-white border-2 border-purple-300 text-purple-600 hover:bg-purple-50 rounded-xl px-8 py-4 text-lg font-bold transition-colors"
+                  className="astro-button px-8 py-4 text-lg font-bold"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -444,6 +447,20 @@ export default function ResultPage() {
           )}
         </div>
       </main>
+
+      {/* G7:牌放大模态 */}
+      <AnimatePresence>
+        {modalCardIndex !== null && drawnCards[modalCardIndex] && (
+          <CardModal
+            card={drawnCards[modalCardIndex]}
+            position={
+              recommendedSpread.positions[modalCardIndex] ?? "未知牌位"
+            }
+            isReversed={cardReversals[modalCardIndex] || false}
+            onClose={() => setModalCardIndex(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, act, waitFor } from "@testing-library/react";
+import { render, screen, act, waitFor, fireEvent } from "@testing-library/react";
 import { useTarotStore } from "@/lib/store";
 import { tarotCards } from "@/lib/tarot-data";
 
@@ -114,6 +114,26 @@ describe("O3 结果页流式解析与展示", () => {
     expect(document.querySelector("strong")).toBeInTheDocument();
     // 页面中不应出现原样星号
     expect(screen.queryByText(/\*\*/)).toBeNull();
+  });
+
+  it("G7 点击牌 → 放大模态显示牌位标注，关闭后消失", async () => {
+    const callbacks = await renderAndGetCallbacks();
+    act(() => {
+      callbacks.onContent("## 🔮 深度解析过程\n\n分析内容。\n\n");
+      callbacks.onComplete();
+    });
+    // 点击第一张牌的牌面
+    const cardImage = document.querySelector('img[alt="愚者"]');
+    expect(cardImage).not.toBeNull();
+    fireEvent.click(cardImage!);
+    // 模态出现,含牌位标注(单张牌阵 positions[0] = 核心指引)与牌名
+    expect(screen.getByText("核心指引")).toBeInTheDocument();
+    expect(screen.getByTestId("card-modal-content")).toBeInTheDocument();
+    // 关闭(AnimatePresence exit 动画需要等待)
+    fireEvent.click(screen.getByTestId("card-modal-overlay"));
+    await waitFor(() =>
+      expect(screen.queryByTestId("card-modal-content")).toBeNull(),
+    );
   });
 
   it("Y1 完成后自动保存记录（addReading 字段完整）", async () => {
