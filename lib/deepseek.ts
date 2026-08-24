@@ -150,3 +150,20 @@ export async function generateTarotReadingStream(
     }
   }
 }
+
+// 查询免费试用状态（页面加载时同步服务端真实状态，服务端为权威）
+export async function fetchTrialStatus(): Promise<{
+  trialUsed: boolean;
+  remaining: number;
+} | null> {
+  try {
+    const response = await fetch('/api/trial-status', {
+      headers: { 'X-Device-Id': getOrCreateDeviceId() },
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as { trialUsed: boolean; remaining: number };
+  } catch (error) {
+    console.warn('查询免费试用状态失败:', error);
+    return null;
+  }
+}

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Stars, Moon } from "lucide-react";
 import { useTarotStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
+import { fetchTrialStatus } from "@/lib/deepseek";
 import {
   MysticalBg,
   MysticalCard,
@@ -37,6 +38,19 @@ export default function Home() {
       localStorage.removeItem("deepseek_api_key");
     };
     restoreApiKey();
+  }, []);
+
+  // 同步服务端免费试用状态：刷新/重开页面后显示真实余量（服务端为权威，本地 trialUsed 仅缓存）
+  useEffect(() => {
+    let cancelled = false;
+    fetchTrialStatus().then((status) => {
+      if (!cancelled && status && typeof status.trialUsed === "boolean") {
+        useTarotStore.getState().setTrialStatus(status.trialUsed);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // 获取推荐问题

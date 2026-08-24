@@ -129,7 +129,7 @@
 
 响应：`text/event-stream` 流式事件，帧格式 `data: {json}\n\n`：
 
-- `{ "type": "meta", "usingSystemKey": true, "remainingCalls": 5, "trialUsed": false }` — 开头元信息
+- `{ "type": "meta", "usingSystemKey": true, "remainingCalls": 1, "trialUsed": false }` — 开头元信息（`remainingCalls` 为系统 Key 试用余量：未用 1 / 已用 0；开发环境为 `null`）
 - `{ "type": "content", "content": "文本片段" }` — AI 增量内容
 - `{ "type": "complete" }` — 流结束
 
@@ -139,12 +139,22 @@
 
 **GET** `/api/suggested-questions` — 返回按类别分组的预设问题库（love / career / relationships / life）。
 
+### 免费试用状态接口
+
+**GET** `/api/trial-status` — 返回当前设备的免费试用状态（需携带 `X-Device-Id` 请求头）：
+
+```json
+{ "trialUsed": false, "remaining": 1 }
+```
+
+页面加载时调用，用于刷新/重开页面后同步真实试用余量（**服务端为权威**，客户端本地状态仅作缓存）。
+
 ## 🔒 隐私与数据
 
 - **本地存储**: 历史记录与 API Key 仅保存在用户浏览器本地；API Key 经 **AES-GCM 加密**后存储（密文在 localStorage，会话密钥在 sessionStorage，关闭浏览器后需重新输入）
 - **API安全**: DeepSeek API 密钥仅在服务端调用时使用；未配置个人密钥时使用系统密钥（免费试用每设备 1 次 + IP 限流 3 小时 5 次 + 每日配额默认 50 次，见 [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)）
 - **加密边界**: 浏览器端加密可防静态窃取（扩展扫描/磁盘取证），**无法防恶意脚本/浏览器扩展**（解密在客户端进行）——这就是 R1 同时做 AI 输出 XSS 消毒（`react-markdown` 默认转义、无 `dangerouslySetInnerHTML`）的原因；生产环境启用 CSP（`next.config.ts`）限制脚本来源
-- **免费试用边界**: 无登录系统，"每人一次"为尽力而为——清除 localStorage / 换浏览器 / 无痕模式可绕过，IP 限流作为辅助防线
+- **免费试用边界**: 无登录系统，"每人一次"为尽力而为——清除 localStorage / 换浏览器 / 无痕模式可绕过，IP 限流作为辅助防线；服务端试用记录存于 Redis（生产推荐，跨实例且重启不失效），未配置 Redis 时回退单实例内存，**服务重启/冷启动即清零**（本地开发验证时注意此行为）
 - **无用户追踪**: 不收集任何个人敏感信息
 
 ## 🤝 贡献指南

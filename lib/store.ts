@@ -89,6 +89,8 @@ interface TarotStore {
   usingSystemKey: boolean;
   trialUsed: boolean;
   setApiUsage: (remainingCalls: number | null, usingSystemKey: boolean, trialUsed?: boolean) => void;
+  // 仅更新免费试用状态（页面加载时由服务端查询校正；不触碰 usingSystemKey/remainingCalls）
+  setTrialStatus: (trialUsed: boolean) => void;
   
   // 重置状态
   resetSession: () => void;
@@ -222,6 +224,8 @@ export const useTarotStore = create<TarotStore>()(
         usingSystemKey,
         trialUsed: trialUsed ?? false,
       }),
+
+      setTrialStatus: (trialUsed) => set({ trialUsed }),
       
       resetSession: () => set({
         question: '',
@@ -238,6 +242,8 @@ export const useTarotStore = create<TarotStore>()(
       partialize: (state) => ({
         readings: state.readings,
         encryptedApiKey: state.encryptedApiKey,
+        // 免费试用状态持久化为缓存：刷新瞬间先显示上次状态，页面加载时再由服务端查询校正
+        trialUsed: state.trialUsed,
       }),
       // 丢弃旧版本持久化中的明文 apiKey 字段，防止明文进入内存态
       merge: (persisted, current) => {

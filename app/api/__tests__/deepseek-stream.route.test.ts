@@ -215,6 +215,8 @@ describe("R3 /api/deepseek-stream 试用 + 限流 + 流式", () => {
     expect(text).toContain('"type":"content","content":"世界"');
     expect(text).toContain('"type":"meta"');
     expect(text).toContain('"trialUsed":true');
+    // 试用已标记 → 剩余次数为 0（不再硬编码 5）
+    expect(text).toContain('"remainingCalls":0');
     expect(text).toContain('"type":"complete"');
   });
 

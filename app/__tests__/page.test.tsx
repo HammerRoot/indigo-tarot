@@ -7,7 +7,11 @@ import {
   importSessionKey,
 } from "@/lib/apiKeyCrypto";
 
-const { routerPushMock } = vi.hoisted(() => ({ routerPushMock: vi.fn() }));
+const { routerPushMock, trialStatusMock } = vi.hoisted(() => ({
+  routerPushMock: vi.fn(),
+  // 服务端试用状态（fetch mock 按需读取；默认与 beforeEach 的 store 初始一致）
+  trialStatusMock: { trialUsed: true, remaining: 0 },
+}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: routerPushMock }),
@@ -29,11 +33,22 @@ describe("首页：免费试用用完时的弹窗引导", () => {
       drawnCards: [],
       cardReversals: [],
     });
-    globalThis.fetch = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ questions: ["测试问题一"] }), {
-        headers: { "Content-Type": "application/json" },
-      }),
-    ) as unknown as typeof fetch;
+    trialStatusMock.trialUsed = true; // 默认：服务端已用过（与 store 初始一致）
+    globalThis.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/trial-status")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(trialStatusMock), {
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ questions: ["测试问题一"] }), {
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    }) as unknown as typeof fetch;
   });
 
   it("试用已用完且未填个人 Key → 提交时弹出 API 设置并提示，不跳转", async () => {
@@ -74,5 +89,23 @@ describe("首页：免费试用用完时的弹窗引导", () => {
     fireEvent.click(screen.getByText("开始占卜"));
 
     expect(screen.queryByText(/免费试用次数已用完/)).toBeNull();
+  });
+
+  it("本地缓存已用完但服务端未试用 → 加载时校正为可用", async () => {
+    trialStatusMock.trialUsed = false;
+    useTarotStore.setState({
+      trialUsed: true, // 模拟过期缓存：上次刷新时已用完
+      apiKey: "",
+      encryptedApiKey: null,
+    });
+
+    render(<Home />);
+    // 等待 useEffect 的 fetchTrialStatus 完成
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+
+    // 服务端为权威 → 本地缓存被校正为未试用
+    expect(useTarotStore.getState().trialUsed).toBe(false);
   });
 });

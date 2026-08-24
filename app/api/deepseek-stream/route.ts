@@ -139,7 +139,9 @@ export async function POST(request: NextRequest) {
             usingSystemKey,
             remainingCalls:
               usingSystemKey && process.env.NODE_ENV !== "development"
-                ? 5
+                ? trialUsed
+                  ? 0
+                  : 1
                 : null,
             trialUsed,
           };
