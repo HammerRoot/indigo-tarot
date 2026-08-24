@@ -35,8 +35,10 @@ export default function DrawPage() {
     scale: spreadScale,
     x: spreadX,
     y: spreadY,
-    registerContainerRef: spreadContainerRef,
+    registerViewportRef: spreadViewportRef,
+    registerContentRef: spreadContentRef,
     ignoreClick: spreadIgnoreClick,
+    fitToContent: spreadFit,
     onPointerDown: spreadPointerDown,
     onPointerMove: spreadPointerMove,
     onPointerUp: spreadPointerUp,
@@ -81,6 +83,16 @@ export default function DrawPage() {
   const handleStartDraw = () => {
     setCurrentStep("draw");
   };
+
+  // 进入选牌步骤后自动 fit,保证 78 张完整可见并居中
+  // 注意:须等 78 张牌的入场动画完成(最长 delay 0.6s)再读 offsetHeight,
+  // 否则动画进行中读到的是未稳定尺寸,fit 会缩到下限。
+  useEffect(() => {
+    if (currentStep === "draw") {
+      const t = setTimeout(() => spreadFit(), 800);
+      return () => clearTimeout(t);
+    }
+  }, [currentStep, spreadFit]);
 
   // 选择卡牌(G6:点击的真实牌 = 抽到的牌,不再随机)
   const handleCardSelect = (index: number) => {
@@ -213,7 +225,8 @@ export default function DrawPage() {
             {currentStep === "spread" && (
               <motion.div
                 key="spread"
-                initial={{ opacity: 0, y: 20 }}
+                // 首屏不播放入场动画(SSR/hydration 时 initial 动画可能卡住导致整块不可见)
+                initial={false}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 className="mystical-card p-8 text-center"
@@ -308,16 +321,16 @@ export default function DrawPage() {
                 </div>
 
                 <div
-                  ref={spreadContainerRef}
+                  ref={spreadViewportRef}
                   className="relative overflow-hidden rounded-2xl border border-purple-200/60 bg-gradient-to-b from-purple-50/50 to-transparent touch-none select-none"
-                  style={{ height: 420 }}
+                  style={{ height: "min(72vh, 680px)" }}
                   onWheel={spreadWheel}
                   onPointerDown={spreadPointerDown}
                   onPointerMove={spreadPointerMove}
                   onPointerUp={spreadPointerUp}
                   onPointerCancel={spreadPointerCancel}
                 >
-                  {/* 牌桌内容:缩放/平移作用于内层 */}
+                  {/* 牌桌内容:缩放/平移作用于内层(自适应宽度,fit 后完整可见) */}
                   <div
                     className="absolute inset-0"
                     style={{
@@ -326,7 +339,10 @@ export default function DrawPage() {
                       transition: "transform 0.1s ease-out",
                     }}
                   >
-                    <div className="grid grid-cols-8 sm:grid-cols-10 lg:grid-cols-13 gap-2 md:gap-3 p-4 w-max">
+                    <div
+                      ref={spreadContentRef}
+                      className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-13 gap-1.5 md:gap-2.5 p-4 w-full"
+                    >
                       {tarotCards.map((card, index) => (
                         <motion.div
                           key={card.id}
@@ -339,7 +355,7 @@ export default function DrawPage() {
                             data-card-back="true"
                             data-index={index}
                             onClick={() => handleCardSelect(index)}
-                            className={`w-12 h-18 sm:w-14 sm:h-21 md:w-16 md:h-24 bg-gradient-to-br from-purple-800 via-blue-900 to-purple-900 rounded-lg border-2 shadow-lg flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                            className={`w-full aspect-[2/3] bg-gradient-to-br from-purple-800 via-blue-900 to-purple-900 rounded-lg border-2 shadow-lg flex items-center justify-center cursor-pointer transition-all duration-200 ${
                               selectedCards.includes(index)
                                 ? "border-yellow-400 shadow-yellow-400/50 scale-110 z-10"
                                 : "border-purple-300 hover:border-purple-400 hover:scale-110 hover:z-10"

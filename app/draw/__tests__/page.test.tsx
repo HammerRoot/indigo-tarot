@@ -30,6 +30,18 @@ describe("G6 牌桌抽牌体验", () => {
     setupStore();
   });
 
+  it("首屏 spread 步骤可见:开始抽牌按钮立即可点(动画不卡死回归)", () => {
+    // 真实浏览器 bug:AnimatePresence mode="wait" 下首屏 initial 动画卡在
+    // opacity 0,导致整个推荐牌阵卡片不可见、按钮无法点击(已修:initial={false})
+    render(<DrawPage />);
+    const btn = screen.getByText("开始抽牌");
+    expect(btn).toBeInTheDocument();
+    expect(btn.closest(".mystical-card")).not.toBeNull();
+    // 按钮容器 opacity 应为 1(不被动画卡在 0)
+    const card = btn.closest(".mystical-card")!;
+    expect(window.getComputedStyle(card).opacity).toBe("1");
+  });
+
   it("选牌步骤渲染 78 张 CSS 牌背(非占位)", async () => {
     render(<DrawPage />);
     fireEvent.click(screen.getByText("开始抽牌"));
