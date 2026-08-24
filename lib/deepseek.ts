@@ -13,6 +13,52 @@ export interface StreamCallbacks {
   }) => void;
 }
 
+// 构建 AI 解读 prompt(规格 G12:结论先行——先核心建议,再深度解析过程)
+// 抽离为纯函数便于单测断言小节顺序与内容。
+export function buildTarotPrompt(
+  question: string,
+  cards: TarotCard[],
+  cardReversals: boolean[] = [],
+): string {
+  const cardInfo = cards
+    .map((card, index) => {
+      const isReversed = cardReversals[index] || false;
+      return `第${index + 1}张牌：${card.name}(${card.nameEn})${isReversed ? " - 逆位" : " - 正位"}
+    含义：${isReversed ? card.meaningReversed : card.meaningUpright}
+    关键词：${isReversed ? card.keywordsReversed.join(", ") : card.keywordsUpright.join(", ")}`;
+    })
+    .join("\n\n");
+
+  return `
+作为一位专业的塔罗占卜师，请为以下问题提供深刻而有帮助的解读：
+
+问题：${question}
+
+抽到的牌：
+${cardInfo}
+
+请按照以下结构进行分析（结论先行，先给核心建议，再展开深度解析）：
+
+## 💡 核心建议
+
+根据以上分析，给出最重要的一句话建议。
+
+## 🔮 深度解析过程
+
+**第一步：卡牌组合分析**
+分析各张牌之间的相互关系和组合含义...
+
+**第二步：针对问题的具体解读**
+结合问题背景，分析卡牌对问题的指引...
+
+**第三步：潜在机会与挑战**
+指出可能的机遇和需要注意的方面...
+
+请用温暖、专业、有希望的语调，并确保内容有深度且实用。
+务必严格包含「## 💡 核心建议」与「## 🔮 深度解析过程」两个小节（用「## 」加粗标题或「**粗体**」标题均可），先输出核心建议（结论先行），再输出深度解析过程。
+`;
+}
+
 // 流式生成塔罗解读
 export async function generateTarotReadingStream(
   question: string,
@@ -21,41 +67,7 @@ export async function generateTarotReadingStream(
   userApiKey?: string,
   cardReversals?: boolean[]
 ): Promise<void> {
-  const cardInfo = cards.map((card, index) => {
-    const isReversed = cardReversals?.[index] || false;
-    return `第${index + 1}张牌：${card.name}(${card.nameEn})${isReversed ? ' - 逆位' : ' - 正位'}
-    含义：${isReversed ? card.meaningReversed : card.meaningUpright}
-    关键词：${isReversed ? card.keywordsReversed.join(', ') : card.keywordsUpright.join(', ')}`
-  }).join('\n\n');
-
-  const prompt = `
-作为一位专业的塔罗占卜师，请为以下问题提供深刻而有帮助的解读：
-
-问题：${question}
-
-抽到的牌：
-${cardInfo}
-
-请按照以下结构进行分析：
-
-## 🔮 深度解析过程
-
-**第一步：卡牌组合分析**
-分析各张牌之间的相互关系和组合含义...
-
-**第二步：针对问题的具体解读** 
-结合问题背景，分析卡牌对问题的指引...
-
-**第三步：潜在机会与挑战**
-指出可能的机遇和需要注意的方面...
-
-## 💡 核心建议
-
-根据以上分析，给出最重要的一句话建议。
-
-请用温暖、专业、有希望的语调，并确保内容有深度且实用。
-务必严格包含「## 🔮 深度解析过程」与「## 💡 核心建议」两个小节（用「## 」加粗标题或「**粗体**」标题均可），核心建议为单独一句话。
-`;
+  const prompt = buildTarotPrompt(question, cards, cardReversals);
 
   try {
     const response = await fetch('/api/deepseek-stream', {

@@ -1,132 +1,101 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Sparkles } from "lucide-react";
-import { useTarotStore, recommendSpread } from "@/lib/store";
+import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { TarotCard } from "@/app/components/TarotCard";
-import { tarotCards } from "@/lib/tarot-data";
-import { pickCardsByIndex } from "@/lib/pick";
-import { useSpreadZoom } from "@/lib/useSpreadZoom";
+import { useTarotStore, recommendSpread } from "@/lib/store";
+import { SpreadSlots } from "@/app/components/SpreadSlots";
+import {
+  SelectionFill,
+  buildPositionMeanings,
+  firstEmptySlot,
+} from "@/lib/drawFlow";
 
+// 选牌情况页(规格 G10):状态机仅为两态——未完成选牌 / 完成选牌
+// - 展示已选牌(填充槽位)与待选空位(虚线占位)
+// - 未完成:仅高亮一个待选空位(按顺序),该空位与底部"开始选牌"可点击 → 跳转选牌子页 /draw/select
+// - 完成:仅"开始解析"主按钮 → 跳转结果页
 export default function DrawPage() {
   const router = useRouter();
   const {
     question,
     recommendedSpread,
-    drawnCards,
-    cardReversals,
-    isLoading,
+    selectedSlots,
     setRecommendedSpread,
+    setSelectedSlots,
     setDrawnCards,
     setCardReversals,
   } = useTarotStore();
 
-  const [currentStep, setCurrentStep] = useState<"spread" | "draw" | "reveal">(
-    "spread",
-  );
-  const [selectedCards, setSelectedCards] = useState<number[]>([]);
-  const [revealedCards, setRevealedCards] = useState<number[]>([]);
   const [showFullScreenLoading, setShowFullScreenLoading] = useState(false);
-
-  // G6:整桌缩放(滚轮/双指 + 拖拽)
-  const {
-    scale: spreadScale,
-    registerViewportRef: spreadViewportRef,
-    ignoreClick: spreadIgnoreClick,
-    onPointerDown: spreadPointerDown,
-    onPointerMove: spreadPointerMove,
-    onPointerUp: spreadPointerUp,
-    onPointerCancel: spreadPointerCancel,
-    onWheel: spreadWheel,
-  } = useSpreadZoom(1);
 
   // 控制全屏加载时的滚动禁用
   useEffect(() => {
     if (showFullScreenLoading) {
-      // 禁用页面滚动
       document.body.style.overflow = "hidden";
     } else {
-      // 恢复页面滚动
       document.body.style.overflow = "unset";
     }
-
-    // 清理函数：组件卸载时恢复滚动
     return () => {
       document.body.style.overflow = "unset";
     };
   }, [showFullScreenLoading]);
 
-  // 如果没有问题，返回首页
+  // 无问题回首页;推荐牌阵
   useEffect(() => {
     if (!question) {
       router.push("/");
       return;
     }
-
-    // 推荐牌阵
     if (!recommendedSpread) {
       const spread = recommendSpread(question);
       setRecommendedSpread(spread);
     }
   }, [question, recommendedSpread, setRecommendedSpread, router]);
 
-  // 开始抽牌
-  const handleStartDraw = () => {
-    setCurrentStep("draw");
-  };
-
-
-
-  // 选择卡牌(G6:点击的真实牌 = 抽到的牌,不再随机)
-  const handleCardSelect = (index: number) => {
-    // 拖拽后抑制点击,保证盲选点击准确
-    if (spreadIgnoreClick()) return;
-    if (
-      selectedCards.includes(index) ||
-      !recommendedSpread ||
-      selectedCards.length >= recommendedSpread.cardCount
-    )
-      return;
-
-    const newSelected = [...selectedCards, index];
-    setSelectedCards(newSelected);
-
-    // 如果选够了卡牌,用点击索引从真实牌组取牌
-    if (newSelected.length === recommendedSpread.cardCount) {
-      const cards = pickCardsByIndex(tarotCards, newSelected);
-      // 生成逆位状态（30%概率逆位）
-      const reversals = cards.map(() => Math.random() < 0.3);
-
-      setDrawnCards(cards);
-      setCardReversals(reversals);
-
-      setCurrentStep("reveal");
+  // 槽位数量与牌阵不一致(或首次进入)时补全为空位数组
+  useEffect(() => {
+    if (recommendedSpread && selectedSlots.length !== recommendedSpread.cardCount) {
+      setSelectedSlots(Array(recommendedSpread.cardCount).fill(null));
     }
-  };
+  }, [recommendedSpread, selectedSlots.length, setSelectedSlots]);
 
-  // 翻牌动画
-  const handleRevealCard = (index: number) => {
-    if (revealedCards.includes(index)) return;
+  const cardCount = recommendedSpread?.cardCount ?? 0;
+  const meanings = useMemo(
+    () =>
+      recommendedSpread
+        ? buildPositionMeanings(question, recommendedSpread.positions)
+        : [],
+    [question, recommendedSpread],
+  );
 
-    const newRevealed = [...revealedCards, index];
-    setRevealedCards(newRevealed);
-  };
+  // 状态机:focus 为第一个未选空位;为 null 即「完成选牌」
+  const focusSlot = useMemo(() => firstEmptySlot(selectedSlots), [selectedSlots]);
+  const isComplete = focusSlot === null;
+  const filledCount = useMemo(
+    () => selectedSlots.filter((s) => s !== null).length,
+    [selectedSlots],
+  );
 
-  // 点击继续按钮
-  const handleContinue = () => {
-    if (!recommendedSpread || drawnCards.length === 0) return;
+  // 进入选牌子页(点击"开始选牌"或聚焦空位,效果一致)
+  const goSelect = useCallback(() => {
+    if (isComplete) return;
+    router.push("/draw/select");
+  }, [isComplete, router]);
 
-    // 显示短暂的过渡动画
+  // 完成选牌 → 写入结果数据并进入解析
+  const handleAnalyze = useCallback(() => {
+    const fills = selectedSlots.filter((s): s is SelectionFill => s !== null);
+    if (fills.length !== cardCount) return;
+    setDrawnCards(fills.map((f) => f.card));
+    setCardReversals(fills.map((f) => f.reversed));
     setShowFullScreenLoading(true);
-
-    // 立即跳转到结果页面，不等待API
-    setTimeout(() => {
+    window.setTimeout(() => {
       setShowFullScreenLoading(false);
       router.push("/result");
     }, 500);
-  };
+  }, [selectedSlots, cardCount, setDrawnCards, setCardReversals, router]);
 
   if (!recommendedSpread) {
     return (
@@ -152,314 +121,64 @@ export default function DrawPage() {
         </motion.button>
 
         <div className="max-w-4xl mx-auto pt-20">
-          {/* 步骤指示器 */}
-          <div className="flex justify-center mb-8">
-            <div className="flex flex-wrap justify-center gap-4 md:gap-8">
-              {["推荐牌阵", "选择卡牌", "揭示结果"].map((step, index) => {
-                const steps = ["spread", "draw", "reveal"];
-                const isActive = steps[index] === currentStep;
-                const isCompleted = steps.indexOf(currentStep) > index;
-
-                return (
-                  <div key={step} className="flex items-center">
-                    <div
-                      className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all shadow-lg ${
-                        isActive
-                          ? "border-purple-500 bg-purple-500 text-white"
-                          : isCompleted
-                            ? "border-purple-300 bg-purple-300 text-white"
-                            : "border-gray-300 bg-white text-gray-400"
-                      }`}
-                    >
-                      {index + 1}
-                    </div>
-                    <span
-                      className={`ml-3 text-sm font-semibold hidden sm:block ${
-                        isActive
-                          ? "text-purple-600"
-                          : isCompleted
-                            ? "text-purple-400"
-                            : "text-gray-400"
-                      }`}
-                    >
-                      {step}
-                    </span>
-                    {index < 2 && (
-                      <div className="w-8 md:w-12 h-px bg-gray-300 mx-2 md:mx-4 hidden sm:block" />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 问题显示 */}
-          <div className="text-center mb-6">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-800 mb-3">
-              你的问题
-            </h1>
-            <div className="mystical-card p-4 max-w-2xl mx-auto">
-              <p className="text-gray-700 text-base leading-relaxed">
-                &quot;{question}&quot;
-              </p>
-            </div>
-          </div>
-
-          <AnimatePresence mode="wait">
-            {/* 步骤1: 推荐牌阵 */}
-            {currentStep === "spread" && (
-              <motion.div
-                key="spread"
-                // 首屏不播放入场动画(SSR/hydration 时 initial 动画可能卡住导致整块不可见)
-                initial={false}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="mystical-card p-8 text-center"
-              >
-                <div className="w-20 h-20 mx-auto mb-8 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-10 h-10 text-white" />
-                </div>
-                <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-6">
-                  {recommendedSpread.name}
-                </h2>
-                <p className="text-gray-600 text-lg md:text-xl mb-8 leading-relaxed max-w-2xl mx-auto">
-                  {recommendedSpread.description}
+          <div className="text-center">
+            <div className="mb-6">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-3">
+                {recommendedSpread.name}
+              </h1>
+              <div className="mystical-card p-4 max-w-2xl mx-auto">
+                <p className="text-sm md:text-base text-gray-700 leading-relaxed">
+                  &quot;{question}&quot;
                 </p>
-                <div className="bg-purple-50 border border-purple-200 rounded-xl p-6 mb-8">
-                  <p className="text-base font-semibold text-gray-700 mb-4 text-center">
-                    牌位含义：
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
-                    {recommendedSpread.positions.map((position, index) => (
-                      <span
-                        key={index}
-                        className="bg-white border border-purple-200 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 text-center"
-                      >
-                        {position}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+              </div>
+            </div>
+
+            {/* 选牌进度 */}
+            <p className="text-sm text-purple-600 font-semibold mb-4">
+              {isComplete
+                ? `已完成选牌 ${filledCount} / ${cardCount} 张`
+                : `已选 ${filledCount} / ${cardCount} 张 · 请选择第 ${focusSlot! + 1} 位「${recommendedSpread.positions[focusSlot!]}」`
+              }
+            </p>
+
+            {/* 牌阵槽位:聚焦空位高亮且可点击,其余不可点 */}
+            <SpreadSlots
+              positions={recommendedSpread.positions}
+              meanings={meanings}
+              fills={selectedSlots}
+              focusSlot={focusSlot}
+              onSlotClick={goSelect}
+            />
+
+            {/* 底部主按钮 */}
+            <div className="mt-10 pb-4">
+              {isComplete ? (
                 <motion.button
-                  onClick={handleStartDraw}
-                  className="mystical-button px-10 py-4 text-xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  onClick={handleAnalyze}
+                  className="mystical-button px-12 py-4 text-xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
                 >
-                  开始抽牌
+                  🔮 开始解析
                 </motion.button>
-              </motion.div>
-            )}
-
-            {/* 步骤2: 选择卡牌 */}
-            {currentStep === "draw" && (
-              <motion.div
-                key="draw"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="text-center"
-              >
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                  请选择 {recommendedSpread.cardCount} 张牌
-                </h2>
-                <div className="mystical-card p-4 inline-block mb-2">
-                  <p className="text-purple-600 font-semibold text-lg">
-                    已选择: {selectedCards.length} /{" "}
-                    {recommendedSpread.cardCount}
-                  </p>
-                </div>
-
-                {/* 修复3:扇形牌桌 - 左右滑动浏览 + 双指缩放 + 严格盲选 */}
-                <div
-                  ref={spreadViewportRef}
-                  className="relative overflow-x-auto overflow-y-hidden rounded-2xl border border-purple-200/60 bg-gradient-to-b from-purple-50/50 to-transparent select-none"
-                  style={{ height: "min(60vh, 560px)" }}
-                  onWheel={spreadWheel}
-                  onPointerDown={spreadPointerDown}
-                  onPointerMove={spreadPointerMove}
-                  onPointerUp={spreadPointerUp}
-                  onPointerCancel={spreadPointerCancel}
+              ) : (
+                <motion.button
+                  onClick={goSelect}
+                  className="mystical-button px-12 py-4 text-xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
                 >
-                  {/* 扇形内容:双指缩放作用于该层 */}
-                  <div
-                    className="relative min-w-full h-full"
-                    style={{
-                      transform: `scale(${spreadScale})`,
-                      transformOrigin: "50% 100%",
-                      transition: "transform 0.1s ease-out",
-                    }}
-                  >
-                    <div
-                      className="relative w-max h-full"
-                      style={{
-                        // 扇形:78 张牌围绕底部圆心,总角度约 180 度,每张牌旋转
-                        padding: "40px 120px 20px",
-                      }}
-                    >
-                      {tarotCards.map((card, index) => {
-                        // 扇形角度:-85° 到 +85°,每张牌偏移
-                        const angle = -85 + (index / (tarotCards.length - 1)) * 170;
-                        return (
-                          <motion.div
-                            key={card.id}
-                            className="absolute bottom-0"
-                            style={{
-                              left: `calc(50% + ${Math.sin((angle * Math.PI) / 180) * 900}px)`,
-                              zIndex: index,
-                            }}
-                            initial={{ opacity: 0, y: 40 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: Math.min(index * 0.015, 1.2) }}
-                          >
-                            <div
-                              data-card-back="true"
-                              data-index={index}
-                              onClick={() => handleCardSelect(index)}
-                              style={{ transform: `rotate(${angle}deg)`, transformOrigin: "50% 100%" }}
-                              className={`w-14 h-21 md:w-16 md:h-24 bg-gradient-to-br from-purple-800 via-blue-900 to-purple-900 rounded-lg border-2 shadow-lg flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                                selectedCards.includes(index)
-                                  ? "border-yellow-400 shadow-yellow-400/50 scale-110 z-50"
-                                  : "border-purple-300 hover:border-purple-400 hover:z-40"
-                              }`}
-                            >
-                              <div className="text-center text-white/80">
-                                <div className="text-xs md:text-sm mb-1">🌟</div>
-                                <div className="text-[10px] md:text-xs font-medium tracking-wider">
-                                  TAROT
-                                </div>
-                              </div>
-                              {selectedCards.includes(index) && (
-                                <motion.div
-                                  className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 rounded-full w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-xs md:text-sm font-bold"
-                                  initial={{ scale: 0 }}
-                                  animate={{ scale: 1 }}
-                                >
-                                  ✓
-                                </motion.div>
-                              )}
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-3">
-                  ← 左右滑动浏览扇形牌面 → · 双指缩放 · 凭直觉选择 {recommendedSpread.cardCount} 张(选中即揭晓)
-                </p>
-              </motion.div>
-            )}
-
-            {/* 步骤3: 揭示卡牌 */}
-            {currentStep === "reveal" && (
-              <motion.div
-                key="reveal"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="text-center"
-              >
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">
-                  点击卡牌揭示结果
-                </h2>
-                <div className="mystical-card p-4 inline-block mb-8">
-                  <p className="text-purple-600 font-semibold text-lg">
-                    已揭示: {revealedCards.length} / {drawnCards.length}
-                  </p>
-                </div>
-
-                <div className="flex justify-center gap-6 flex-wrap">
-                  {drawnCards.map((card, index) => (
-                    <motion.div
-                      key={card.id}
-                      className="flex flex-col items-center"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.2 }}
-                    >
-                      {/* 牌位标签 */}
-                      <motion.div
-                        className="bg-white border border-purple-200 rounded-lg px-4 py-2 mb-4 shadow-sm"
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.2 + 0.1 }}
-                      >
-                        <span className="text-sm font-semibold text-gray-700">
-                          {recommendedSpread.positions[index]}
-                        </span>
-                      </motion.div>
-
-                      {/* 塔罗牌组件 */}
-                      <TarotCard
-                        card={card}
-                        size="lg"
-                        isRevealed={revealedCards.includes(index)}
-                        isReversed={cardReversals[index] || false}
-                        onClick={() => handleRevealCard(index)}
-                      />
-
-                      {/* 卡牌提示 */}
-                      {revealedCards.includes(index) && (
-                        <motion.div
-                          className="mt-3 text-center max-w-32"
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.3 }}
-                        >
-                          <p className="text-xs text-gray-600 leading-relaxed">
-                            {(cardReversals[index]
-                              ? card.keywordsReversed
-                              : card.keywordsUpright
-                            )
-                              .slice(0, 2)
-                              .join("、")}
-                          </p>
-                        </motion.div>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-
-                {/* 继续按钮 - 全部卡牌揭示后显示 */}
-                {revealedCards.length === drawnCards.length && !isLoading && (
-                  <motion.div
-                    className="mt-8 text-center"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                  >
-                    <motion.button
-                      onClick={handleContinue}
-                      className="mystical-button px-8 py-4 text-xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      🔮 获取AI解读
-                    </motion.button>
-                    <p className="text-sm text-gray-500 mt-3">
-                      点击按钮，让AI为你解读塔罗牌的奥秘
-                    </p>
-                  </motion.div>
-                )}
-
-                {isLoading && (
-                  <motion.div
-                    className="mt-8"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                  >
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-300 mr-3"></div>
-                      <span className="text-gray-600">
-                        🤖 AI正在为你解读...
-                      </span>
-                    </div>
-                  </motion.div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  开始选牌
+                </motion.button>
+              )}
+              <p className="text-xs text-gray-500 mt-3">
+                {isComplete
+                  ? "牌阵已就位,让塔罗为你解读"
+                  : "点击高亮空位或「开始选牌」进入选牌页"
+              }
+            </p>
+            </div>
+          </div>
         </div>
       </main>
 
@@ -473,7 +192,6 @@ export default function DrawPage() {
             className="fixed inset-0 bg-gradient-to-br from-purple-900/95 via-blue-900/95 to-purple-800/95 backdrop-blur-sm z-50 flex items-center justify-center"
           >
             <div className="text-center">
-              {/* 主要加载动画 */}
               <motion.div
                 className="relative mb-8"
                 initial={{ scale: 0.8, opacity: 0 }}
@@ -488,11 +206,7 @@ export default function DrawPage() {
                 <motion.div
                   className="absolute inset-4 w-24 h-24 border-4 border-purple-300/30 border-b-purple-300 rounded-full"
                   animate={{ rotate: -360 }}
-                  transition={{
-                    duration: 1.5,
-                    repeat: Infinity,
-                    ease: "linear",
-                  }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <motion.div
@@ -505,38 +219,27 @@ export default function DrawPage() {
                 </div>
               </motion.div>
 
-              {/* 加载文本 */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="text-center"
               >
                 <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
                   🚀 即将开始AI解析
                 </h3>
-                <motion.p
-                  className="text-lg text-purple-200 mb-6 max-w-md"
-                  animate={{ opacity: [0.7, 1, 0.7] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                >
-                  准备进入解析页面，实时观看AI思考过程...
-                </motion.p>
-
-                {/* 加载点动画 */}
+                <p className="text-lg text-purple-200 mb-6 max-w-md mx-auto">
+                  准备进入解析页面,实时观看AI思考过程...
+                </p>
                 <div className="flex justify-center space-x-2">
-                  {[0, 1, 2].map((index) => (
+                  {[0, 1, 2].map((i) => (
                     <motion.div
-                      key={index}
+                      key={i}
                       className="w-3 h-3 bg-yellow-300 rounded-full"
-                      animate={{
-                        scale: [1, 1.2, 1],
-                        opacity: [0.5, 1, 0.5],
-                      }}
+                      animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
                       transition={{
                         duration: 1.5,
                         repeat: Infinity,
-                        delay: index * 0.2,
+                        delay: i * 0.2,
                       }}
                     />
                   ))}

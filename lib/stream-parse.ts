@@ -29,29 +29,29 @@ function headingEnd(content: string, match: RegExpMatchArray): number {
   return idx;
 }
 
+/**
+ * 顺序无关地提取某小节正文（规格 G12：结论先行时 💡 在 🔮 之前也要正确切分）。
+ * 规则：从该小节标题后取到"下一个小节标题（🔮/💡/✨/📌）或结尾"之间的正文。
+ */
+function extractSection(
+  content: string,
+  heading: RegExpMatchArray | null,
+): string | null {
+  if (!heading) return null;
+  const start = headingEnd(content, heading);
+  const after = content.slice(start);
+  const next = after.match(NEXT_HEADING);
+  const end = next ? start + next.index! : content.length;
+  const slice = content.slice(start, end).trim();
+  return slice || null;
+}
+
 export function parseStreamContent(content: string): StreamParseResult {
   const analysisHeading = content.match(ANALYSIS_HEADING);
   const adviceHeading = content.match(ADVICE_HEADING);
 
-  let analysis: string | null = null;
-  let coreAdvice: string | null = null;
-
-  if (analysisHeading) {
-    const start = headingEnd(content, analysisHeading);
-    const end = adviceHeading ? adviceHeading.index! : content.length;
-    const slice = content.slice(start, end).trim();
-    analysis = slice || null;
-  }
-
-  if (adviceHeading) {
-    const start = headingEnd(content, adviceHeading);
-    // 在 advice 正文范围内查找下一个标题（排除标题本身）
-    const after = content.slice(start);
-    const next = after.match(NEXT_HEADING);
-    const end = next ? start + next.index! : content.length;
-    const slice = content.slice(start, end).trim();
-    coreAdvice = slice || null;
-  }
+  const analysis = extractSection(content, analysisHeading);
+  const coreAdvice = extractSection(content, adviceHeading);
 
   // 取最后一个 "### 牌面 N"
   let currentCardIndex: number | null = null;

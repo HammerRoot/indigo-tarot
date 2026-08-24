@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { TarotCard } from './tarot-data';
+import { SelectionFill } from './drawFlow';
 import { recommendSpreadId } from './spread';
 import {
   decryptApiKey,
@@ -61,6 +62,10 @@ interface TarotStore {
   // 推荐的牌阵
   recommendedSpread: TarotSpread | null;
   setRecommendedSpread: (spread: TarotSpread | null) => void;
+  
+  // 选牌进行中的槽位填充(长度为 cardCount,null 表示未选)——情况页与选牌子页共享,内存态不持久化
+  selectedSlots: (SelectionFill | null)[];
+  setSelectedSlots: (slots: (SelectionFill | null)[]) => void;
   
   // 抽取的卡牌
   drawnCards: TarotCard[];
@@ -142,6 +147,7 @@ export const useTarotStore = create<TarotStore>()(
       apiKey: '',
       encryptedApiKey: null,
       recommendedSpread: null,
+      selectedSlots: [],
       drawnCards: [],
       cardReversals: [],
       readings: [],
@@ -195,6 +201,7 @@ export const useTarotStore = create<TarotStore>()(
       },
       
       setRecommendedSpread: (spread) => set({ recommendedSpread: spread }),
+      setSelectedSlots: (slots) => set({ selectedSlots: slots }),
       
       setDrawnCards: (cards) => set({ drawnCards: cards }),
       
@@ -219,6 +226,7 @@ export const useTarotStore = create<TarotStore>()(
       resetSession: () => set({
         question: '',
         recommendedSpread: null,
+        selectedSlots: [],
         drawnCards: [],
         cardReversals: [],
         isLoading: false

@@ -12,7 +12,6 @@ import { MarkdownRenderer } from "@/app/components/MarkdownRenderer";
 import { CardModal } from "@/app/components/CardModal";
 import { imageCache } from "@/lib/imageCache";
 import { parseStreamContent, stripAdviceSection } from "@/lib/stream-parse";
-import { gridClassFor } from "@/lib/utils";
 
 export default function ResultPage() {
   const router = useRouter();
@@ -47,6 +46,8 @@ export default function ResultPage() {
     () => parseStreamContent(streamingContent),
     [streamingContent],
   );
+  // 解析区正文(结论先行时 💡 先流式,此时 analysis 为空 → 显示占位,规格 G12)
+  const analysisText = parsed.analysis ?? stripAdviceSection(streamingContent);
 
   const startAnalysis = useMemoizedFn(() => {
     // 防止重复调用
@@ -280,9 +281,8 @@ export default function ResultPage() {
                 {/* 牌阵布局(轻量:小图 + 点击放大) */}
                 <div className="max-w-5xl mx-auto">
                   <div
-                    className={`grid gap-4 justify-items-center ${gridClassFor(
-                      drawnCards.length,
-                    )} ${drawnCards.length > 4 ? "grid-rows-2" : ""}`}
+                    data-testid="result-grid"
+                    className="flex flex-wrap justify-center gap-5 md:gap-6"
                   >
                     {drawnCards.map((card, index) => (
                       <motion.div
@@ -291,13 +291,6 @@ export default function ResultPage() {
                           parsed.currentCardIndex === index
                             ? "rounded-xl p-3 bg-white/5 ring-1 ring-gold/40"
                             : ""
-                        } ${
-                          // 特殊布局调整
-                          drawnCards.length === 5 && index === 4
-                            ? "col-start-2"
-                            : drawnCards.length === 7 && index >= 4
-                              ? "col-start-2"
-                              : ""
                         }`}
                         initial={{ opacity: 0, scale: 0.8, y: 20 }}
                         animate={{
@@ -309,6 +302,11 @@ export default function ResultPage() {
                         id={`card-${index}`}
                         onClick={() => setModalCardIndex(index)}
                       >
+                        {/* 牌位标注 */}
+                        <p className="text-gold/80 text-[11px] font-semibold mb-2 tracking-wide text-center">
+                          {recommendedSpread.positions[index] ??
+                            `第 ${index + 1} 位`}
+                        </p>
                         {/* 牌面小图(轻量呈现) */}
                         <div className="pointer-events-none">
                           <ResultTarotCard
@@ -332,48 +330,6 @@ export default function ResultPage() {
                   <p className="text-center text-xs text-white/40 mt-4">
                     点击任意牌可放大查看牌位含义
                   </p>
-                </div>
-              </motion.section>
-            )}
-          </AnimatePresence>
-
-          {/* 3. AI深度解析 */}
-          <AnimatePresence>
-            {showAnalysis && (
-              <motion.section
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -30 }}
-                transition={{ duration: 0.6 }}
-                className="astro-card p-6 md:p-8"
-              >
-                <div className="flex items-center justify-between mb-5">
-                  <div className="astro-card-title">
-                    <span className="text-gold">🔮</span>
-                    <span>AI 深度解析</span>
-                  </div>
-                  {isStreaming && (
-                    <p className="text-gold/80 text-sm font-medium">
-                      ✨ 正在思考分析中...
-                    </p>
-                  )}
-                </div>
-
-                <div className="max-w-2xl mx-auto text-white/85 leading-8">
-                  <MarkdownRenderer
-                    content={
-                      parsed.analysis ?? stripAdviceSection(streamingContent)
-                    }
-                    variant="dark"
-                    className="text-white/85"
-                  />
-                  {isStreaming && (
-                    <motion.span
-                      className="inline-block w-2 h-5 bg-gold ml-1"
-                      animate={{ opacity: [1, 0, 1] }}
-                      transition={{ duration: 1, repeat: Infinity }}
-                    />
-                  )}
                 </div>
               </motion.section>
             )}
@@ -416,14 +372,69 @@ export default function ResultPage() {
             )}
           </AnimatePresence>
 
-          {/* 底部操作 */}
+          {/* 3. AI深度解析 */}
+          <AnimatePresence>
+            {showAnalysis && (
+              <motion.section
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -30 }}
+                transition={{ duration: 0.6 }}
+                className="astro-card p-6 md:p-8"
+              >
+                <div className="flex items-center justify-between mb-5">
+                  <div className="astro-card-title">
+                    <span className="text-gold">🔮</span>
+                    <span>AI 深度解析</span>
+                  </div>
+                  {isStreaming && (
+                    <p className="text-gold/80 text-sm font-medium">
+                      ✨ 正在思考分析中...
+                    </p>
+                  )}
+                </div>
+
+                <div className="max-w-2xl mx-auto text-white/85 leading-8">
+                  {analysisText ? (
+                    <MarkdownRenderer
+                      content={analysisText}
+                      variant="dark"
+                      className="text-white/85"
+                    />
+                  ) : (
+                    <p className="text-white/50 text-center">
+                      深度解析正在生成中…
+                    </p>
+                  )}
+                  {isStreaming && (
+                    <motion.span
+                      className="inline-block w-2 h-5 bg-gold ml-1"
+                      animate={{ opacity: [1, 0, 1] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                    />
+                  )}
+                </div>
+              </motion.section>
+            )}
+          </AnimatePresence>
+
+          {/* AI 免责声明 + 底部操作 */}
           {streamComplete && (
             <motion.div
-              className="text-center pt-6"
+              className="text-center"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
             >
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="text-center text-white/40 text-xs leading-relaxed mb-6"
+              >
+                以上内容皆由AI生成，仅供娱乐，请勿尽信
+              </motion.p>
+
               <div className="flex flex-col sm:flex-row justify-center gap-3">
                 <motion.button
                   onClick={() => router.push("/history")}
@@ -453,9 +464,7 @@ export default function ResultPage() {
         {modalCardIndex !== null && drawnCards[modalCardIndex] && (
           <CardModal
             card={drawnCards[modalCardIndex]}
-            position={
-              recommendedSpread.positions[modalCardIndex] ?? "未知牌位"
-            }
+            position={recommendedSpread.positions[modalCardIndex] ?? "未知牌位"}
             isReversed={cardReversals[modalCardIndex] || false}
             onClose={() => setModalCardIndex(null)}
           />

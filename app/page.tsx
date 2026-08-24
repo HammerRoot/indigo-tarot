@@ -23,12 +23,7 @@ export default function Home() {
   const [loadingSuggestions, setLoadingSuggestions] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsNotice, setSettingsNotice] = useState<string | null>(null);
-  const {
-    setQuestion,
-    resetSession,
-    trialUsed,
-    setApiKey,
-  } = useTarotStore();
+  const { setQuestion, resetSession, trialUsed, setApiKey } = useTarotStore();
   const router = useRouter();
 
   // 从加密存储恢复 API Key（同一会话刷新自动恢复；失败则提示重输）
@@ -275,8 +270,10 @@ export default function Home() {
                 </motion.div>
               ))}
             </div>
-            <p className="text-center text-xs text-gray-500 mt-4 max-w-md mx-auto">
-              韦特塔罗牌，包含22张大阿尔卡纳和56张小阿尔卡纳，每张牌都有独特的含义和象征
+            <p className="text-center text-xs text-gray-500 mt-4 max-w-sm mx-auto">
+              韦特塔罗牌，包含22张大阿尔卡纳和56张小阿尔卡纳
+              <br />
+              每张牌都有独特的含义和象征
             </p>
           </motion.div>
 

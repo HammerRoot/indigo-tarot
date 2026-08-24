@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, act, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, act, waitFor, fireEvent, within } from "@testing-library/react";
 import { useTarotStore } from "@/lib/store";
 import { tarotCards } from "@/lib/tarot-data";
 
@@ -95,6 +95,38 @@ describe("O3 结果页流式解析与展示", () => {
     expect(screen.getByText(/粗体建议/)).toBeInTheDocument();
   });
 
+  it("G12 结论先行流式:先出核心建议,解析区占位→正文", async () => {
+    const callbacks = await renderAndGetCallbacks();
+    act(() => {
+      callbacks.onContent("## 💡 核心建议\n\n先给的核心建议。\n\n");
+    });
+    // 核心建议先出现
+    expect(screen.getByText(/先给的核心建议/)).toBeInTheDocument();
+    // 解析区尚未输出正文 → 占位文案
+    expect(screen.getByText(/深度解析正在生成中/)).toBeInTheDocument();
+    act(() => {
+      callbacks.onContent("## 🔮 深度解析过程\n\n分析正文内容。\n\n");
+      callbacks.onComplete();
+    });
+    // 解析正文出现,占位消失
+    expect(screen.getByText(/分析正文内容/)).toBeInTheDocument();
+    expect(screen.queryByText(/深度解析正在生成中/)).toBeNull();
+  });
+  it("G13 结果页末尾显示 AI 免责声明(历史记录上方)", async () => {
+    const callbacks = await renderAndGetCallbacks();
+    act(() => {
+      callbacks.onContent("## 🔮 深度解析过程\n\n分析内容。\n\n");
+      callbacks.onComplete();
+    });
+    const disclaimer = screen.getByText("以上内容皆由AI生成，仅供娱乐");
+    expect(disclaimer).toBeInTheDocument();
+    // 免责声明在历史记录按钮上方
+    const historyBtn = screen.getByText(/历史记录/);
+    expect(
+      disclaimer.compareDocumentPosition(historyBtn) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
   it("trial_used 错误显示免费试用引导文案（R3）", async () => {
     const callbacks = await renderAndGetCallbacks();
     act(() => {
@@ -126,9 +158,10 @@ describe("O3 结果页流式解析与展示", () => {
     const cardImage = document.querySelector('img[alt="愚者"]');
     expect(cardImage).not.toBeNull();
     fireEvent.click(cardImage!);
-    // 模态出现,含牌位标注(单张牌阵 positions[0] = 核心指引)与牌名
-    expect(screen.getByText("核心指引")).toBeInTheDocument();
-    expect(screen.getByTestId("card-modal-content")).toBeInTheDocument();
+    // 模态出现,含牌位标注(单张牌阵 positions[0] = 核心指引);范围限定在模态内(卡片上有同名位置标注)与牌名
+    const modal = screen.getByTestId("card-modal-content");
+    expect(within(modal).getByText("核心指引")).toBeInTheDocument();
+    expect(within(modal).getByText("愚者")).toBeInTheDocument();
     // 关闭(AnimatePresence exit 动画需要等待)
     fireEvent.click(screen.getByTestId("card-modal-overlay"));
     await waitFor(() =>
@@ -172,7 +205,7 @@ describe("O3 结果页流式解析与展示", () => {
     expect(screen.getByText(/请结合以上解析，听从内心的声音/)).toBeInTheDocument();
   });
 
-  it("O1 五张牌阵容器包含字面量 grid-cols-5", async () => {
+  it("G11 抽牌结果居中换行 + 每张牌标注位置名", async () => {
     streamMock.mockClear();
     useTarotStore.setState({
       question: "选择问题",
@@ -191,8 +224,31 @@ describe("O3 结果页流式解析与展示", () => {
     });
     render(<ResultPage />);
     await waitFor(() => expect(streamMock).toHaveBeenCalled());
-    // 容器类名包含字面量 grid-cols-5（Tailwind 可扫描生成）
-    const grid = document.querySelector(".grid.justify-items-center");
-    expect(grid?.className).toContain("grid-cols-5");
+    // 居中换行布局(去除 grid-cols/grid-rows-2/col-start-2 补丁)
+    const grid = screen.getByTestId("result-grid");
+    expect(grid.className).toContain("flex");
+    expect(grid.className).toContain("justify-center");
+    expect(grid.className).toContain("flex-wrap");
+    expect(grid.className).not.toContain("grid");
+    // 每张牌上方标注对应位置名
+    for (const position of ["现状", "选项A", "选项B", "影响因素", "建议"]) {
+      expect(screen.getByText(position)).toBeInTheDocument();
+    }
+  });
+
+  it("G11 核心建议前置到 AI 深度解析之前", async () => {
+    const callbacks = await renderAndGetCallbacks();
+    act(() => {
+      callbacks.onContent("## 🔮 深度解析过程\n\n分析正文。\n\n");
+      callbacks.onContent("## 💡 核心建议\n\n一句话建议。\n");
+      callbacks.onComplete();
+    });
+    // DOM 顺序:核心建议 title 在 AI 深度解析 title 之前
+    const titles = [...document.querySelectorAll(".astro-card-title")]
+      .map((el) => el.textContent ?? "");
+    const aiIdx = titles.findIndex((t) => t.includes("AI 深度解析"));
+    const adviceIdx = titles.findIndex((t) => t.includes("核心建议"));
+    expect(adviceIdx).toBeGreaterThanOrEqual(0);
+    expect(aiIdx).toBeGreaterThan(adviceIdx);
   });
 });

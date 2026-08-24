@@ -1,153 +1,110 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { useTarotStore } from "@/lib/store";
 import { tarotCards } from "@/lib/tarot-data";
+import { SelectionFill } from "@/lib/drawFlow";
 
+const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: pushMock }),
 }));
 
 import DrawPage from "@/app/draw/page";
 
-function setupStore() {
+const SPREAD = {
+  id: "past-present-future",
+  name: "时间之流",
+  description: "经典三牌阵",
+  cardCount: 3,
+  positions: ["过去", "现在", "未来"],
+  category: [],
+};
+
+function fill(cardIndex: number): SelectionFill {
+  return { cardIndex, card: tarotCards[cardIndex], reversed: false };
+}
+
+function setupStore(selectedSlots: (SelectionFill | null)[] = [null, null, null]) {
   useTarotStore.setState({
-    question: "测试问题",
-    recommendedSpread: {
-      id: "single-card",
-      name: "单张牌指引",
-      description: "最简单直接的指引",
-      cardCount: 1,
-      positions: ["核心指引"],
-      category: [],
-    },
+    question: "猫咪想说什么",
+    recommendedSpread: SPREAD,
+    selectedSlots,
     drawnCards: [],
     cardReversals: [],
   });
 }
 
-describe("G6 牌桌抽牌体验", () => {
+describe("G10 选牌情况页(/draw)", () => {
   beforeEach(() => {
     setupStore();
+    vi.useFakeTimers();
   });
 
-  it("首屏 spread 步骤可见:开始抽牌按钮立即可点(动画不卡死回归)", () => {
-    // 真实浏览器 bug:AnimatePresence mode="wait" 下首屏 initial 动画卡在
-    // opacity 0,导致整个推荐牌阵卡片不可见、按钮无法点击(已修:initial={false})
-    render(<DrawPage />);
-    const btn = screen.getByText("开始抽牌");
-    expect(btn).toBeInTheDocument();
-    expect(btn.closest(".mystical-card")).not.toBeNull();
-    // 按钮容器 opacity 应为 1(不被动画卡在 0)
-    const card = btn.closest(".mystical-card")!;
-    expect(window.getComputedStyle(card).opacity).toBe("1");
+  afterEach(() => {
+    vi.useRealTimers();
+    pushMock.mockClear();
   });
 
-  it("选牌步骤渲染 78 张 CSS 牌背(非占位)", async () => {
+  it("未完成选牌:展示 3 个空槽位 + 开始选牌按钮,仅聚焦空位高亮可点击", () => {
     render(<DrawPage />);
-    fireEvent.click(screen.getByText("开始抽牌"));
-    // AnimatePresence mode="wait" 需等待 draw 步骤挂载
-    await waitFor(() => {
-      expect(document.querySelectorAll('[data-card-back="true"]').length).toBe(78);
-    });
+    expect(screen.getByText("开始选牌")).toBeInTheDocument();
+    expect(screen.queryByText(/开始解析/)).toBeNull();
+    expect(document.querySelectorAll('[data-slot]').length).toBe(3);
+    expect(document.querySelectorAll('[data-empty-slot]').length).toBe(3);
+    // 聚焦空位(0)可点击,其余空位不可点击
+    expect(document.querySelector('[data-empty-slot="0"]')?.getAttribute("role")).toBe("button");
+    expect(document.querySelector('[data-empty-slot="1"]')?.getAttribute("role")).toBeNull();
+    // 动态含义结合问题
+    expect(screen.getByText("「猫咪想说」的起点")).toBeInTheDocument();
   });
 
-  it("严格盲选:牌背无牌面图片/名称", async () => {
+  it("点击底部「开始选牌」→ 跳转选牌子页 /draw/select", () => {
     render(<DrawPage />);
-    fireEvent.click(screen.getByText("开始抽牌"));
-    await waitFor(() => {
-      expect(document.querySelectorAll('[data-card-back="true"]').length).toBe(78);
-    });
-    // 盲选:看不到牌面(无 alt=牌名 的图片)
-    expect(document.querySelector('img[alt="愚者"]')).toBeNull();
+    fireEvent.click(screen.getByText("开始选牌"));
+    expect(pushMock).toHaveBeenCalledWith("/draw/select");
   });
 
-  it("点击第 N 张牌背 → 抽中的就是 tarotCards[N]", async () => {
+  it("点击聚焦空位(第 1 位)与「开始选牌」效果一致", () => {
     render(<DrawPage />);
-    fireEvent.click(screen.getByText("开始抽牌"));
-    await waitFor(() => {
-      expect(document.querySelector('[data-card-back="true"][data-index="7"]')).not.toBeNull();
-    });
-    // 单张牌阵,点第 7 张(index=7 → tarotCards[7])
-    fireEvent.click(document.querySelector('[data-card-back="true"][data-index="7"]')!);
-    // 选满 1 张 → 进入 reveal 步骤,drawnCards[0] 应为 tarotCards[7]
-    expect(useTarotStore.getState().drawnCards[0]?.id).toBe(tarotCards[7].id);
+    fireEvent.click(document.querySelector('[data-empty-slot="0"]')!);
+    expect(pushMock).toHaveBeenCalledWith("/draw/select");
   });
 
-  it("选满 cardCount 自动进入揭示步骤", async () => {
-    useTarotStore.setState({
-      recommendedSpread: {
-        id: "decision-making",
-        name: "选择之路",
-        description: "五张牌阵",
-        cardCount: 2,
-        positions: ["现状", "选项A"],
-        category: [],
-      },
-    });
+  it("非聚焦空位不可点击(点击不跳转)", () => {
     render(<DrawPage />);
-    fireEvent.click(screen.getByText("开始抽牌"));
-    await waitFor(() => {
-      expect(document.querySelector('[data-card-back="true"][data-index="3"]')).not.toBeNull();
-    });
-    fireEvent.click(document.querySelector('[data-card-back="true"][data-index="3"]')!);
-    fireEvent.click(document.querySelector('[data-card-back="true"][data-index="20"]')!);
-    // 选满 2 张 → reveal 步骤出现(点击卡牌揭示结果);mode="wait" 需等待
-    await waitFor(() => {
-      expect(screen.getByText("点击卡牌揭示结果")).toBeInTheDocument();
-    });
+    fireEvent.click(document.querySelector('[data-empty-slot="1"]')!);
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it("已选中的牌不可重复选择", async () => {
-    useTarotStore.setState({
-      recommendedSpread: {
-        id: "decision-making",
-        name: "选择之路",
-        description: "五张牌阵",
-        cardCount: 3,
-        positions: ["现状", "选项A", "选项B"],
-        category: [],
-      },
-    });
+  it("部分已选:展示已填槽位,聚焦下一个空位(高亮且可点击)", () => {
+    setupStore([fill(7), null, null]);
     render(<DrawPage />);
-    fireEvent.click(screen.getByText("开始抽牌"));
-    await waitFor(() => {
-      expect(document.querySelector('[data-card-back="true"][data-index="5"]')).not.toBeNull();
-    });
-    const first = document.querySelector('[data-card-back="true"][data-index="5"]')!;
-    fireEvent.click(first);
-    // 再次点击同一张 → selectedCards 不变,不进入 reveal
-    fireEvent.click(first);
-    expect(screen.queryByText("点击卡牌揭示结果")).toBeNull();
-    // 点另一张后共 2/3,未满
-    fireEvent.click(document.querySelector('[data-card-back="true"][data-index="9"]')!);
-    expect(screen.queryByText("点击卡牌揭示结果")).toBeNull();
+    // 槽位 0 已填充,牌面即 tarotCards[7]
+    expect(document.querySelector('[data-filled-card="0"]')).not.toBeNull();
+    expect(document.querySelector('[data-filled-card="0"] img')?.getAttribute("alt")).toBe(tarotCards[7].name);
+    // 聚焦下一位(索引 1)为空槽且可点击
+    expect(document.querySelector('[data-empty-slot="1"]')?.getAttribute("role")).toBe("button");
+    expect(document.querySelector('[data-empty-slot="0"]')).toBeNull();
+    fireEvent.click(document.querySelector('[data-empty-slot="1"]')!);
+    expect(pushMock).toHaveBeenCalledWith("/draw/select");
   });
 
-  it("牌桌为扇形布局且无缩放控件区(修复3)", async () => {
+  it("完成选牌:仅「开始解析」,点击写入 store 并跳转结果页", () => {
+    setupStore([fill(7), fill(20), fill(33)]);
     render(<DrawPage />);
-    fireEvent.click(screen.getByText("开始抽牌"));
-    await waitFor(() => {
-      expect(document.querySelectorAll('[data-card-back="true"]').length).toBe(78);
+    expect(screen.getByText(/开始解析/)).toBeInTheDocument();
+    expect(screen.queryByText("开始选牌")).toBeNull();
+    expect(document.querySelectorAll('[data-filled-card]').length).toBe(3);
+    fireEvent.click(screen.getByText(/开始解析/));
+    act(() => {
+      vi.advanceTimersByTime(500);
     });
-    // 缩放控件区已移除(用户要求去掉 spread-zoom-controls)
-    expect(screen.queryByTestId("spread-zoom-controls")).toBeNull();
-    // 扇形特征:牌 div 自身带 rotate(扇形角度),外层为 absolute 定位
-    const first = document.querySelector('[data-card-back="true"]')!;
-    const cardStyle = first.getAttribute("style") || "";
-    expect(cardStyle).toContain("rotate");
-    // 外层容器应含 absolute 定位 + left 扇形坐标(jsdom 保留 inline style)
-    let wrapper: HTMLElement | null = first.parentElement;
-    let foundFan = false;
-    while (wrapper) {
-      const st = wrapper.getAttribute("style") || "";
-      if (st.includes("left: calc(50%") && wrapper.className.includes("absolute")) {
-        foundFan = true;
-        break;
-      }
-      wrapper = wrapper.parentElement;
-    }
-    expect(foundFan).toBe(true);
-    // 左右滑动提示存在
-    expect(screen.getByText(/左右滑动/)).toBeInTheDocument();
+    const { drawnCards, cardReversals } = useTarotStore.getState();
+    expect(drawnCards.length).toBe(3);
+    expect(drawnCards[0].id).toBe(tarotCards[7].id);
+    expect(drawnCards[1].id).toBe(tarotCards[20].id);
+    expect(drawnCards[2].id).toBe(tarotCards[33].id);
+    expect(cardReversals.length).toBe(3);
+    expect(pushMock).toHaveBeenCalledWith("/result");
   });
 });

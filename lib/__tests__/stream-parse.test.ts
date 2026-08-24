@@ -128,6 +128,23 @@ describe("O3 parseStreamContent", () => {
     expect(r.currentCardIndex).toBeNull();
   });
 
+  it("G12 结论先行:💡 在 🔮 之前也能正确切分", () => {
+    const conclusionFirst = [
+      "## 💡 核心建议",
+      "",
+      "先给出的一句话建议。",
+      "",
+      "## 🔮 深度解析过程",
+      "",
+      "第一步：卡牌组合分析",
+      "这里是分析正文。",
+    ].join("\n");
+    const r = parseStreamContent(conclusionFirst);
+    expect(r.coreAdvice).toContain("先给出的一句话建议。");
+    expect(r.analysis).toContain("第一步：卡牌组合分析");
+    expect(r.analysis).toContain("这里是分析正文。");
+    expect(r.analysis).not.toContain("核心建议");
+  });
   it("多牌取最后一张（0 基索引）", () => {
     const multi = [
       "## 🔮 深度解析过程",
