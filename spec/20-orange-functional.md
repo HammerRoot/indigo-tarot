@@ -57,6 +57,8 @@ export function gridClassFor(count: number): string {
 
 结果页 L272–277 改为 `gridClassFor(drawnCards.length)`；保留既有 `grid-rows-2`、`col-start-2` 定位逻辑（5 张第 5 位、7 张第 5–7 位放第二行）。
 
+> 注（历史）：G11 起结果页抽牌结果改为居中换行（flex），`grid-rows-2`/`col-start-2` 定位与 `gridClassFor` 的页面引用已移除；`gridClassFor` 保留为 `lib/utils.ts` 工具函数（含单测）。
+
 ### TDD 测试计划
 
 | 测试文件 | 测试名 | 断言要点 |
