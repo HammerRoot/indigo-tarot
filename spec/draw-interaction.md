@@ -66,7 +66,7 @@
 
 - 新增：`lib/drawFlow.ts`、`lib/useFanWheelGesture.ts`、`app/components/CardFace.tsx`、`app/components/FanCard.tsx`、`app/components/SpreadSlots.tsx` 及对应测试
 - 修改：`app/draw/page.tsx`、`app/draw/__tests__/page.test.tsx`、`spec/README.md`、`spec/40-green-improvements.md`
-- 删除：无（`lib/useSpreadZoom.ts`、`lib/pick.ts` 保留，供其他场景复用）
+- 删除：`lib/useSpreadZoom.ts`（G8 重写后无调用方，随 G13 文档审查清理）；`lib/pick.ts` 保留
 
 ### 风险与假设
 
@@ -314,12 +314,12 @@
 
 ### 目标
 
-- 结果页末尾、历史记录按钮上方显示"以上内容皆由AI生成，仅供娱乐"；
+- 结果页末尾、历史记录按钮上方显示"以上内容皆由AI生成，仅供娱乐，请勿尽信"；
 - /draw/select 牌背恢复 🌟 + TAROT 图案。
 
 ### 验收标准
 
-- [ ] 结果页 streamComplete 后，历史记录按钮上方显示免责声明"以上内容皆由AI生成，仅供娱乐"
+- [ ] 结果页 streamComplete 后，历史记录按钮上方显示免责声明"以上内容皆由AI生成，仅供娱乐，请勿尽信"
 - [ ] /draw/select 牌背含 🌟 TAROT 图案
 
 ### 技术方案

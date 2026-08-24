@@ -118,7 +118,7 @@ describe("O3 结果页流式解析与展示", () => {
       callbacks.onContent("## 🔮 深度解析过程\n\n分析内容。\n\n");
       callbacks.onComplete();
     });
-    const disclaimer = screen.getByText("以上内容皆由AI生成，仅供娱乐");
+    const disclaimer = screen.getByText("以上内容皆由AI生成，仅供娱乐，请勿尽信");
     expect(disclaimer).toBeInTheDocument();
     // 免责声明在历史记录按钮上方
     const historyBtn = screen.getByText(/历史记录/);

@@ -135,7 +135,7 @@ F0（测试设施，先行）
 | 🟡 文档 | layout metadata 定制 | Y4 | `lang="zh-CN"` + 中文品牌标题 |
 | 🟡 重构 | 图片目录整理 + 完整性测试 | Y6 | `minor/<suit>/` 目录 + kebab-case + 8 项数据契约测试 |
 | 🟢 成本 | 每日熔断配额 + 管理开关接口 | G5 | `lib/server/quota.ts` + `app/api/admin/quota`（每天 50 次，可关/开） |
-| 🟢 交互 | 牌桌抽牌体验升级 | G6 | `lib/pick.ts` + `lib/useSpreadZoom.ts`（78 张 CSS 牌背 + 整桌缩放 + 严格盲选一一对应） |
+| 🟢 交互 | 牌桌抽牌体验升级 | G6 | `lib/pick.ts`（点击索引取牌一一对应；`lib/useSpreadZoom.ts` 已于文档审查时删除，整桌缩放流程被 G9/G10 取代） |
 | 🟢 视觉 | 结果页深邃夜空风 | G7 | `astro-*` 玻璃拟态组件类 + `CardModal` 牌放大 + `MarkdownRenderer` dark variant |
 | 🟢 文档 | 部署文档 + .env.example | G3 | `docs/DEPLOYMENT.md` + `.env.example` |
 
