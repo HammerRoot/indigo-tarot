@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { TarotCard, tarotCards } from './tarot-data';
-import { shuffle } from './shuffle';
+import { TarotCard } from './tarot-data';
 import { recommendSpreadId } from './spread';
 import {
   decryptApiKey,
@@ -88,9 +87,6 @@ interface TarotStore {
   
   // 重置状态
   resetSession: () => void;
-  
-  // 工具函数
-  getRandomCards: (count: number) => TarotCard[];
 }
 
 // 预定义的牌阵
@@ -227,9 +223,6 @@ export const useTarotStore = create<TarotStore>()(
         cardReversals: [],
         isLoading: false
       }),
-      
-      // 工具函数（Fisher-Yates 均匀洗牌，规格 O4）
-      getRandomCards: (count) => shuffle(tarotCards).slice(0, count),
     }),
     {
       name: 'tarot-store',

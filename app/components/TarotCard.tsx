@@ -11,7 +11,6 @@ interface TarotCardProps {
   isReversed?: boolean;
   onClick?: () => void;
   size?: "sm" | "md" | "lg";
-  showDetails?: boolean;
 }
 
 // 卡牌背面组件
@@ -125,7 +124,6 @@ export const TarotCard = memo(function TarotCard({
   isReversed = false,
   onClick,
   size = "md",
-  showDetails = false,
 }: TarotCardProps) {
   const [imageError, setImageError] = useState(false);
 
@@ -171,27 +169,6 @@ export const TarotCard = memo(function TarotCard({
           />
         </div>
       </motion.div>
-
-      {/* 卡牌详细信息（可选） */}
-      {showDetails && isRevealed && (
-        <motion.div
-          className="mt-4 p-3 bg-white rounded-lg shadow-md"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <h3 className="font-bold text-purple-900 mb-1">{card.name}</h3>
-          <p className="text-sm text-gray-600 mb-2">
-            {isReversed ? card.meaningReversed : card.meaningUpright}
-          </p>
-          <div className="text-xs text-purple-700">
-            <strong>关键词：</strong>
-            {(isReversed ? card.keywordsReversed : card.keywordsUpright).join(
-              "、",
-            )}
-          </div>
-        </motion.div>
-      )}
     </motion.div>
   );
 });

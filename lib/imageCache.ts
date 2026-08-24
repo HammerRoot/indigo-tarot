@@ -38,29 +38,10 @@ class ImageCacheManager {
     return loadingPromise;
   }
 
-  isLoaded(src: string): boolean {
-    return this.cache.has(src);
-  }
-
-  isLoading(src: string): boolean {
-    return this.loadingPromises.has(src);
-  }
-
   // 批量预加载图片
   async preloadBatch(srcList: string[]): Promise<HTMLImageElement[]> {
     const promises = srcList.map(src => this.preloadImage(src));
     return Promise.all(promises);
-  }
-
-  // 清理缓存
-  clear(): void {
-    this.cache.clear();
-    this.loadingPromises.clear();
-  }
-
-  // 获取缓存大小
-  getCacheSize(): number {
-    return this.cache.size;
   }
 }
 

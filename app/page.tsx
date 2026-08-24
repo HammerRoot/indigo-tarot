@@ -271,7 +271,6 @@ export default function Home() {
                     size="sm"
                     isRevealed={true}
                     isReversed={index === 1} // 中间的卡牌显示为逆位
-                    showDetails={false}
                   />
                 </motion.div>
               ))}

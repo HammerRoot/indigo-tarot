@@ -34,9 +34,7 @@ export default function DrawPage() {
   const {
     scale: spreadScale,
     registerViewportRef: spreadViewportRef,
-    registerContentRef: spreadContentRef,
     ignoreClick: spreadIgnoreClick,
-    fitToContent: spreadFit,
     onPointerDown: spreadPointerDown,
     onPointerMove: spreadPointerMove,
     onPointerUp: spreadPointerUp,
@@ -79,16 +77,7 @@ export default function DrawPage() {
     setCurrentStep("draw");
   };
 
-  // 进入选牌步骤后自动 fit,保证 78 张完整可见并居中
-  // 注意:须等 78 张牌的入场动画完成(最长 delay 0.6s)再读 offsetHeight,
-  // 否则动画进行中读到的是未稳定尺寸,fit 会缩到下限。
-  useEffect(() => {
-    if (currentStep === "draw") {
-      const t = setTimeout(() => spreadFit(), 800);
-      return () => clearTimeout(t);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep]);
+
 
   // 选择卡牌(G6:点击的真实牌 = 抽到的牌,不再随机)
   const handleCardSelect = (index: number) => {
@@ -302,7 +291,6 @@ export default function DrawPage() {
                     }}
                   >
                     <div
-                      ref={spreadContentRef}
                       className="relative w-max h-full"
                       style={{
                         // 扇形:78 张牌围绕底部圆心,总角度约 180 度,每张牌旋转
@@ -408,7 +396,6 @@ export default function DrawPage() {
                         size="lg"
                         isRevealed={revealedCards.includes(index)}
                         isReversed={cardReversals[index] || false}
-                        showDetails={false}
                         onClick={() => handleRevealCard(index)}
                       />
 
