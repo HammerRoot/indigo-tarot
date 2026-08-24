@@ -108,16 +108,15 @@ export function useSpreadZoom(initialScale = 1): SpreadZoom {
       movedRef.current = true;
       shouldIgnoreClickRef.current = true;
     } else if (pts.length === 1) {
+      // 单指:不拖拽平移(扇形横向滑动交给原生 overflow-x 滚动),
+      // 仅用于区分"是否发生了移动"以抑制误点击。
       const [p] = pts;
       if (lastSingleRef.current) {
         const dx = p.x - lastSingleRef.current.x;
         const dy = p.y - lastSingleRef.current.y;
         if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
           movedRef.current = true;
-        }
-        if (movedRef.current) {
-          setX((prev) => prev + dx);
-          setY((prev) => prev + dy);
+          shouldIgnoreClickRef.current = true;
         }
       }
       lastSingleRef.current = p;
@@ -125,8 +124,8 @@ export function useSpreadZoom(initialScale = 1): SpreadZoom {
   }, [scale]);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
-    const target = e.currentTarget as HTMLElement;
-    target.setPointerCapture?.(e.pointerId);
+    // 修复:不立即 setPointerCapture(会吞掉子元素的 click,导致选牌无反应)。
+    // 仅记录指针;拖拽移动超过阈值时在 onPointerMove 中才 capture。
     pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     movedRef.current = false;
     shouldIgnoreClickRef.current = false;
@@ -137,6 +136,18 @@ export function useSpreadZoom(initialScale = 1): SpreadZoom {
     (e: React.PointerEvent) => {
       if (!pointersRef.current.has(e.pointerId)) return;
       pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      // 判定为拖拽时再 capture(避免吞掉纯点击)
+      if (
+        !movedRef.current &&
+        pointersRef.current.size === 1 &&
+        lastSingleRef.current
+      ) {
+        const dx = e.clientX - lastSingleRef.current.x;
+        const dy = e.clientY - lastSingleRef.current.y;
+        if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+          (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+        }
+      }
       updateFromPointers();
     },
     [updateFromPointers],

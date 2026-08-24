@@ -188,7 +188,7 @@ export default function Home() {
                     <MysticalButton
                       type="submit"
                       disabled={isLoading || !localQuestion.trim()}
-                      className="w-full py-4 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed bg-purple-100 hover:bg-purple-200 text-purple-700 border-purple-200 shadow-sm"
+                      className="w-full py-4 text-lg font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{ borderRadius: "8px" }}
                     >
                       {isLoading ? (

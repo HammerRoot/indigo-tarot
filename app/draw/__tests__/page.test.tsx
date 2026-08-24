@@ -123,12 +123,31 @@ describe("G6 牌桌抽牌体验", () => {
     expect(screen.queryByText("点击卡牌揭示结果")).toBeNull();
   });
 
-  it("牌桌提供缩放与重置控件", async () => {
+  it("牌桌为扇形布局且无缩放控件区(修复3)", async () => {
     render(<DrawPage />);
     fireEvent.click(screen.getByText("开始抽牌"));
-    // 缩放提示/控件存在(整桌缩放交互的可见入口)
     await waitFor(() => {
-      expect(screen.getByTestId("spread-zoom-controls")).toBeInTheDocument();
+      expect(document.querySelectorAll('[data-card-back="true"]').length).toBe(78);
     });
+    // 缩放控件区已移除(用户要求去掉 spread-zoom-controls)
+    expect(screen.queryByTestId("spread-zoom-controls")).toBeNull();
+    // 扇形特征:牌 div 自身带 rotate(扇形角度),外层为 absolute 定位
+    const first = document.querySelector('[data-card-back="true"]')!;
+    const cardStyle = first.getAttribute("style") || "";
+    expect(cardStyle).toContain("rotate");
+    // 外层容器应含 absolute 定位 + left 扇形坐标(jsdom 保留 inline style)
+    let wrapper: HTMLElement | null = first.parentElement;
+    let foundFan = false;
+    while (wrapper) {
+      const st = wrapper.getAttribute("style") || "";
+      if (st.includes("left: calc(50%") && wrapper.className.includes("absolute")) {
+        foundFan = true;
+        break;
+      }
+      wrapper = wrapper.parentElement;
+    }
+    expect(foundFan).toBe(true);
+    // 左右滑动提示存在
+    expect(screen.getByText(/左右滑动/)).toBeInTheDocument();
   });
 });
