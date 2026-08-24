@@ -51,6 +51,14 @@ describe("R1-A MarkdownRenderer XSS 消毒", () => {
     expect(link?.getAttribute("href")).toBe("https://example.com");
   });
 
+  it("hideHr：content 含 --- 时不再渲染 hr 元素（Y9 建议卡用）", () => {
+    const { container } = render(
+      <MarkdownRenderer content={"---\n\n正文内容"} hideHr />,
+    );
+    expect(container.querySelector("hr")).toBeNull();
+    expect(screen.getByText("正文内容")).toBeInTheDocument();
+  });
+
   it("空内容返回 null", () => {
     const { container } = render(<MarkdownRenderer content="" />);
     expect(container.firstChild).toBeNull();

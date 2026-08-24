@@ -72,3 +72,20 @@ export function stripAdviceSection(content: string): string {
   if (!adviceHeading) return content;
   return content.slice(0, adviceHeading.index!).trim();
 }
+
+/**
+ * 移除「💡 核心建议」小节（历史页展开区去重，规格 Y8）：
+ * 从 💡 标题行取到下一个小节标题（🔮/💡/✨/📌）或结尾，其余内容保留
+ * （含「🔮 深度解析过程」小节及其标题）。无 💡 节时原样返回。
+ * 与 stripAdviceSection 的区别：后者截断到 💡 节之前（丢弃之后所有内容），
+ * 本函数只删除 💡 小节本身，适用于 G12 结论先行（💡 在前）的完整内容。
+ */
+export function removeAdviceSection(content: string): string {
+  const advice = content.match(ADVICE_HEADING);
+  if (!advice) return content;
+  const before = content.slice(0, advice.index!);
+  const afterStart = headingEnd(content, advice);
+  const next = content.slice(afterStart).match(NEXT_HEADING);
+  const end = next ? afterStart + next.index! : content.length;
+  return (before + content.slice(end)).trim();
+}

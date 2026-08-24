@@ -6,6 +6,7 @@ import { ArrowLeft, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTarotStore } from "@/lib/store";
 import { MarkdownRenderer } from "@/app/components/MarkdownRenderer";
+import { parseStreamContent, removeAdviceSection } from "@/lib/stream-parse";
 
 export default function HistoryPage() {
   const router = useRouter();
@@ -54,6 +55,11 @@ export default function HistoryPage() {
             <div className="space-y-4">
               {readings.map((reading) => {
                 const isExpanded = expandedId === reading.id;
+                // Y8：展开区去重——核心建议从 interpretation 解析（G12 结论先行），
+                // 旧数据回退 advice 字段；💡 节不再重复渲染
+                const parsed = parseStreamContent(reading.interpretation);
+                const coreAdvice = parsed.coreAdvice ?? (reading.advice || null);
+                const analysisContent = removeAdviceSection(reading.interpretation);
                 return (
                   <motion.div
                     key={reading.id}
@@ -61,52 +67,55 @@ export default function HistoryPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="mystical-card p-5 md:p-6"
                   >
-                    {/* 列表摘要 */}
-                    <button
-                      onClick={() => setExpandedId(isExpanded ? null : reading.id)}
-                      className="w-full text-left"
-                      aria-expanded={isExpanded}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <p className="text-lg font-semibold text-gray-800 truncate">
-                            {reading.question || "（未填写问题）"}
-                          </p>
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            <span className="text-xs bg-purple-50 border border-purple-200 rounded-full px-3 py-1 text-purple-700">
-                              {reading.spread?.name ?? "牌阵"}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {reading.cards.map((c) =>
-                                c.name +
-                                  (reading.cardReversals?.[reading.cards.indexOf(c)] ? "（逆）" : ""),
-                              ).join("、")}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-400 mt-2">
-                            {new Date(reading.timestamp).toLocaleString("zh-CN")}
-                          </p>
+                    {/* 列表摘要（Y9：拆分外层整行 button，消除 button 嵌套，修复 hydration 错误） */}
+                    <div className="flex items-start justify-between gap-4">
+                      <button
+                        onClick={() => setExpandedId(isExpanded ? null : reading.id)}
+                        className="flex-1 min-w-0 text-left"
+                        aria-expanded={isExpanded}
+                      >
+                        <p className="text-lg font-semibold text-gray-800 truncate">
+                          {reading.question || "（未填写问题）"}
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          <span className="text-xs bg-purple-50 border border-purple-200 rounded-full px-3 py-1 text-purple-700">
+                            {reading.spread?.name ?? "牌阵"}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {reading.cards.map((c) =>
+                              c.name +
+                                (reading.cardReversals?.[reading.cards.indexOf(c)] ? "（逆）" : ""),
+                            ).join("、")}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(reading.id);
-                            }}
-                            className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                            aria-label="删除记录"
-                            title="删除记录"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                        <p className="text-xs text-gray-400 mt-2">
+                          {new Date(reading.timestamp).toLocaleString("zh-CN")}
+                        </p>
+                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => handleDelete(reading.id)}
+                          className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                          aria-label="删除记录"
+                          title="删除记录"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setExpandedId(isExpanded ? null : reading.id)}
+                          className="p-2 text-purple-500 hover:text-purple-700 transition-colors"
+                          aria-expanded={isExpanded}
+                          aria-label={isExpanded ? "收起详情" : "展开详情"}
+                          title={isExpanded ? "收起详情" : "展开详情"}
+                        >
                           {isExpanded ? (
-                            <ChevronUp className="w-5 h-5 text-purple-500" />
+                            <ChevronUp className="w-5 h-5" />
                           ) : (
-                            <ChevronDown className="w-5 h-5 text-purple-500" />
+                            <ChevronDown className="w-5 h-5" />
                           )}
-                        </div>
+                        </button>
                       </div>
-                    </button>
+                    </div>
 
                     {/* 展开详情 */}
                     <AnimatePresence>
@@ -117,27 +126,30 @@ export default function HistoryPage() {
                           exit={{ opacity: 0, height: 0 }}
                           className="overflow-hidden"
                         >
-                          <div className="mt-4 pt-4 border-t border-gray-100">
-                            <h3 className="text-sm font-bold text-purple-700 mb-2">
-                              🤖 AI 深度解析
-                            </h3>
-                            <div className="prose prose-sm max-w-none text-gray-700">
-                              <MarkdownRenderer
-                                content={reading.interpretation}
-                                className="text-gray-700"
-                              />
-                            </div>
-                            {reading.advice && (
-                              <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
+                            {/* 核心建议：结论先行 + 背景高亮（唯一模块，位于深度解析过程之前） */}
+                            {coreAdvice && (
+                              <div
+                                data-testid="history-advice"
+                                className="bg-yellow-50 border border-yellow-200 rounded-lg p-4"
+                              >
                                 <h4 className="text-sm font-bold text-yellow-800 mb-1">
                                   💡 核心建议
                                 </h4>
                                 <MarkdownRenderer
-                                  content={reading.advice}
+                                  content={coreAdvice}
                                   className="text-yellow-900"
+                                  hideHr
                                 />
                               </div>
                             )}
+                            {/* 深度解析过程：interpretation 剥离 💡 节（保留 🔮 小节标题与正文） */}
+                            <div className="prose prose-sm max-w-none text-gray-700">
+                              <MarkdownRenderer
+                                content={analysisContent}
+                                className="text-gray-700"
+                              />
+                            </div>
                           </div>
                         </motion.div>
                       )}

@@ -36,6 +36,8 @@
 | Y5 | API Key 双份存储统一 | 🟡 | 重构 | ✅ 已并入 R1 |
 | Y6 | 图片目录整理 + 数据完整性测试 | 🟡 | 重构 | ✅ 完成 |
 | Y7 | 路由重复逻辑抽取 | 🟡 | 重构 | ✅ 核心完成（共享模块随 R3 落地） |
+| Y8 | 历史页展开区去重 + 核心建议高亮 | 🟡 | 小功能/视觉 | ✅ 完成 |
+| Y9 | 历史页展开区收尾：核心建议去分隔线 + 摘要区嵌套按钮修复 | 🟡 | 小功能/重构 | ✅ 完成 |
 | G1 | 牌阵推荐逻辑增强（评分制） | 🟢 | 质量提升 | ✅ 完成 |
 | G2 | AI 解析健壮性（降级提取 + prompt 加固） | 🟢 | 质量提升 | ✅ 完成 |
 | G3 | .env.example 与部署文档 | 🟢 | 文档 | ✅ 完成 |
@@ -130,6 +132,8 @@ F0（测试设施，先行）
 | 🟢 质量 | 牌阵推荐评分制 | G1 | `lib/spread.ts`（强关系信号优先 + 关键词计分 + 默认单张） |
 | 🟢 质量 | AI 解析健壮性降级 | G2 | 兜底文案 + prompt 结构约束（`lib/deepseek.ts`） |
 | 🟡 功能 | 历史记录页 | Y1 | `app/history/page.tsx` + 结果页自动 `addReading`（上限 50 条） |
+| 🟡 视觉 | 历史页展开区去重 + 核心建议高亮 | Y8 | 移除 `🤖 AI 深度解析` 标题与底部重复建议块；核心建议唯一模块 + 黄底高亮前置（`removeAdviceSection`） |
+| 🟡 重构 | 历史页展开区收尾 | Y9 | 核心建议卡去 `<hr>`（`MarkdownRenderer` 新增 `hideHr`）；摘要区拆分外层整行 button，消除嵌套 button（修复 hydration 错误） |
 | 🟡 重构 | 死代码清理 | Y2 | 删除 `/api/deepseek`、`useImagePreloader`、`callDeepSeek`/`generateTarotReading`、`currentReading` |
 | 🟡 文档 | README 与代码事实同步 | Y3 | 技术栈/API 文档/commit hooks/隐私边界/env 清单 |
 | 🟡 文档 | layout metadata 定制 | Y4 | `lang="zh-CN"` + 中文品牌标题 |
@@ -139,7 +143,7 @@ F0（测试设施，先行）
 | 🟢 视觉 | 结果页深邃夜空风 | G7 | `astro-*` 玻璃拟态组件类 + `CardModal` 牌放大 + `MarkdownRenderer` dark variant |
 | 🟢 文档 | 部署文档 + .env.example | G3 | `docs/DEPLOYMENT.md` + `.env.example` |
 
-**测试规模**：157 个测试 / 28 个文件，`type-check` / `lint` / `test:run` 全绿。
+**测试规模**：188 个测试 / 31 个文件，`type-check` / `lint` / `test:run` 全绿。
 
 ### 决策记录（Assumptions & Decisions，D1–D9）
 
@@ -155,3 +159,7 @@ F0（测试设施，先行）
 > 完成顺序严格按上方依赖图执行；每个条目完成后更新本表与对应文档状态。
 
 > **2026-08 推进记录**：O1/O2/O4/O5/G1/G2 六个条目按 TDD 红→绿完成（commit 33fbf38）。本轮 Y1/Y2/Y3/Y4/Y6 五个条目完成（commit 35554b8 后新增，未提交）：历史记录页、死代码清理、README 同步、layout metadata、图片目录整理+完整性测试。
+>
+> **Y8 推进记录**：历史页展开区去重 + 核心建议高亮按 TDD 红（10 失败）→ 绿（全量 184 通过）完成：移除 `🤖 AI 深度解析` h3 与底部重复「💡 核心建议」块；新增 `lib/stream-parse.ts` 纯函数 `removeAdviceSection`；保留的「核心建议」模块黄底高亮且位于「🔮 深度解析过程」之前。
+>
+> **Y9 推进记录**：历史页展开区收尾按 TDD 红（3 失败）→ 绿（全量 188 通过）完成：`MarkdownRenderer` 新增 `hideHr` prop，核心建议卡内不再渲染 `---` 分隔线；摘要区拆分外层整行 `<button>`（文本区按钮 + 独立删除/展开按钮），消除嵌套 button，修复控制台 hydration 错误。

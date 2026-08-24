@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseStreamContent } from "@/lib/stream-parse";
+import { parseStreamContent, removeAdviceSection } from "@/lib/stream-parse";
 
 const STD = [
   "## 🔮 深度解析过程",
@@ -159,5 +159,68 @@ describe("O3 parseStreamContent", () => {
       "第三张牌。",
     ].join("\n");
     expect(parseStreamContent(multi).currentCardIndex).toBe(2);
+  });
+});
+
+describe("Y8 removeAdviceSection（历史页展开区剥离 💡 节）", () => {
+  it("G12 结论先行（💡 在前）：仅移除 💡 节，保留 🔮 节及其标题", () => {
+    const g12 = [
+      "## 💡 核心建议",
+      "",
+      "勇敢行动，保持专注。",
+      "",
+      "## 🔮 深度解析过程",
+      "",
+      "第一步：卡牌组合分析",
+      "分析正文内容。",
+    ].join("\n");
+    expect(removeAdviceSection(g12)).toBe(
+      "## 🔮 深度解析过程\n\n第一步：卡牌组合分析\n分析正文内容。",
+    );
+  });
+
+  it("旧格式（💡 在后）：保留 🔮 节，移除 💡 节", () => {
+    const old = [
+      "## 🔮 深度解析过程",
+      "",
+      "分析正文内容。",
+      "",
+      "## 💡 核心建议",
+      "",
+      "建议内容。",
+    ].join("\n");
+    expect(removeAdviceSection(old)).toBe(
+      "## 🔮 深度解析过程\n\n分析正文内容。",
+    );
+  });
+
+  it("粗体标题格式同样只保留 🔮 节", () => {
+    const bold = [
+      "🔮 **深度解析过程**",
+      "",
+      "分析正文内容。",
+      "",
+      "💡 **核心建议**",
+      "",
+      "建议内容。",
+    ].join("\n");
+    expect(removeAdviceSection(bold)).toBe(
+      "🔮 **深度解析过程**\n\n分析正文内容。",
+    );
+  });
+
+  it("无 💡 节 → 原样返回", () => {
+    const plain = "普通文本，没有任何小节标题。";
+    expect(removeAdviceSection(plain)).toBe(plain);
+  });
+
+  it("仅 💡 节 → 返回空字符串", () => {
+    const onlyAdvice = "## 💡 核心建议\n\n建议内容。";
+    expect(removeAdviceSection(onlyAdvice)).toBe("");
+  });
+
+  it("💡 节含结束语（无下一标题）→ 结束语随 💡 节一并移除", () => {
+    const c = "## 💡 核心建议\n\n建议内容。\n\n愿塔罗指引你。";
+    expect(removeAdviceSection(c)).toBe("");
   });
 });

@@ -1,4 +1,4 @@
-# 🟡 黄级：清理 / 文档 / 小功能（Y1–Y7）
+# 🟡 黄级：清理 / 文档 / 小功能（Y1–Y9）
 
 > 黄级条目为代码清理、文档修正与小功能。执行顺序注意：**Y1（历史记录）先于 Y2（死代码清理）**，避免误删 readings 相关代码；Y7 与 R3 共享模块合并实施。
 
@@ -13,6 +13,8 @@
 | Y5 | API Key 双份存储统一 | 重构 | ✅ 已并入 R1 |
 | Y6 | 图片目录整理 + 数据完整性测试 | 重构 | ✅ 完成 |
 | Y7 | 路由重复逻辑抽取 | 重构 | ✅ 核心完成（共享模块随 R3 落地；Y2 删除路由后收尾） |
+| Y8 | 历史页展开区去重 + 核心建议高亮 | 小功能/视觉 | ✅ 完成 |
+| Y9 | 历史页展开区收尾：核心建议去分隔线 + 摘要区嵌套按钮修复 | 小功能/重构 | ✅ 完成 |
 
 ---
 
@@ -351,3 +353,123 @@ R1 已重写为「API Key 安全加固」综合条目（`spec/10-red-security.md
 ### 风险与假设
 
 同 R3。
+
+---
+
+## [Y8] 历史页展开区去重 + 核心建议高亮
+
+- **优先级**: 🟡
+- **类别**: 小功能 / 视觉
+- **状态**: ✅ 完成
+- **关联条目**: Y1（历史记录页）、G12（结论先行：💡 节位于 🔮 节之前）、G11（核心建议前置）
+
+### 问题描述
+
+- 现状：`app/history/page.tsx` 展开详情（L112–142）同时渲染三样东西，导致「核心建议」出现**两次**：
+  1. `<h3>🤖 AI 深度解析</h3>`（L121–123，页面级标题）；
+  2. `MarkdownRenderer` 渲染完整 `reading.interpretation`（L124–129）——由于 G12 结论先行，该 markdown 自身已含 `## 💡 核心建议`（位于 `## 🔮 深度解析过程` **上方**）与 `## 🔮 深度解析过程` 两个小节；
+  3. 底部独立黄底「💡 核心建议」块（L130–138，渲染 `reading.advice`）——与 interpretation 内的 💡 节内容重复。
+- 影响：用户在同一展开区看到两遍核心建议；`🤖 AI 深度解析` 标题与 markdown 内 `🔮 深度解析过程` 标题重复表达同一层级。
+
+### 目标
+
+展开区只保留**一个**「核心建议」模块（位于「深度解析过程」之上，带背景高亮色）；删除 `🤖 AI 深度解析` h3 与底部重复的 💡 块。
+
+### 验收标准
+
+- [ ] 展开详情不再渲染 `<h3>🤖 AI 深度解析</h3>`
+- [ ] 展开详情只出现**一个**「核心建议」标题/模块（interpretation 内的 💡 节被剥离，底部 advice 块被删除）
+- [ ] 保留的「核心建议」模块带背景高亮（`bg-yellow-50` 黄底）且位于「🔮 深度解析过程」内容**之前**
+- [ ] 核心建议正文不重复（DOM 中只出现一次）
+- [ ] 无 💡 节的历史记录（旧数据/纯文本）不白屏：仅隐藏高亮块，解析内容原样显示
+
+### 技术方案
+
+1. **`lib/stream-parse.ts`** 新增纯函数 `removeAdviceSection(content)`：删除「💡 核心建议」小节（从 💡 标题行到下一个小节标题或结尾），**保留其余内容**（含 `## 🔮 深度解析过程` 标题与其正文）。复用文件内既有 `ADVICE_HEADING` / `NEXT_HEADING` / `headingEnd`，与 `extractSection` 语义一致（粗体标题格式同样支持；无 💡 节时原样返回）。
+2. **`app/history/page.tsx`** 展开区（L112–142）改造：
+   - 删除 `🤖 AI 深度解析` h3（L121–123）；
+   - 顶部渲染高亮「核心建议」块：`bg-yellow-50 border border-yellow-200 rounded-lg p-4` + `<h4>💡 核心建议</h4>` + `MarkdownRenderer` 渲染 `parseStreamContent(interpretation).coreAdvice ?? reading.advice`（结论先行数据以 interpretation 为准，旧数据回退 advice 字段）；块上加 `data-testid="history-advice"`；
+   - 下方渲染 `removeAdviceSection(interpretation)`（保留 `🔮 深度解析过程` 标题与正文，不再出现 💡 节）。
+
+### TDD 测试计划
+
+> Red 阶段必须完成的测试清单；对应测试未通过（红）之前，不得开始实现（Green）。
+
+| 测试文件 | 测试名 | 断言要点 |
+|---|---|---|
+| `lib/__tests__/stream-parse.test.ts` | removeAdviceSection：G12 结论先行（💡 在前） | 输入 `## 💡 核心建议…## 🔮 深度解析过程…` → 结果只含 🔮 节（含其标题），不含"核心建议" |
+| | removeAdviceSection：旧格式（💡 在后） | 输入 `## 🔮…分析…## 💡…建议` → 结果只含 🔮 节 |
+| | removeAdviceSection：粗体标题格式 | `💡 **核心建议**` / `🔮 **深度解析过程**` 同样只保留 🔮 节 |
+| | removeAdviceSection：无 💡 节 | 普通文本原样返回 |
+| | removeAdviceSection：仅 💡 节 | 返回空字符串（`.trim()` 后） |
+| `app/history/__tests__/page.test.tsx` | 展开不再显示 🤖 AI 深度解析 | 展开后 `queryByText("🤖 AI 深度解析")` 为 null |
+| | 核心建议仅一个且高亮、位于解析之前 | `getAllByText(/核心建议/)` 长度 1；`[data-testid=history-advice]` 含 `bg-yellow-50` 类；💡 块在 🔮 标题之前（`compareDocumentPosition` FOLLOWING） |
+| | 核心建议正文不重复 | `getAllByText("勇敢行动，保持专注。")` 长度 1；解析正文 `分析正文内容。` 可见 |
+| | 无 💡 节旧记录不白屏 | 纯文本 interpretation + advice → 高亮块可见且解析内容原样显示 |
+
+### 影响范围
+
+- 新增：`lib/stream-parse.ts` 导出 `removeAdviceSection`
+- 修改：`app/history/page.tsx`（展开区）、`lib/__tests__/stream-parse.test.ts`、`app/history/__tests__/page.test.tsx`
+- 删除：展开区 `🤖 AI 深度解析` h3 与底部 advice 块
+
+### 风险与假设
+
+- 假设：历史记录的 `interpretation` 为结果页保存的完整流式内容（含 G12 结构标题）；`removeAdviceSection` 与 `parseStreamContent` 使用同一套标题正则，行为一致。
+- 风险：旧数据 interpretation 无 💡/🔮 标题时——`coreAdvice` 为 null 回退 `reading.advice`，`removeAdviceSection` 原样返回，不白屏（有测试守护）。
+- 备选方案（已否决）：在 `MarkdownRenderer` 内按标题文本给 💡 节加背景——react-markdown 无法把「标题 + 后续段落」包进同一高亮容器，需改渲染器，侵入面大。
+
+
+---
+
+## [Y9] 历史页展开区收尾：核心建议去分隔线 + 摘要区嵌套按钮修复
+
+- **优先级**: 🟡
+- **类别**: 小功能 / 重构
+- **状态**: ✅ 完成
+- **关联条目**: Y8（核心建议高亮）、Y1（历史记录页）
+
+### 问题描述
+
+- 现状 1：AI 输出常在 💡 核心建议小节内/结尾带 `---` 分隔线；`MarkdownRenderer` 将其渲染为 `<hr class="border-t-2 border-purple-200 my-6">`，出现在 Y8 新增的高亮建议卡（`history-advice` 块）内部，与卡片边框视觉重复。
+- 现状 2：摘要区外层展开按钮 `<button>` 内嵌删除 `<button>`（`app/history/page.tsx` L71–107）——无效 HTML，React 控制台报 `<button> cannot be a descendant of <button>`，引发 hydration error，对辅助技术不友好。
+- 影响：控制台报错（hydration）；建议卡内出现冗余分隔线。
+
+### 目标
+
+核心建议模块内不再出现 `<hr>`；摘要区无嵌套按钮（hydration 修复），展开/删除交互不变。
+
+### 验收标准
+
+- [ ] `history-advice` 块内 `querySelector("hr")` 为 null（建议内容含 `---` 时）
+- [ ] 页面 DOM 无 `button button` 嵌套
+- [ ] 点击问题文本可展开/收起（交互不变）
+- [ ] 删除按钮独立可用（交互不变）
+- [ ] `MarkdownRenderer` 默认行为不变（无 `hideHr` 时 `---` 仍渲染 hr）
+
+### 技术方案
+
+1. **`app/components/MarkdownRenderer.tsx`**：新增可选 prop `hideHr?: boolean`；为 true 时组件表 `{ ...base, hr: () => null }`（light/dark 均生效），默认 false 不影响既有调用方（结果页、解析区）。
+2. **`app/history/page.tsx`**：
+   - 建议卡 `MarkdownRenderer` 加 `hideHr`；
+   - 摘要区重构：外层整行 `<button>` 拆为「文本区展开按钮（`flex-1 min-w-0 text-left`）+ 右侧操作区（删除按钮 + 独立展开/收起按钮）」，消除嵌套 button。
+
+### TDD 测试计划
+
+| 测试文件 | 测试名 | 断言要点 |
+|---|---|---|
+| `app/components/__tests__/MarkdownRenderer.test.tsx` | hideHr 不渲染 hr | `content="---"` + `hideHr` → `querySelector("hr")` 为 null；正文仍可见 |
+| `app/history/__tests__/page.test.tsx` | 核心建议内无 hr | 💡 节含 `---` → 展开后 `history-advice` 块内无 hr |
+| | 无嵌套 button | `container.querySelector("button button")` 为 null |
+| | 展开/删除交互回归 | 点击问题文本展开、删除记录（既有用例守护） |
+
+### 影响范围
+
+- 修改：`app/components/MarkdownRenderer.tsx`、`app/history/page.tsx`、`app/components/__tests__/MarkdownRenderer.test.tsx`、`app/history/__tests__/page.test.tsx`
+
+### 风险与假设
+
+- 假设：AI 输出中的 `---` 属于 💡 小节（`parseStreamContent` 的 coreAdvice 提取会包含小节内 `---`）。
+- 风险：低；`hideHr` 默认 false，不影响其它调用方。
+
+

@@ -8,6 +8,8 @@ interface MarkdownRendererProps {
   className?: string;
   /** 夜空风深色模式（规格 G7）：文字/边框转浅色；默认 light 兼容历史页 */
   variant?: "light" | "dark";
+  /** 不渲染分隔线（规格 Y9）：AI 输出小节内的 `---` 不再显示为 <hr>（如核心建议卡内） */
+  hideHr?: boolean;
 }
 
 // 样式类从旧版正则实现平移，保持视觉一致；variant="dark" 时适配夜空深色背景
@@ -119,14 +121,18 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   content,
   className = "",
   variant = "light",
+  hideHr = false,
 }: MarkdownRendererProps) {
   if (!content) return null;
 
+  const base = variant === "dark" ? darkComponents : lightComponents;
+  const components: Components = hideHr
+    ? { ...base, hr: () => null }
+    : base;
+
   return (
     <div className={`prose max-w-none ${className}`}>
-      <ReactMarkdown components={variant === "dark" ? darkComponents : lightComponents}>
-        {content}
-      </ReactMarkdown>
+      <ReactMarkdown components={components}>{content}</ReactMarkdown>
     </div>
   );
 });
