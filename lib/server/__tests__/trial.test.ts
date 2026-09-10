@@ -48,33 +48,32 @@ describe("R3 trial 免费试用模块", () => {
     expect((await guard.check("dev-a")).trialUsed).toBe(false);
   });
 
-  it("工厂回退：无 UPSTASH_* 环境变量 → 内存版", async () => {
-    const originalUrl = process.env.UPSTASH_REDIS_REST_URL;
-    const originalToken = process.env.UPSTASH_REDIS_REST_TOKEN;
-    delete process.env.UPSTASH_REDIS_REST_URL;
-    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+  it("工厂回退：无 REDIS_* 环境变量 → 内存版", async () => {
+    const originalHost = process.env.REDIS_HOST;
+    const originalPassword = process.env.REDIS_PASSWORD;
+    delete process.env.REDIS_HOST;
+    delete process.env.REDIS_PASSWORD;
     try {
       expect(getTrialGuard(true).kind).toBe("memory");
     } finally {
-      if (originalUrl) process.env.UPSTASH_REDIS_REST_URL = originalUrl;
-      if (originalToken) process.env.UPSTASH_REDIS_REST_TOKEN = originalToken;
+      if (originalHost) process.env.REDIS_HOST = originalHost;
+      if (originalPassword) process.env.REDIS_PASSWORD = originalPassword;
     }
   });
 
-  it("工厂：有 UPSTASH_* 环境变量 → Redis 版（不真实请求）", async () => {
-    const originalUrl = process.env.UPSTASH_REDIS_REST_URL;
-    const originalToken = process.env.UPSTASH_REDIS_REST_TOKEN;
-    process.env.UPSTASH_REDIS_REST_URL = "https://mock.upstash.io";
-    process.env.UPSTASH_REDIS_REST_TOKEN = "mock-token";
+  it("工厂：有 REDIS_* 环境变量 → Redis 版（不真实请求）", async () => {
+    const originalHost = process.env.REDIS_HOST;
+    const originalPassword = process.env.REDIS_PASSWORD;
+    process.env.REDIS_HOST = "127.0.0.1";
+    process.env.REDIS_PASSWORD = "mock-password";
     // 工厂是单例，先清除缓存以便按 env 重建
     try {
       expect(getTrialGuard(true).kind).toBe("redis");
     } finally {
-      if (originalUrl === undefined) delete process.env.UPSTASH_REDIS_REST_URL;
-      else process.env.UPSTASH_REDIS_REST_URL = originalUrl;
-      if (originalToken === undefined)
-        delete process.env.UPSTASH_REDIS_REST_TOKEN;
-      else process.env.UPSTASH_REDIS_REST_TOKEN = originalToken;
+      if (originalHost === undefined) delete process.env.REDIS_HOST;
+      else process.env.REDIS_HOST = originalHost;
+      if (originalPassword === undefined) delete process.env.REDIS_PASSWORD;
+      else process.env.REDIS_PASSWORD = originalPassword;
     }
   });
 });
