@@ -37,7 +37,7 @@
 | 访问方式 | 公网 IP + HTTP 直连（接受无 HTTPS），免 ICP 备案 |
 | 使用对象 | HR / 面试官试用，需防滥用（保留免费试用/限流/配额策略） |
 | 代码上传 | 提交并 push 到 GitHub，服务器拉取（`feat/tencent-migration` 分支） |
-| 每日配额 | 保持 50 不变（`QUOTA_DAILY_LIMIT=50`） |
+| 每日配额 | 保持 50 不变（`QUOTA_DAILY_LIMIT=50`）；口径为**每天** 50 次（非每月），2026-09-10 已再次确认 |
 
 ---
 
@@ -397,23 +397,34 @@ redis-cli -a "$REDIS_PASSWORD" --no-auth-warning --scan --pattern 'trial:*'
 redis-cli -a "$REDIS_PASSWORD" --no-auth-warning --scan --pattern 'rl:system_*'
 ```
 
-### 18.5 待验证疑点：IP 限流是否退化为全局限流
+### 18.5 IP 限流地址来源（实测确认，非缺陷）
 
 代码取客户端 IP 的顺序是 `x-forwarded-for` → `x-real-ip` → 字面量 `"unknown"`（见 [route.ts](file:///Users/qiu/Developer/personal/indigo-tarot/app/api/deepseek-stream/route.ts#L85-L88)）。
 
-当前部署是 `next start` 直接监听 80 端口，**前面没有 Nginx 等反向代理**，而 `x-forwarded-for` / `x-real-ip` 通常由代理写入，浏览器自身不会发送。若两者均缺失，所有访问者的限流键都会是 `rl:system_unknown`，导致：
+曾一度怀疑：`next start` 直接监听 80 端口、前面无反向代理，两个请求头可能均缺失，导致所有用户限流键退化为 `rl:system_unknown`，使「每 IP 每 3 小时 5 次」变成全体共享 5 次。
 
-- 「每 IP 每 3 小时 5 次」实际退化为**全体用户共享 5 次**
-- 可能与早期「浏览器端偶发 AI 解析失败」相关（本地 curl 用不同路径测试时未复现）
-
-**验证方法**：在服务器执行
+**实测结论：该怀疑不成立。** 服务器上执行
 
 ```bash
 source /root/indigo-tarot/.env.local
 redis-cli -a "$REDIS_PASSWORD" --no-auth-warning --scan --pattern 'rl:*'
 ```
 
-若输出为 `rl:system_unknown`，则该疑点成立，需要修复（引入 Nginx 反代透传真实 IP，或从 TCP 连接层取远端地址）。
+实际输出：
+
+```
+rl:system_::ffff:58.33.206.209
+rl:system_::ffff:127.0.0.1
+```
+
+说明：
+
+- Next.js 会基于 TCP 连接的远端地址写入 `x-forwarded-for`，因此无需 Nginx 也能取到真实 IP；
+- `::ffff:` 前缀是 IPv4-mapped IPv6 表示法，`::ffff:58.33.206.209` 等价于 `58.33.206.209`，键值语义正确；
+- `::ffff:127.0.0.1` 来自服务器本机 curl 诊断请求，属预期；
+- **IP 限流按真实客户端 IP 生效，无需修复。**
+
+> 附注：早期「浏览器端 AI 解析失败」的真实原因是 `crypto.randomUUID` 在 HTTP 非安全上下文不可用（见「十二」第 5 项），与 IP 限流无关，已修复。
 
 ### 18.6 增强方案（可选，需改代码，未实施）
 
@@ -421,6 +432,6 @@ redis-cli -a "$REDIS_PASSWORD" --no-auth-warning --scan --pattern 'rl:*'
 
 1. **调用日志**：在 [route.ts](file:///Users/qiu/Developer/personal/indigo-tarot/app/api/deepseek-stream/route.ts) 成功计数处，把 `时间 + IP + deviceId + 是否系统 Key` 写入 Redis List 或独立日志文件，保留 N 天后清理。
 2. **统计接口**：新增管理员接口，按日聚合返回「调用总数 / 去重 IP 数 / 去重设备数」。
-3. **前置代理**：加 Nginx 反代并透传 `X-Forwarded-For`，使 IP 限流恢复真实语义（同时可顺带接管 80 端口、便于以后上 HTTPS）。
+3. **前置代理**：加 Nginx 反代（当前 IP 限流已正常，非必需）；价值在于便于以后上 HTTPS、以及统一接管 80/443 端口。
 
 > 以上三项均涉及代码改动，本次未实施，按需再评估。
