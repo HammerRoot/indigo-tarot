@@ -142,15 +142,18 @@ F0（测试设施，先行）
 | 🟢 交互 | 牌桌抽牌体验升级 | G6 | `lib/pick.ts`（点击索引取牌一一对应；`lib/useSpreadZoom.ts` 已于文档审查时删除，整桌缩放流程被 G9/G10 取代） |
 | 🟢 视觉 | 结果页深邃夜空风 | G7 | `astro-*` 玻璃拟态组件类 + `CardModal` 牌放大 + `MarkdownRenderer` dark variant |
 | 🟢 文档 | 部署文档 + .env.example | G3 | `docs/DEPLOYMENT.md` + `.env.example` |
+| 🟢 部署 | 存储层迁移 ioredis（自建 Redis） | G14 | `lib/server/upstash.ts`（ioredis）+ `REDIS_*` 环境变量 |
+| 🟢 部署 | deviceId 兼容 HTTP（getRandomValues 手写 UUID） | G14 | `lib/deviceId.ts` |
 
-**测试规模**：188 个测试 / 31 个文件，`type-check` / `lint` / `test:run` 全绿。
+**测试规模**：193 个测试 / 31 个文件，`type-check` / `lint` / `test:run` 全绿。
 
-### 决策记录（Assumptions & Decisions，D1–D9）
+### 决策记录（Assumptions & Decisions，D1–D10）
 
 详见上方表格，关键决策：
 - **D2**：API Key 用 AES-GCM 加密存储（密文 localStorage + 会话密钥 sessionStorage）
 - **D8**：浏览器加密不防 XSS/会话期扩展读取；主密码/服务端托管为远期
 - **D9**：无登录系统"一人一次"为尽力而为（deviceId + IP 辅助）
+- **D10**：HTTP 直连下 Web Crypto 受限，deviceId 改用 getRandomValues；API Key 加密在 HTTP 下降级不持久化
 
 ### 待开发条目
 
