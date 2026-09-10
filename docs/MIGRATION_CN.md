@@ -278,3 +278,149 @@ curl -L -o /tmp/code.tar.gz https://ghfast.top/https://github.com/HammerRoot/ind
 tar -xzf /tmp/code.tar.gz --strip-components=1 -C /root/indigo-tarot
 npm ci && npm run build && pm2 restart indigo-tarot
 ```
+
+---
+
+## 十七、监控与告警方案
+
+### 17.1 先分清两层监控
+
+「服务器是否正常运行」其实是两件独立的事，需要不同手段：
+
+| 层面 | 含义 | 手段 |
+|---|---|---|
+| 服务器层 | 机器是否活着、CPU/内存/磁盘是否正常 | 腾讯云云监控（平台自带） |
+| 网站层 | `http://124.221.231.18` 能否正常返回页面 | **外部**可用性探测（第三方） |
+
+关键点：网站层必须用**外部**探测。服务器内部脚本在整机宕机时自己也停了，无法给你报信。
+
+### 17.2 方案对比
+
+| 方案 | 覆盖层 | 成本 | 说明 |
+|---|---|---|---|
+| A. 腾讯云云监控告警 | 服务器 | 免费 | 控制台 → 实例 → 监控 → 设置告警；支持阈值告警与「无数据告警」；通知渠道含邮件/短信/微信/电话 |
+| B. 外部可用性监控（推荐） | 网站 | 免费 | 独立于本机。UptimeRobot 免费版：50 个监控、5 分钟间隔、支持 HTTP 状态码与关键字检查 |
+| C. 服务器内自愈/巡检 | 应用 | 免费 | PM2 进程崩溃自动重启（已有）；可加 `max_memory_restart`；crontab 定时本地 curl 失败发 Webhook。**不能替代 A、B** |
+| D. `/api/health` 健康检查端点 | 应用 | 需改代码 | 当前项目无健康检查端点；加后可校验 Redis 连通，配合 B 更准确 |
+
+### 17.3 推荐组合（0 成本）
+
+**第 1 步：UptimeRobot 关键字监控（最该做的一项）**
+
+- 监控地址：`http://124.221.231.18`
+- 监控类型选 **Keyword（关键字）**，检查页面是否包含「塔罗」等固定文案
+- **为什么必须用关键字而非纯状态码**：本项目曾出现 80 端口被遗留 `sshd` 占用的情况，此时访问仍返回 HTTP 200，但内容是 `SSH-2.0-OpenSSH_8.9p1`。纯状态码监控发现不了这类故障，关键字监控才能抓到
+- 免费版通知：邮件 + 5 种集成（Discord 等）；不含短信/电话
+- 注意：探测节点主要在海外，从海外探测国内服务器一般可用，但偶有延迟
+
+**第 2 步：腾讯云云监控告警策略**
+
+- 资源类：CPU > 80%、内存 > 85%、磁盘 > 85%
+- **「无数据」告警**：实例监控上报中断时触发（用于发现机器失联）
+- 通知渠道绑定微信公众号，手机可第一时间收到
+- 短信每月 1000 条免费配额（每个告警类型）
+
+**第 3 步（可选）：应用自愈**
+
+- PM2 配置 `max_memory_restart`（如 500M）防止内存长期累积
+- 属自愈措施，降低故障概率，但不能替代告警
+
+**关于自建 Uptime Kuma**：不建议。监控与被监控服务同机，服务器一挂两者同时失效，探测失去意义。
+
+### 17.4 方案 D 说明（未实施）
+
+如需更准确的健康检查，可新增 `app/api/health/route.ts`，返回应用与 Redis 连通状态，再配合 UptimeRobot HTTP 监控。当前未实施。
+
+---
+
+## 十八、用量与来源查询
+
+### 18.1 Redis 键结构（实际存储）
+
+系统把防滥用数据存在服务器自建 Redis，键结构如下：
+
+| 键 | 类型 | TTL | 含义 |
+|---|---|---|---|
+| `quota:enabled` | String | 永久 | 每日配额开关，`1` 开 / `0` 关 |
+| `quota:count:YYYY-MM-DD` | String | 当天结束 | 当天系统 Key 调用次数（Asia/Shanghai 自然日） |
+| `trial:{deviceId}` | String | 90 天 | 该设备已用过免费试用的标记 |
+| `rl:system_{IP}` | String | 3 小时 | 该 IP 在 3 小时窗口内的系统 Key 调用次数 |
+
+### 18.2 能查到什么、查不到什么
+
+| 问题 | 能否回答 | 依据 |
+|---|---|---|
+| 今天总共被请求了多少次 | ✅ 能 | `quota:count:当天日期` |
+| 今天还剩多少次 | ✅ 能 | `limit - count` |
+| 配额开关当前状态 | ✅ 能 | `quota:enabled` |
+| 有多少设备用过免费试用 | ✅ 能（数量） | `trial:*` 键数量 |
+| 具体哪些设备用过 | ⚠️ 仅 deviceId | `trial:*` 键名；**不含 IP、不含时间** |
+| 哪些 IP 调用过系统 Key | ⚠️ 仅最近 3 小时 | `rl:system_*`；**超过 3 小时自动过期，无历史** |
+| 每次调用的时间/来源/问题内容 | ❌ 不能 | 系统未记录调用日志 |
+
+**结论**：当前实现只服务于「防滥用计数」，不服务于「审计与统计」。历史来源明细需要新增代码才能记录。
+
+### 18.3 查询方法一：管理员 API（查配额）
+
+系统提供配额查询接口，需管理员令牌（值见服务器 `.env.local` 的 `ADMIN_TOKEN`）：
+
+```bash
+# 查询开关与当天计数
+curl -s -H "Authorization: Bearer <ADMIN_TOKEN>" http://localhost/api/admin/quota
+
+# 返回示例
+# {"enabled":true,"count":7,"limit":50}
+```
+
+也可通过公网访问：`http://124.221.231.18/api/admin/quota`
+
+### 18.4 查询方法二：redis-cli（查来源明细）
+
+在服务器（OrcaTerm，root 身份）执行：
+
+```bash
+# 读取密码
+source /root/indigo-tarot/.env.local
+
+# 今天用了多少次 + 还剩多少
+NOW=$(TZ=Asia/Shanghai date +%F)
+USED=$(redis-cli -a "$REDIS_PASSWORD" --no-auth-warning GET "quota:count:$NOW")
+echo "今日已用: ${USED:-0} / 50，剩余: $((50 - ${USED:-0}))"
+
+# 配额开关
+redis-cli -a "$REDIS_PASSWORD" --no-auth-warning GET quota:enabled
+
+# 用过免费试用的设备列表（deviceId）
+redis-cli -a "$REDIS_PASSWORD" --no-auth-warning --scan --pattern 'trial:*'
+
+# 最近 3 小时有调用的 IP
+redis-cli -a "$REDIS_PASSWORD" --no-auth-warning --scan --pattern 'rl:system_*'
+```
+
+### 18.5 待验证疑点：IP 限流是否退化为全局限流
+
+代码取客户端 IP 的顺序是 `x-forwarded-for` → `x-real-ip` → 字面量 `"unknown"`（见 [route.ts](file:///Users/qiu/Developer/personal/indigo-tarot/app/api/deepseek-stream/route.ts#L85-L88)）。
+
+当前部署是 `next start` 直接监听 80 端口，**前面没有 Nginx 等反向代理**，而 `x-forwarded-for` / `x-real-ip` 通常由代理写入，浏览器自身不会发送。若两者均缺失，所有访问者的限流键都会是 `rl:system_unknown`，导致：
+
+- 「每 IP 每 3 小时 5 次」实际退化为**全体用户共享 5 次**
+- 可能与早期「浏览器端偶发 AI 解析失败」相关（本地 curl 用不同路径测试时未复现）
+
+**验证方法**：在服务器执行
+
+```bash
+source /root/indigo-tarot/.env.local
+redis-cli -a "$REDIS_PASSWORD" --no-auth-warning --scan --pattern 'rl:*'
+```
+
+若输出为 `rl:system_unknown`，则该疑点成立，需要修复（引入 Nginx 反代透传真实 IP，或从 TCP 连接层取远端地址）。
+
+### 18.6 增强方案（可选，需改代码，未实施）
+
+若要完整的来源审计与历史统计，需要新增记录逻辑：
+
+1. **调用日志**：在 [route.ts](file:///Users/qiu/Developer/personal/indigo-tarot/app/api/deepseek-stream/route.ts) 成功计数处，把 `时间 + IP + deviceId + 是否系统 Key` 写入 Redis List 或独立日志文件，保留 N 天后清理。
+2. **统计接口**：新增管理员接口，按日聚合返回「调用总数 / 去重 IP 数 / 去重设备数」。
+3. **前置代理**：加 Nginx 反代并透传 `X-Forwarded-For`，使 IP 限流恢复真实语义（同时可顺带接管 80 端口、便于以后上 HTTPS）。
+
+> 以上三项均涉及代码改动，本次未实施，按需再评估。
