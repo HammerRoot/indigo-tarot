@@ -254,8 +254,27 @@ pm2 startup        # 生成并启用 systemd 服务 pm2-root，开机自动 resu
 ## 十五、Vercel 处理
 
 - **保留**：Vercel 项目与生产地址 `https://indigo-tarot.vercel.app/` 暂不删除，作对照。
-- **关闭自动发布**：当前仓库**没有** `.github/workflows/` 文件，Vercel 自动部署来自 **Vercel for GitHub 的 Git 集成**（Vercel 控制台侧配置），需在 Vercel 控制台关闭：
+- **已关闭自动发布**（2026-09-10 完成）：当前仓库**没有** `.github/workflows/` 文件，Vercel 自动部署来自 **Vercel for GitHub 的 Git 集成**（Vercel 控制台侧配置），已在 Vercel 控制台关闭：
   1. 登录 vercel.com → 打开项目 `indigo-tarot`。
   2. **Settings → Git → Connected Git Repository**。
   3. 点击 **Disconnect**（断开 Git 连接）。
   4. 断开后 push 到 GitHub 不再自动触发 Vercel 部署，Vercel 项目与已有部署保留。
+
+---
+
+## 十六、分支与发布说明
+
+- **迁移分支**：`feat/tencent-migration`，已完成迁移相关 3 个提交并合并回 `main`：
+  - `01db5a6` 存储层迁移到 ioredis
+  - `c09d5c1` deviceId 改用 getRandomValues 兼容 HTTP
+  - `1cd66fe` 部署文档与 spec 补充
+- **发布分支**：`main`（已与迁移分支同步）。
+- **服务器代码来源**：部署时取自 `feat/tencent-migration`；两分支合并后代码内容一致，后续更新以 `main` 为准。
+- **发布方式**：手工部署（未配置 CI/CD，理由见「十四」）。更新命令：
+
+```bash
+cd /root/indigo-tarot
+curl -L -o /tmp/code.tar.gz https://ghfast.top/https://github.com/HammerRoot/indigo-tarot/archive/refs/heads/main.tar.gz
+tar -xzf /tmp/code.tar.gz --strip-components=1 -C /root/indigo-tarot
+npm ci && npm run build && pm2 restart indigo-tarot
+```
