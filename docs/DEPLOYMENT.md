@@ -38,14 +38,19 @@ npm run dev                  # http://localhost:3000
 
 1. **Redis 必须持久化**：`requirepass` 设强密码 + `appendonly yes`，且只监听 `127.0.0.1`（勿暴露公网）。
 2. **环境变量写入服务器** `/root/indigo-tarot/.env.local`（权限 600）。
-3. **构建与启动**：
+3. **构建与启动**（注意应用监听 **3000**，80 由 Nginx 占用）：
    ```bash
    npm ci && npm run build
-   pm2 start npm --name indigo-tarot -- start -- -p 80
+   pm2 start npm --name indigo-tarot --max-memory-restart 500M -- start -- -p 3000
    pm2 save && pm2 startup
    ```
-4. **防火墙**只放行必要端口（22、80）。
-5. 改环境变量后必须**重启 PM2 进程**才生效（`pm2 restart indigo-tarot`）。
+4. **Nginx 反向代理**（对外 80 → 应用 3000）：
+   - 作用之一是**覆写 `X-Forwarded-For`**，使 IP 限流无法被客户端伪造的请求头绕过（详见 [`MIGRATION_CN_ARCHIVE.md`](./MIGRATION_CN_ARCHIVE.md) §16）；
+   - 配置中 `proxy_buffering off` 是**必需项**——否则 SSE 逐字输出会退化成一次性刷出；
+   - 配置文件 `/etc/nginx/sites-available/indigo-tarot`（完整内容见归档 §16.3）。
+5. **防火墙**只放行必要端口（22、80）。
+6. 改环境变量后必须**重启 PM2 进程**才生效（`pm2 restart indigo-tarot`，无需重新 build）。
+7. ⚠️ 若需重建 PM2 进程，务必带上 `-p 3000 --max-memory-restart 500M` 并执行 `pm2 save`，否则重启后应用会回到 80 端口与 Nginx 冲突。
 
 > ⚠️ 当前生产为 **HTTP 明文直连**（无 HTTPS），`crypto.subtle` 不可用 → API Key「记住」功能失效（刷新丢 Key），属固有限制。详见 [`MIGRATION_CN.md`](./MIGRATION_CN.md) 三、已知限制。
 

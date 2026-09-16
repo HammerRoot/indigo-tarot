@@ -352,3 +352,89 @@ rl:system_::ffff:127.0.0.1
 > 附注 1：早期「浏览器端 AI 解析失败」的真实原因是 `crypto.randomUUID` 在 HTTP 非安全上下文不可用（见「10. 问题与解决记录」第 5 项），与 IP 限流无关，已修复。
 >
 > 附注 2：本结论**不覆盖客户端自带 `X-Forwarded-For` 的情形**——Next 仅在请求头缺失时才用 socket 地址填充，客户端伪造的头会被保留。该疑点见 [MIGRATION_CN.md](./MIGRATION_CN.md) 疑点 Q1。
+
+---
+
+## 16. Nginx 反向代理接入（2026-09-16，修复 Q1）
+
+### 16.1 背景
+
+疑点 Q1 经实测确认：客户端自带的 `X-Forwarded-For` 被完全信任，换头即换限流桶（实测伪造 `203.0.113.77` → Redis 键 `rl:system_203.0.113.77`）。由于 Next.js App Router 无法直接读取 socket 远端地址，采用**前置 Nginx 覆写请求头**的方案（Q1 方案 A）。
+
+### 16.2 架构变化
+
+| | 修复前 | 修复后 |
+|---|---|---|
+| 对外监听 | PM2 `indigo-tarot` 直接监听 **80** | **Nginx 监听 80** |
+| 应用监听 | — | PM2 `indigo-tarot` 监听 **127.0.0.1:3000** |
+| 客户端 IP 来源 | 客户端可伪造的 `X-Forwarded-For` | Nginx 以 `$remote_addr` **覆写**该头 |
+| 应用代码 | — | **零改动**（仍读 `x-forwarded-for`，但值已可信） |
+
+### 16.3 安装与配置
+
+```bash
+apt-get install -y nginx        # 安装时不会启动（80 被 Next 占用，属预期）
+```
+
+配置文件 `/etc/nginx/sites-available/indigo-tarot`（软链到 `sites-enabled/`，已删除默认站点）：
+
+```nginx
+server {
+    listen 80 default_server;
+    server_name _;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;   # 关键：覆写而非追加
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_buffering off;      # 关键：SSE 流式必需，否则逐字输出退化为一次性刷出
+        proxy_cache off;
+        proxy_read_timeout 300s;  # AI 解读耗时可能超过默认 60s
+    }
+}
+```
+
+### 16.4 切换步骤（含应用端口迁移）
+
+```bash
+# 1. 启用配置并校验
+rm -f /etc/nginx/sites-enabled/default
+ln -sf /etc/nginx/sites-available/indigo-tarot /etc/nginx/sites-enabled/indigo-tarot
+nginx -t
+
+# 2. 迁移应用端口 + 启动 nginx（此段为中断窗口，实测约 10-20 秒）
+pm2 delete indigo-tarot
+pm2 start npm --name indigo-tarot --max-memory-restart 500M -- start -- -p 3000
+systemctl start nginx
+
+# 3. 持久化（务必：否则重启后 PM2 会把应用恢复回 80 端口，与 nginx 冲突）
+pm2 save
+systemctl enable nginx
+```
+
+> ⚠️ `pm2 delete` 会连带清掉此前设置的 `max_memory_restart`，重建时必须重新带上该参数。
+
+### 16.5 验证结果（实测）
+
+| 项 | 结果 |
+|---|---|
+| 站点可访问 | HTTP 200，~42ms |
+| `/api/health` | `{"status":"ok","checks":{"redis":"ok"}}` |
+| 安全响应头透传 | 5 条 + CSP 扩展全部保留 |
+| **SSE 流式** | 首字节 0.22s / 总时长 1.94s，145 个 content 帧逐字到达 → **未被缓冲** |
+| **伪造 XFF（修复后）** | 发送 `203.0.113.88` → Redis 中**无此键**，记录为真实来源 IP ✅ |
+| `max_memory_restart` | 重建后确认仍为 `524288000`（500MB） |
+| 开机自启 | nginx `enabled`；PM2 `dump.pm2` 已更新为 3000 端口 |
+
+> 修复前遗留的 `rl:system_203.0.113.77` 键有 3 小时 TTL，会自行过期，无需手工清理。
+
+### 16.6 对部署流程的影响
+
+- **日常更新命令不变**：`pm2 restart indigo-tarot` 会保留 `-p 3000` 参数，归档 §11 的流程照旧可用。
+- **若需重建 PM2 进程**：必须带上 `-p 3000 --max-memory-restart 500M`，并按 16.4 执行 `pm2 save`。
+- **Nginx 配置变更后**：`nginx -t && systemctl reload nginx`（不断连接）。
+- **附带收益**：将来上 HTTPS 只需在本配置中加证书与 443 server 块，应用侧无需改动。
