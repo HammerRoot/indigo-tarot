@@ -1,5 +1,9 @@
 # 🟡 黄级：清理 / 文档 / 小功能（Y1–Y9）
 
+> ⚠️ **本文是历史记录，不描述当前状态。** 黄级条目 Y1–Y9 已完成并归档。
+> **当前状态以 [`docs/README.md`](../README.md) 的「条目状态」为准。**
+
+
 > 黄级条目为代码清理、文档修正与小功能。执行顺序注意：**Y1（历史记录）先于 Y2（死代码清理）**，避免误删 readings 相关代码；Y7 与 R3 共享模块合并实施。
 
 ## 条目状态
@@ -255,7 +259,7 @@ export const metadata: Metadata = {
 
 ### 说明
 
-R1 已重写为「API Key 安全加固」综合条目（`spec/10-red-security.md`），本条目内容（删除 `deepseek_api_key` 双份存储、Key 走 store 单一来源）纳入其 **C 层（收窄暴露面）**，不再单独实施。实施时以 R1 为准。
+R1 已重写为「API Key 安全加固」综合条目（`docs/archive/10-red-security.md`），本条目内容（删除 `deepseek_api_key` 双份存储、Key 走 store 单一来源）纳入其 **C 层（收窄暴露面）**，不再单独实施。实施时以 R1 为准。
 
 原方案摘要（供 R1-C 参考）：
 - 现状：API Key 同时存在于 store persist（localStorage `tarot-store`，`lib/store.ts` L177）与 `app/page.tsx` 手写的 `deepseek_api_key`（L34–40 读取、L79–87 写入/删除）——两份状态需手动同步，易漂移。

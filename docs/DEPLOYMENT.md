@@ -1,8 +1,12 @@
 # 部署文档
 
+> **本文只负责**：环境变量、本地开发、生产部署步骤、成本控制、管理接口、上线检查清单。
+> **本文不写**：迁移历史与事故经过（→ [`archive/`](./archive/)）、运维待办与当前状态
+> （→ [`OPERATIONS.md`](./OPERATIONS.md)）、代码条目状态（→ [`README.md`](./README.md)）。
+>
 > indigo-tarot 的环境变量配置与部署指南。本地开发参考 [`README.md`](../README.md)。
 >
-> 当前生产环境为**腾讯云轻量应用服务器 + 自建 Redis**（`http://124.221.231.18`），实际部署执行记录见 [`MIGRATION_CN_ARCHIVE.md`](./MIGRATION_CN_ARCHIVE.md) §4；未完成待办与上线前安全清单见 [`MIGRATION_CN.md`](./MIGRATION_CN.md)。
+> 当前生产环境为**腾讯云轻量应用服务器 + 自建 Redis**（`http://<SERVER_IP>`），实际部署执行记录见 [`archive/migration-2026-09.md`](./archive/migration-2026-09.md) §4；未完成待办与上线前安全清单见 [`OPERATIONS.md`](./OPERATIONS.md)。
 
 ## 一、环境变量清单
 
@@ -34,7 +38,7 @@ npm run dev                  # http://localhost:3000
 
 ## 三、生产部署（腾讯云自建）
 
-完整执行记录（购买、上传代码、安装 Node/Redis/PM2、防火墙）见 [`MIGRATION_CN_ARCHIVE.md`](./MIGRATION_CN_ARCHIVE.md) §4。要点：
+完整执行记录（购买、上传代码、安装 Node/Redis/PM2、防火墙）见 [`archive/migration-2026-09.md`](./archive/migration-2026-09.md) §4。要点：
 
 1. **Redis 必须持久化**：`requirepass` 设强密码 + `appendonly yes`，且只监听 `127.0.0.1`（勿暴露公网）。
 2. **环境变量写入服务器** `/root/indigo-tarot/.env.local`（权限 600）。
@@ -45,14 +49,14 @@ npm run dev                  # http://localhost:3000
    pm2 save && pm2 startup
    ```
 4. **Nginx 反向代理**（对外 80 → 应用 3000）：
-   - 作用之一是**覆写 `X-Forwarded-For`**，使 IP 限流无法被客户端伪造的请求头绕过（详见 [`MIGRATION_CN_ARCHIVE.md`](./MIGRATION_CN_ARCHIVE.md) §16）；
+   - 作用之一是**覆写 `X-Forwarded-For`**，使 IP 限流无法被客户端伪造的请求头绕过（详见 [`archive/migration-2026-09.md`](./archive/migration-2026-09.md) §16）；
    - 配置中 `proxy_buffering off` 是**必需项**——否则 SSE 逐字输出会退化成一次性刷出；
    - 配置文件 `/etc/nginx/sites-available/indigo-tarot`（完整内容见归档 §16.3）。
 5. **防火墙**只放行必要端口（22、80）。
 6. 改环境变量后必须**重启 PM2 进程**才生效（`pm2 restart indigo-tarot`，无需重新 build）。
 7. ⚠️ 若需重建 PM2 进程，务必带上 `-p 3000 --max-memory-restart 500M` 并执行 `pm2 save`，否则重启后应用会回到 80 端口与 Nginx 冲突。
 
-> ⚠️ 当前生产为 **HTTP 明文直连**（无 HTTPS），`crypto.subtle` 不可用 → API Key「记住」功能失效（刷新丢 Key），属固有限制。详见 [`MIGRATION_CN.md`](./MIGRATION_CN.md) 三、已知限制。
+> ⚠️ 当前生产为 **HTTP 明文直连**（无 HTTPS），`crypto.subtle` 不可用 → API Key「记住」功能失效（刷新丢 Key），属固有限制。详见 [`OPERATIONS.md`](./OPERATIONS.md) 三、已知限制。
 
 ## 四、成本控制（重要）
 
@@ -113,7 +117,7 @@ curl "http://<你的地址>/api/admin/stats?days=30" \
 
 > **隐私边界**：该接口只返回聚合数字。不记录问题内容、不记录 IP、不记录单次调用明细；去重设备数用 Redis HyperLogLog 估算，服务端不保存原始设备标识。聚合数据保留 30 天后自动过期。
 >
-> 需要**更底层的排查**（如查某个 IP 的限流键、Redis 原始键结构）见 [`MIGRATION_CN_ARCHIVE.md`](./MIGRATION_CN_ARCHIVE.md) §14 的 redis-cli 速查。
+> 需要**更底层的排查**（如查某个 IP 的限流键、Redis 原始键结构）见 [`archive/migration-2026-09.md`](./archive/migration-2026-09.md) §14 的 redis-cli 速查。
 
 ## 六、上线前检查清单
 
@@ -123,8 +127,8 @@ curl "http://<你的地址>/api/admin/stats?days=30" \
 - [ ] Redis 已开启 AOF 且只监听 `127.0.0.1`
 - [ ] 环境变量已配置并重启 PM2 进程
 - [ ] DeepSeek 账户为固定充值余额
-- [ ] 重启服务器后验证计数不重置（见 [`MIGRATION_CN.md`](./MIGRATION_CN.md) 待办 N4）
-- [ ] 监控告警已配置（见 [`MIGRATION_CN.md`](./MIGRATION_CN.md) 待办 N1）
+- [ ] 重启服务器后验证计数不重置（见 [`OPERATIONS.md`](./OPERATIONS.md) 台账 N4）
+- [x] 监控告警已配置（✅ 2026-09-16 完成，见 [`OPERATIONS.md`](./OPERATIONS.md) 台账 N1）
 - [ ] 无痕窗口实测：不填 Key 占卜 1 次成功 → 再次占卜提示"免费试用已用完" → 填个人 Key 后可正常占卜
 
-> Vercel 为历史部署平台，已停止使用（自动发布已关闭）；处置状态见 [`MIGRATION_CN.md`](./MIGRATION_CN.md) 疑点 Q2。
+> Vercel 为历史部署平台，已停用并删除；历史处置记录见 [`archive/migration-2026-09.md`](./archive/migration-2026-09.md) §12。

@@ -2,6 +2,11 @@
 
 一个基于 AI 的现代化塔罗牌占卜应用，提供智能牌阵推荐、流畅抽牌体验和深度解析。
 
+> **本文只负责**：面向使用者的功能说明、技术栈、快速开始、API 契约、隐私边界。
+> **本文不写**：部署步骤（→ [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)）、运维待办与现状
+> （→ [`docs/OPERATIONS.md`](./docs/OPERATIONS.md)）、代码条目状态与决策记录。
+> **文档总览、规格台账与单一源规则见 [`docs/README.md`](./docs/README.md)。**
+
 ## ✨ 功能特色
 
 - **🤖 AI智能推荐** - 根据你的问题自动推荐最适合的塔罗牌阵
@@ -16,7 +21,7 @@
 - **状态管理**: Zustand
 - **测试**: Vitest + React Testing Library
 - **AI服务**: DeepSeek API（流式 SSE）
-- **部署平台**: 腾讯云轻量应用服务器 + 自建 Redis（PM2 托管）
+- **部署形态**: 自建服务器 + 自建 Redis（详见 [`docs/OPERATIONS.md`](./docs/OPERATIONS.md)）
 
 ## 🚀 快速开始
 
@@ -48,7 +53,8 @@
    cp .env.example .env.local
    ```
 
-   必填变量：`DEEPSEEK_API_KEY`（系统 Key）、`ADMIN_TOKEN`（管理接口认证）。完整清单（含可选的 `DEEPSEEK_API_URL`、`QUOTA_DAILY_LIMIT`、以及 Redis 的 `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`）见 [`.env.example`](./.env.example) 与 [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)。
+   环境变量**完整清单以 [`.env.example`](./.env.example) 为唯一出处**（含必填项与可选项及中文注释），
+   各项用途见 [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)。本文不复述变量列表，以免与两处漂移。
 
 4. **启动开发服务器**
 
@@ -137,7 +143,8 @@
 
 ### 建议问题接口
 
-**GET** `/api/suggested-questions` — 返回按类别分组的预设问题库（love / career / relationships / life）。
+**GET** `/api/suggested-questions` — 从 6 个类别（love / career / relationships / personal / finance / health）中
+随机抽取 3 个不同类别、每类取 1 个问题返回，即 `{ questions: [...] }`（3 条，非按类别分组返回）。
 
 ### 免费试用状态接口
 

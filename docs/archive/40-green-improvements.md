@@ -1,5 +1,9 @@
 # 🟢 绿级：质量提升（G1–G7、G14）
 
+> ⚠️ **本文是历史记录，不描述当前状态。** 条目 G1–G7、G14 已完成并归档，正文保留的是当时的
+> 问题描述、验收标准、技术方案与 TDD 计划。
+> **当前状态以 [`docs/README.md`](../README.md) 的「条目状态」为准。**
+
 > 绿级条目为可选的质量提升，红/橙/黄全部完成后按需实施。
 
 ## 条目状态
@@ -202,7 +206,7 @@ export function recommendSpread(question: string): TarotSpread {
 
 - [x] `npm audit` 无 high/critical 漏洞
 - [x] 分支处置：**已直接删除远端 `feature/less-modules`**（比"README 注明废弃"更彻底——分支不存在即无误合并风险）
-- [x] （可选）CI：**经评估决定不加**，理由见 `docs/MIGRATION_CN_ARCHIVE.md` §13（使用周期约 2 个月、GitHub runner 海外到国内服务器链路不稳、SSH 私钥入 Secrets 增加泄露面、手工部署仅一条命令）
+- [x] （可选）CI：**经评估决定不加**，理由见 `docs/archive/migration-2026-09.md` §13（使用周期约 2 个月、GitHub runner 海外到国内服务器链路不稳、SSH 私钥入 Secrets 增加泄露面、手工部署仅一条命令）
 
 ### 技术方案
 
@@ -260,7 +264,9 @@ export function recommendSpread(question: string): TarotSpread {
 1. `npm audit fix`（非破坏性）→ 15 项降至 3 项（仅剩 next / postcss / sharp）；
 2. `next` 与 `eslint-config-next` 同步 `16.1.6` → `16.3.5`（保持 `--save-exact` 精确锁定，与既有风格一致）→ **`found 0 vulnerabilities`**。
 
-**升级后验证**：`npm run build`（Next.js 16.3.5 + Turbopack，12 个路由全部产出）✅、`type-check` ✅、`lint` ✅、190 个测试全绿 ✅。
+**升级后验证（2026-09-16 当时快照）**：`npm run build`（Next.js 16.3.5 + Turbopack，12 个路由全部产出）✅、`type-check` ✅、`lint` ✅、测试全绿 ✅。
+
+> 当前测试规模以 [`docs/README.md`](../README.md) 的「测试规模」一行为唯一出处。
 
 **部署（2026-09-16 已完成）**：服务器已按归档 §11 流程重新部署（下载 tarball → `npm ci` → `npm run build` → `pm2 restart`），构建 `BUILD_EXIT=0`、10 个路由全部产出，`node_modules/next` 实测 `16.3.5`；站点外部验证 HTTP 200、`/api/trial-status` 与 `/api/suggested-questions` 均正常（Redis 连接未受影响）。
 
@@ -467,7 +473,7 @@ export function recommendSpread(question: string): TarotSpread {
 - **优先级**: 🟢
 - **类别**: 部署
 - **状态**: ✅ 完成
-- **关联条目**: D10、D11；部署记录见 [`docs/MIGRATION_CN_ARCHIVE.md`](../docs/MIGRATION_CN_ARCHIVE.md) §6
+- **关联条目**: D10、D11；部署记录见 [`migration-2026-09.md`](./migration-2026-09.md) §6
 
 ### 问题描述
 
@@ -505,7 +511,7 @@ export function recommendSpread(question: string): TarotSpread {
 
 - 修改：`package.json`（+ioredis）、`lib/server/upstash.ts`、`lib/deviceId.ts`
 - 环境：`UPSTASH_*` / `KV_*` → `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`（同步 `.env.example` 与部署文档）
-- 文档：`docs/DEPLOYMENT.md`、`docs/MIGRATION_CN{,_ARCHIVE}.md`
+- 文档：`docs/DEPLOYMENT.md`、`docs/OPERATIONS.md`、`docs/archive/migration-2026-09.md`
 
 ### 风险与假设
 

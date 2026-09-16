@@ -1,9 +1,13 @@
-# indigo-tarot 腾讯云迁移：已完成归档
+# 腾讯云迁移归档（2026-09）
 
-> **归档日期**：2026-09-10
+> **归档日期**：2026-09-10　**最后修订**：2026-09-16
+>
+> ⚠️ **本文是历史记录，不描述当前状态。** 文中所有"保留 / 待核实 / 进行中"等表述均为**当时**的情况，
+> 已过期的部分就地标注，**当前状态一律以 [`docs/OPERATIONS.md`](../OPERATIONS.md) 为准**。
 >
 > 本文件收录腾讯云迁移过程中**已完成**的内容：部署执行记录、代码改动、验证结果、问题排查与运维速查。
-> **未完成待办、疑点与上线前安全清单** → [MIGRATION_CN.md](./MIGRATION_CN.md)。
+>
+> **未完成待办、疑点与上线前安全清单** → [OPERATIONS.md](../OPERATIONS.md)。
 
 ---
 
@@ -12,8 +16,8 @@
 | 维度 | 实际值 |
 |---|---|
 | 云平台 | 腾讯云轻量应用服务器（Lighthouse） |
-| 实例 ID | `lhins-8zyqhgjq` |
-| 公网 IP | `124.221.231.18` |
+| 实例 ID | `<INSTANCE_ID>` |
+| 公网 IP | `<SERVER_IP>` |
 | 规格 | 4 核 4G 3M 带宽 / 上海 / 1 年 / 109 元（1.4 折） |
 | 系统镜像 | Ubuntu 22.04 LTS |
 | 访问方式 | 公网 IP + HTTP（80 端口直连，无 HTTPS） |
@@ -56,9 +60,9 @@
 
 **关键代码位置**
 
-- 服务端共享模块：[lib/server/deepseek.ts](../lib/server/deepseek.ts)、[lib/server/upstash.ts](../lib/server/upstash.ts)、[lib/server/trial.ts](../lib/server/trial.ts)、[lib/server/rate-limit.ts](../lib/server/rate-limit.ts)、[lib/server/quota.ts](../lib/server/quota.ts)
-- 流式 SSE 路由：[app/api/deepseek-stream/route.ts](../app/api/deepseek-stream/route.ts)
-- 设备标识：[lib/deviceId.ts](../lib/deviceId.ts)
+- 服务端共享模块：[lib/server/deepseek.ts](../../lib/server/deepseek.ts)、[lib/server/upstash.ts](../../lib/server/upstash.ts)、[lib/server/trial.ts](../../lib/server/trial.ts)、[lib/server/rate-limit.ts](../../lib/server/rate-limit.ts)、[lib/server/quota.ts](../../lib/server/quota.ts)
+- 流式 SSE 路由：[app/api/deepseek-stream/route.ts](../../app/api/deepseek-stream/route.ts)
+- 设备标识：[lib/deviceId.ts](../../lib/deviceId.ts)
 
 ---
 
@@ -68,7 +72,7 @@
 
 ### 4.1 购买服务器
 
-- 腾讯云轻量应用服务器（Lighthouse），实例 `lhins-8zyqhgjq`。
+- 腾讯云轻量应用服务器（Lighthouse），实例 `<INSTANCE_ID>`。
 - 规格：4 核 4G 3M / 上海 / 1 年 / 109 元（1.4 折促销）。
 - 系统镜像：Ubuntu 22.04 LTS（购买后可从控制台重装系统）。
 
@@ -134,7 +138,7 @@ pm2 startup        # 生成并启用 systemd 服务 pm2-root，开机自动 resu
 ### 4.8 开放防火墙
 
 - 轻量服务器控制台 → 防火墙 → 放行 TCP 80。
-- 访问地址：`http://124.221.231.18`。
+- 访问地址：`http://<SERVER_IP>`。
 
 ---
 
@@ -159,7 +163,7 @@ pm2 startup        # 生成并启用 systemd 服务 pm2-root，开机自动 resu
 
 ### 6.1 存储层迁移到 ioredis（commit `01db5a6`）
 
-改动集中在 [lib/server/upstash.ts](../lib/server/upstash.ts)：
+改动集中在 [lib/server/upstash.ts](../../lib/server/upstash.ts)：
 
 1. `package.json` 增加依赖 `ioredis`。
 2. `redisCommand` 实现从「Upstash REST fetch」换成「ioredis 执行命令」，返回结构 `RedisCommandResult[]` 不变。
@@ -169,10 +173,10 @@ pm2 startup        # 生成并启用 systemd 服务 pm2-root，开机自动 resu
 ### 6.2 deviceId 兼容 HTTP 部署（commit `c09d5c1`）
 
 - **问题**：`crypto.randomUUID()` 仅在 HTTPS / localhost 安全上下文可用，公网 IP 直连（HTTP）下为 `undefined`，导致设备标识生成失败 → AI 解析报错 `TypeError: crypto.randomUUID is not a function`。
-- **修复**：[lib/deviceId.ts](../lib/deviceId.ts) 改用 `crypto.getRandomValues()`（HTTP 下同样可用）手写 UUID v4。
-- **验证**：`type-check` 通过，193 个测试全部通过。
+- **修复**：[lib/deviceId.ts](../../lib/deviceId.ts) 改用 `crypto.getRandomValues()`（HTTP 下同样可用）手写 UUID v4。
+- **验证**：`type-check` 通过，测试全绿。
 
-> 连带说明：`crypto.subtle`（API Key 加密，见 `lib/apiKeyCrypto.ts`）同样只在安全上下文可用。HTTP 下 `crypto.subtle` 不可用，`setApiKey` 已通过 try/catch 降级为「不持久化 API Key」（内存中仍可用，刷新后需重填）。如需完整「记住 Key」功能需上 HTTPS（见 [MIGRATION_CN.md](./MIGRATION_CN.md) 已知限制）。
+> 连带说明：`crypto.subtle`（API Key 加密，见 `lib/apiKeyCrypto.ts`）同样只在安全上下文可用。HTTP 下 `crypto.subtle` 不可用，`setApiKey` 已通过 try/catch 降级为「不持久化 API Key」（内存中仍可用，刷新后需重填）。如需完整「记住 Key」功能需上 HTTPS（见 [OPERATIONS.md](../OPERATIONS.md) 已知限制）。
 
 ---
 
@@ -191,7 +195,7 @@ pm2 startup        # 生成并启用 systemd 服务 pm2-root，开机自动 resu
 - [x] 抽牌流程（选牌 → 翻牌 → 结果页）正常
 - [x] AI 深度解析流式返回成功（出现「💡 核心建议」与「🔮 深度解析」）
 - [x] 历史记录正常保存/读取
-- [ ] 重启服务器后，免费试用/每日配额计数不重置（Redis AOF 持久化生效）——**未完成，见 [MIGRATION_CN.md](./MIGRATION_CN.md) 待办 N4**
+- [ ] 重启服务器后，免费试用/每日配额计数不重置（Redis AOF 持久化生效）——**未完成，见 [OPERATIONS.md](../OPERATIONS.md) 待办 N4**
 
 ---
 
@@ -216,7 +220,7 @@ pm2 startup        # 生成并启用 systemd 服务 pm2-root，开机自动 resu
 | 3 | 服务器直接 `git clone` GitHub 超时 | 服务器到 GitHub 网络不通 | 用 `ghfast.top` 镜像下载 tar.gz |
 | 4 | 端口 80 被遗留 sshd 占用，访问返回 `SSH-2.0-...` | 之前临时 sshd 监听 80 未清理 | 从 `ss -ltnp` 提取 pid 并 kill，再启动 PM2 |
 | 5 | 浏览器端 AI 解析报错 `crypto.randomUUID is not a function` | Web Crypto API 在 HTTP 非安全上下文不可用 | deviceId 改用 `getRandomValues` 手写 UUID（commit `c09d5c1`） |
-| 6 | **上线 N3 后 AI 解析 502，一次调用即打挂应用** | **本次引入**：`lib/server/stats.ts` 的 Redis 版 `record()` 在 `for...of` 遍历 `commands` 的同时向同一数组 `push` EXPIRE 命令 → 循环永不终止、数组无限增长 → V8 堆耗尽，`next-server` `Aborted (core dumped)`（见下方详述） | 改为先构造 `counters`，再 `map` 出独立的 `expiries`，最后合并下发（commit `c5280ac`）。**并补齐此前完全缺失的 Redis 分支测试**——内存版写对、Redis 版从未被验证，正是漏洞来源 |
+| 6 | 上线 N3 后 AI 解析 502，一次调用即打挂应用 | 见下方 §10.1 | 见下方 §10.1 |
 
 ### 10.1 事故 6 详述（2026-09-16）
 
@@ -240,7 +244,8 @@ for (const cmd of commands) {
 
 **回归防护**：新增 `lib/server/__tests__/stats.redis.test.ts`（8 例，mock `redisCommand` 后断言下发的命令数组）。已用「恢复旧代码」的方式验证该测试确实能抓到本 bug（旧代码下直接 OOM 崩溃）。
 
-> 建议后续：为 `quota.ts` / `rate-limit.ts` / `trial.ts` 的 Redis 分支补同类型测试——它们目前处于同样的盲区。
+> **同类型盲区**：`quota.ts` / `rate-limit.ts` / `trial.ts` 当时处于同样的 Redis 分支零覆盖状态
+> （这三个模块正跑在生产上，直接管成本熔断与防滥用）。是否补测未在本归档结论内。
 
 ---
 
@@ -266,12 +271,16 @@ npm ci && npm run build && pm2 restart indigo-tarot
 
 ## 12. Vercel 处理（已关闭自动发布）
 
-- **保留**：Vercel 项目与生产地址 `https://indigo-tarot.vercel.app/` 暂未删除，作对照（**该部署是否仍是可用入口，见 [MIGRATION_CN.md](./MIGRATION_CN.md) 疑点 Q2**）。
+> 本节记录 **2026-09-10 当时**的处置情况，属历史记录。
+> 该平台现已停用，**当前状态以 [`docs/OPERATIONS.md`](../OPERATIONS.md) 为准**。
+
+- **当时的处置**：Vercel 项目与生产地址 `https://<VERCEL_DOMAIN>/` 未删除，作对照保留。
 - **已关闭自动发布**（2026-09-10 完成）：当前仓库**没有** `.github/workflows/` 文件，Vercel 自动部署来自 **Vercel for GitHub 的 Git 集成**（Vercel 控制台侧配置），已在 Vercel 控制台关闭：
   1. 登录 vercel.com → 打开项目 `indigo-tarot`。
   2. **Settings → Git → Connected Git Repository**。
   3. 点击 **Disconnect**（断开 Git 连接）。
   4. 断开后 push 到 GitHub 不再自动触发 Vercel 部署，Vercel 项目与已有部署保留。
+     （**已于 2026-09-16 删除**，此处描述的是当时的状态。当前状态见 [`OPERATIONS.md`](../OPERATIONS.md)。）
 
 ---
 
@@ -306,7 +315,7 @@ npm ci && npm run build && pm2 restart indigo-tarot
 | 哪些 IP 调用过系统 Key | ⚠️ 仅最近 3 小时 | `rl:system_*`；**超过 3 小时自动过期，无历史** |
 | 每次调用的时间/来源/问题内容 | ❌ 不能 | 系统未记录调用日志 |
 
-**结论**：当前实现只服务于「防滥用计数」，不服务于「审计与统计」。历史来源明细需要新增代码（见 [MIGRATION_CN.md](./MIGRATION_CN.md) 待办 N3）。
+**结论**：当前实现只服务于「防滥用计数」，不服务于「审计与统计」。历史来源明细需要新增代码（见 [OPERATIONS.md](../OPERATIONS.md) 待办 N3）。
 
 ### 14.2 查询方法一：管理员 API（查配额）
 
@@ -320,7 +329,7 @@ curl -s -H "Authorization: Bearer <ADMIN_TOKEN>" http://localhost/api/admin/quot
 # {"enabled":true,"count":7,"limit":50}
 ```
 
-也可通过公网访问：`http://124.221.231.18/api/admin/quota`
+也可通过公网访问：`http://<SERVER_IP>/api/admin/quota`
 
 ### 14.3 查询方法二：redis-cli（查来源明细）
 
@@ -349,7 +358,7 @@ redis-cli -a "$REDIS_PASSWORD" --no-auth-warning --scan --pattern 'rl:system_*'
 
 ## 15. 已澄清疑点：IP 限流地址来源
 
-代码取客户端 IP 的顺序是 `x-forwarded-for` → `x-real-ip` → 字面量 `"unknown"`（见 [route.ts](../app/api/deepseek-stream/route.ts#L85-L88)）。
+代码取客户端 IP 的顺序是 `x-forwarded-for` → `x-real-ip` → 字面量 `"unknown"`（见 [route.ts](../../app/api/deepseek-stream/route.ts#L85-L88)）。
 
 曾一度怀疑：`next start` 直接监听 80 端口、前面无反向代理，两个请求头可能均缺失，导致所有用户限流键退化为 `rl:system_unknown`，使「每 IP 每 3 小时 5 次」变成全体共享 5 次。
 
@@ -376,7 +385,7 @@ rl:system_::ffff:127.0.0.1
 
 > 附注 1：早期「浏览器端 AI 解析失败」的真实原因是 `crypto.randomUUID` 在 HTTP 非安全上下文不可用（见「10. 问题与解决记录」第 5 项），与 IP 限流无关，已修复。
 >
-> 附注 2：本结论**不覆盖客户端自带 `X-Forwarded-For` 的情形**——Next 仅在请求头缺失时才用 socket 地址填充，客户端伪造的头会被保留。该疑点见 [MIGRATION_CN.md](./MIGRATION_CN.md) 疑点 Q1。
+> 附注 2：本结论**不覆盖客户端自带 `X-Forwarded-For` 的情形**——Next 仅在请求头缺失时才用 socket 地址填充，客户端伪造的头会被保留。该疑点见 [OPERATIONS.md](../OPERATIONS.md) 疑点 Q1。
 
 ---
 
