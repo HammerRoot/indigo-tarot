@@ -3,7 +3,7 @@
 // - 系统 Key 每天（自然日，Asia/Shanghai 0 点起算）最多调用 N 次（默认 50，可配 QUOTA_DAILY_LIMIT）；
 // - 超限后系统 Key 熔断（只允许用户自填 Key）；
 // - 开关可关闭/开启：关闭期间不计数不熔断；重新开启后从关闭时刻的计数继续（不清零）；
-// - Redis（Upstash）跨实例 + 持久化（重启不清零）；未配置回退内存（单实例，开发用）。
+// - Redis 跨实例 + 持久化（重启不清零）；未配置（REDIS_HOST/REDIS_PASSWORD）回退内存（单实例，开发用）。
 
 import { hasRedisConfig, redisCommand } from "./upstash";
 

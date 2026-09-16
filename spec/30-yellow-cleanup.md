@@ -175,7 +175,7 @@ README 与代码事实一致。
 - [ ] 技术栈版本准确（Next.js 16、React 19、Tailwind 4、Zustand、Vitest）
 - [ ] API 文档准确：`/api/deepseek-stream`（流式 SSE）、`/api/suggested-questions`；删除 `/api/deepseek`（Y2）
 - [ ] Git hooks 时机为 commit；新增测试命令（`npm test` / `test:run`）
-- [ ] 功能列表含历史记录（Y1）；env 变量表：`DEEPSEEK_API_KEY`、`DEEPSEEK_API_URL`（可选）、`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`（可选，R3/G3）
+- [ ] 功能列表含历史记录（Y1）；env 变量表：`DEEPSEEK_API_KEY`、`DEEPSEEK_API_URL`（可选）、`REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`（可选，R3/G3；G14 后由 `UPSTASH_*` 变更而来）
 - [ ] 隐私章节补充 localStorage Key 风险说明（R1）与 CSP 说明
 
 ### 技术方案
@@ -324,7 +324,7 @@ R1 已重写为「API Key 安全加固」综合条目（`spec/10-red-security.md
 
 - **优先级**: 🟡
 - **类别**: 重构
-- **状态**: ⬜ 待开发
+- **状态**: ✅ 核心完成（共享模块随 R3 落地；Y2 删除 `/api/deepseek` 后只作用于 stream 路由）
 - **关联条目**: R3（共享模块，同批文件）、Y2（删除 /api/deepseek）
 
 ### 问题描述

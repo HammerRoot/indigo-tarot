@@ -66,7 +66,7 @@
 
 - 新增：`lib/drawFlow.ts`、`lib/useFanWheelGesture.ts`、`app/components/CardFace.tsx`、`app/components/FanCard.tsx`、`app/components/SpreadSlots.tsx` 及对应测试
 - 修改：`app/draw/page.tsx`、`app/draw/__tests__/page.test.tsx`、`spec/README.md`、`spec/40-green-improvements.md`
-- 删除：`lib/useSpreadZoom.ts`（G8 重写后无调用方，随 G13 文档审查清理）；`lib/pick.ts` 保留
+- 删除：`lib/useSpreadZoom.ts`（G8 重写后无调用方，随 G13 文档审查清理）；`lib/pick.ts` 当时保留，后于 **2026-09-16 删除**（选牌子页改用 `pickedIndexesFromSlots`，该文件仅剩自身测试引用）
 
 ### 风险与假设
 

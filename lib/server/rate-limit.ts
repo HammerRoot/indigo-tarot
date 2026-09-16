@@ -1,8 +1,8 @@
 // 限流模块（规格 R3，惰性清理见 R4）
 //
 // - 内存版：Map + 窗口 + 惰性清理（访问时判断过期删除；超过阈值时批量清理过期条目）
-// - Redis 版：INCR + EXPIRE（滑动窗口，跨实例一致），通过 Upstash REST 直连
-// - 工厂 getRateLimiter()：有 UPSTASH_* 环境变量返回 Redis 版，否则内存版
+// - Redis 版：INCR + EXPIRE（滑动窗口，跨实例一致），经 lib/server/upstash.ts 的 ioredis 客户端执行
+// - 工厂 getRateLimiter()：配置了 REDIS_HOST + REDIS_PASSWORD 返回 Redis 版，否则内存版
 
 import { hasRedisConfig, redisCommand } from "./upstash";
 

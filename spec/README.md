@@ -82,8 +82,14 @@ F0（测试设施，先行）
   → 🔴 R1（综合：XSS 消毒 + 加密存储 + 掩码/CSP + 双份存储统一）→ R3（+R4 合并）→ R4
   → 🟠 O1 → O2 → O3 → O4 → O5
   → 🟡 Y1（先于 Y2）→ Y2 → Y3 → Y4 → Y6 → Y7（与 R3 合并）
-  → 🟢 G1 → G2 → G3 → G4
+  → 🟢 G1 → G2 → G3 → G5（成本控制）
+  → 🟢 G6 → G7（交互/视觉）
+  → 🟢 G8 → G9 → G10 → G11 → G12 → G13（抽牌交互模块重做，详见 draw-interaction.md）
+  → 🟢 G14（腾讯云迁移：ioredis + deviceId 兼容 HTTP）
+  → 🟢 G4（收尾：依赖审计、分支处置、可选 CI）← 唯一未完成
 ```
+
+> G8–G13 的详细条目见 [`draw-interaction.md`](./draw-interaction.md)；G14 见 [`40-green-improvements.md`](./40-green-improvements.md)。Y8/Y9 为 Y1 历史记录页的后续修复，随该页迭代完成。
 
 依赖关系：
 
@@ -103,13 +109,15 @@ F0（测试设施，先行）
 |---|---|---|
 | D1 | 规格文档随仓库提交（`spec/` 不入 `.gitignore`） | 文档与代码同版本，改动可对照 |
 | D2 | API Key 使用 **AES-GCM 加密存储**：密文存 localStorage，随机会话密钥（base64）存 sessionStorage；同一会话刷新自动解密、关闭浏览器后需重输 | 浏览器无系统级安全存储；该方案为"真加密防静态窃取"且零主密码 UX 负担 |
-| D3 | R3 生产推荐 Upstash Redis；未配置时回退内存实现 | 零配置可用；跨实例限流为生产增强 |
-| D4 | O2 采用"样式移到 `globals.css`"而非逐页 CSS Module | 与 main 分支现状一致；`feature/less-modules` 分支方向因此废弃（G4 注明） |
+| D3 | R3 生产推荐自建 Redis（ioredis，见 D11）；未配置时回退内存实现 | 零配置可用；跨实例限流为生产增强 |
+| D4 | O2 采用"样式移到 `globals.css`"而非逐页 CSS Module | 与 main 分支现状一致；`feature/less-modules` 分支方向因此废弃，该分支已于 **2026-09-16 删除**（最后提交 `3e40e49`） |
 | D5 | 测试统一使用 Vitest 生态（jsdom），不引入 MSW | mock 全局 fetch 已满足路由测试需求 |
 | D6 | Y1 历史记录采用最小实现（列表 + 详情 + 删除） | 与 store 现有骨架匹配，避免过度设计 |
 | D7 | R1-A 主方案 `react-markdown`（默认转义、无 dangerouslySetInnerHTML）；备选 DOMPurify 仅在主方案依赖冲突时启用 | 白名单解析优于黑名单消毒 |
 | D8 | 加密的边界：**不防 XSS 与会话期扩展读取**（解密在客户端进行）；主密码 PBKDF2 派生与服务端托管 Key 记为远期，不实现 | 纯浏览器方案无法防会话内窃取；R1-A（XSS 消毒）才是防主路径的核心 |
 | D9 | 免费试用一次基于 **deviceId（localStorage）+ 服务端记录（Redis 优先）**；无登录系统，"同一用户一次"为**尽力而为**——清 localStorage/换浏览器/无痕可绕过，IP 限流作为辅助防线 | 无登录系统的通行做法（防普通用户滥用）；"一人一次"需登录系统（远期） |
+| D10 | HTTP 直连部署下 `crypto.subtle` / `crypto.randomUUID` 不可用：deviceId 改用 `crypto.getRandomValues()` 手写 UUID v4；API Key 加密降级为不持久化（内存可用，刷新需重填） | 公网 IP 直连（免 ICP 备案）只能用 HTTP；上 HTTPS 才能恢复完整功能 |
+| D11 | 存储层从 **Upstash Redis REST 迁移到 ioredis 连自建 Redis**（`REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`）；`redisCommand` 接口与返回结构不变，调用方零改动 | 腾讯云迁移后状态存储须留在境内服务器；自建 Redis + AOF 持久化，不再依赖外部 SaaS |
 
 ## 当前状态
 
@@ -126,7 +134,7 @@ F0（测试设施，先行）
 | 🟠 功能 | 结果页流式解析容错 | O3 | `lib/stream-parse.ts`（标题格式兼容 + 完整建议 + 剥离 💡） |
 | 🟠 功能 | 结果页 grid 类名字面量映射 | O1 | `gridClassFor`（`lib/utils.ts`，Tailwind 可扫描生成） |
 | 🟠 功能 | mystical-* 设计系统类迁移全局 | O2 | `app/globals.css`（单一来源；`ui.module.css` 删除） |
-| 🟠 功能 | Fisher-Yates 均匀洗牌 | O4 | `lib/shuffle.ts`（替代 sort+random 有偏算法） |
+| 🟠 功能 | Fisher-Yates 均匀洗牌 | O4 | `lib/shuffle.ts`；调用方为 `/api/suggested-questions`（2026-09-16 收尾：原调用方 `store.getRandomCards` 被 Y2 删除后该函数沦为死代码，现已接回并加契约测试锁定） |
 | 🟠 功能 | SSE Content-Type 符合规范 | O5 | `text/event-stream; charset=utf-8`（测试锁定） |
 | 🟡 重构 | 服务端共享模块 | Y7 | `lib/server/{deepseek,rate-limit,trial,upstash}.ts` |
 | 🟢 质量 | 牌阵推荐评分制 | G1 | `lib/spread.ts`（强关系信号优先 + 关键词计分 + 默认单张） |
@@ -139,25 +147,33 @@ F0（测试设施，先行）
 | 🟡 文档 | layout metadata 定制 | Y4 | `lang="zh-CN"` + 中文品牌标题 |
 | 🟡 重构 | 图片目录整理 + 完整性测试 | Y6 | `minor/<suit>/` 目录 + kebab-case + 8 项数据契约测试 |
 | 🟢 成本 | 每日熔断配额 + 管理开关接口 | G5 | `lib/server/quota.ts` + `app/api/admin/quota`（每天 50 次，可关/开） |
-| 🟢 交互 | 牌桌抽牌体验升级 | G6 | `lib/pick.ts`（点击索引取牌一一对应；`lib/useSpreadZoom.ts` 已于文档审查时删除，整桌缩放流程被 G9/G10 取代） |
+| 🟢 交互 | 牌桌抽牌体验升级 | G6 | 原为 `lib/pick.ts`（点击索引取牌一一对应）；`lib/useSpreadZoom.ts` 随 G13 文档审查删除，整桌缩放流程被 G9/G10 取代，`lib/pick.ts` 亦于 **2026-09-16 删除**（选牌子页改用 `pickedIndexesFromSlots`） |
 | 🟢 视觉 | 结果页深邃夜空风 | G7 | `astro-*` 玻璃拟态组件类 + `CardModal` 牌放大 + `MarkdownRenderer` dark variant |
 | 🟢 文档 | 部署文档 + .env.example | G3 | `docs/DEPLOYMENT.md` + `.env.example` |
 | 🟢 部署 | 存储层迁移 ioredis（自建 Redis） | G14 | `lib/server/upstash.ts`（ioredis）+ `REDIS_*` 环境变量 |
 | 🟢 部署 | deviceId 兼容 HTTP（getRandomValues 手写 UUID） | G14 | `lib/deviceId.ts` |
 
-**测试规模**：193 个测试 / 31 个文件，`type-check` / `lint` / `test:run` 全绿。
+**测试规模**：190 个测试 / 31 个文件，`type-check` / `lint` / `test:run` 全绿。
 
-### 决策记录（Assumptions & Decisions，D1–D10）
+### 决策记录（Assumptions & Decisions，D1–D11）
 
 详见上方表格，关键决策：
 - **D2**：API Key 用 AES-GCM 加密存储（密文 localStorage + 会话密钥 sessionStorage）
 - **D8**：浏览器加密不防 XSS/会话期扩展读取；主密码/服务端托管为远期
 - **D9**：无登录系统"一人一次"为尽力而为（deviceId + IP 辅助）
 - **D10**：HTTP 直连下 Web Crypto 受限，deviceId 改用 getRandomValues；API Key 加密在 HTTP 下降级不持久化
+- **D11**：存储层迁移到 ioredis 连自建 Redis（腾讯云），`REDIS_*` 取代 `UPSTASH_*` / `KV_*`
 
 ### 待开发条目
 
-⬜ G4（依赖审计/分支处置/可选 CI）。
+⬜ **G4**（依赖审计/可选 CI；分支处置已于 2026-09-16 完成）。
+
+> **2026-09-16 文档审查收尾**（原条目已标完成，但实现未真正生效/已失效，均已修复）：
+>
+> ✅ **O4 收尾**：`shuffle()` 原本无生产调用方（唯一调用方 `store.getRandomCards` 被 Y2 删除），而 `/api/suggested-questions` 仍在用 `sort(() => Math.random() - 0.5)` → 已改为 `shuffle(categories)`。
+> ✅ **Y2 收尾**：`lib/pick.ts` 仅被自身测试引用（选牌子页改用 `pickedIndexesFromSlots`）→ 已删除 `lib/pick.ts` 与 `lib/__tests__/pick.test.ts`。
+>
+> 两者均已纳入 [`tests/no-dead-code.test.ts`](../tests/no-dead-code.test.ts) 契约（禁止有偏 sort 洗牌、`shuffle()` 必须有生产调用方、`pickCardsByIndex` 不得再现）。
 
 > 完成顺序严格按上方依赖图执行；每个条目完成后更新本表与对应文档状态。
 

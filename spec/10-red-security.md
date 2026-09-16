@@ -18,7 +18,7 @@
 
 - **优先级**: 🔴
 - **类别**: 安全
-- **状态**: ⬜ 待开发
+- **状态**: ✅ 完成
 - **关联条目**: Y5（已并入本条目）、R3（系统 Key 限流）、Y3（README 风险说明）、D8（远期：服务端托管 Key）
 
 ### 问题描述
@@ -156,7 +156,7 @@
 
 - **优先级**: 🔴
 - **类别**: 安全（成本保护 + 新功能）
-- **状态**: ⬜ 待开发
+- **状态**: ✅ 完成
 - **关联条目**: R4（惰性清理，合并实现）、Y7（路由抽取，同批文件）、D9（无登录试用边界）
 
 ### 问题描述
@@ -205,7 +205,7 @@
   - `TrialResult = { allowed: boolean; trialUsed: boolean }`；
   - Redis 实现：`SETNX trial:{deviceId} 1 EX <TTL>`（默认 90 天，防无限增长）；`EXISTS` 做检查；
   - 内存实现：`Set<string>` + 惰性清理（TTL 记录，访问时清理过期——同 R4 模式）；
-  - 工厂 `getTrialGuard()`：有 `UPSTASH_REDIS_REST_URL/TOKEN` 返回 Redis 版，否则内存版。
+  - 工厂 `getTrialGuard()`：配置了 Redis 则返回 Redis 版，否则内存版（原判定 `UPSTASH_REDIS_REST_URL/TOKEN`，G14 迁移后改为 `REDIS_HOST` / `REDIS_PASSWORD`）。
 
 **3. 路由改造（`/api/deepseek-stream`，薄 handler）**
 
@@ -245,7 +245,7 @@
 | | markUsed 幂等 | 重复 markUsed 不抛错 |
 | | 不同设备独立 | devA 用完不影响 devB |
 | | TTL 过期后可再试用（内存版） | 注入假时钟推进 TTL → check 恢复 allowed |
-| | 工厂回退 | 无 UPSTASH_* → 内存版；有 → Redis 版（mock） |
+| | 工厂回退 | 无 `REDIS_*` 配置 → 内存版；有 → Redis 版（mock） |
 | `lib/__tests__/deviceId.test.ts` | 首次生成并持久化 | 无 localStorage → 生成 UUID 并写入；再次调用返回同一值 |
 | `lib/server/__tests__/deepseek.test.ts` | resolveApiKey 优先用户 key | 传 userApiKey → `usingSystemKey: false` |
 | | 无 key 且无系统 key 抛错 | 清空环境变量 → 抛 `needApiKey` 错误 |
@@ -268,13 +268,13 @@
 ### 影响范围
 
 - 新增：`lib/server/rate-limit.ts`、`lib/server/trial.ts`、`lib/server/deepseek.ts`、`lib/deviceId.ts`、依赖 `@upstash/redis`（可选）
-- 修改：`app/api/deepseek/route.ts`、`app/api/deepseek-stream/route.ts`（薄化 + 试用逻辑）、`lib/deepseek.ts`（X-Device-Id + trial_used 处理）、`app/result/page.tsx`（引导文案）、`app/components/ApiKeySettings.tsx`（试用状态）、`lib/store.ts`（trialUsed 状态）、`package.json`、`.env.example`（随 G3，加 UPSTASH_* 与 TRIAL_TTL 可配）
+- 修改：`app/api/deepseek/route.ts`、`app/api/deepseek-stream/route.ts`（薄化 + 试用逻辑）、`lib/deepseek.ts`（X-Device-Id + trial_used 处理）、`app/result/page.tsx`（引导文案）、`app/components/ApiKeySettings.tsx`（试用状态）、`lib/store.ts`（trialUsed 状态）、`package.json`、`.env.example`（随 G3，加 Redis 环境变量与 TRIAL_TTL 可配；`UPSTASH_*` 已于 G14 改为 `REDIS_*`）
 
 ### 风险与假设
 
-- 假设：Redis 依赖外部服务（Vercel 集成 Upstash 有免费额度）；未配置时回退内存实现（单实例，跨实例不共享——诚实降级）。
+- 假设：Redis 依赖外部服务（当时为 Vercel 集成 Upstash，有免费额度）；未配置时回退内存实现（单实例，跨实例不共享——诚实降级）。**G14 迁移后改为服务器自建 Redis**（`REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`）。
 - 边界（D9）：无登录系统，"同一用户一次"为**尽力而为**——清除 localStorage / 换浏览器 / 无痕模式可生成新 deviceId 再次试用；IP 辅助限制降低批量绕过成本；要做到"一人一次"需登录系统（远期）。
-- 风险：Redis 不可用时试用状态单实例失效（可接受降级）；`x-forwarded-for` 在 Vercel 平台由边缘设置。
+- 风险：Redis 不可用时试用状态单实例失效（可接受降级）；`x-forwarded-for` 在 Vercel 平台由边缘设置（G14 后为无前置代理的自建部署，该头可被客户端伪造，见 `docs/MIGRATION_CN.md` 疑点 Q1）。
 - 备选方案：不做 deviceId，仅 IP 维度试用（同 IP 一次）——IP 共享场景（公司/NAT）会误伤，不采用。
 
 ---
@@ -283,7 +283,7 @@
 
 - **优先级**: 🔴
 - **类别**: 安全（运维/稳定性）
-- **状态**: ⬜ 待开发
+- **状态**: ✅ 完成（随 R3 在 rate-limit 模块内实现惰性清理）
 - **关联条目**: R3（合并实现于 rate-limit 模块）
 
 ### 问题描述

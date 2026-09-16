@@ -133,7 +133,7 @@ export function gridClassFor(count: number): string {
 
 - **优先级**: 🟠
 - **类别**: 功能缺陷
-- **状态**: ⬜ 待开发
+- **状态**: ✅ 完成
 
 ### 问题描述
 
@@ -275,6 +275,8 @@ export function shuffle<T>(arr: readonly T[]): T[] {
 
 - 新增：`lib/shuffle.ts`
 - 修改：`lib/store.ts`（getRandomCards 改用 shuffle）
+
+> **后续变更（2026-09-16）**：`store.getRandomCards` 已被 Y2 死代码清理删除，`shuffle()` 因此失去唯一调用方沦为死代码，而 `/api/suggested-questions` 仍在用本条目要消灭的 `sort(() => Math.random() - 0.5)`。现已把 `shuffle()` 接回该路由（行为不变，仅修正分布），并在 `tests/no-dead-code.test.ts` 加契约锁定。
 
 ### 风险与假设
 

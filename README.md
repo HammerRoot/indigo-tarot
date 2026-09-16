@@ -16,7 +16,7 @@
 - **状态管理**: Zustand
 - **测试**: Vitest + React Testing Library
 - **AI服务**: DeepSeek API（流式 SSE）
-- **部署平台**: Vercel
+- **部署平台**: 腾讯云轻量应用服务器 + 自建 Redis（PM2 托管）
 
 ## 🚀 快速开始
 
@@ -48,7 +48,7 @@
    cp .env.example .env.local
    ```
 
-   必填变量：`DEEPSEEK_API_KEY`（系统 Key）、`ADMIN_TOKEN`（管理接口认证）。完整清单（含可选的 `DEEPSEEK_API_URL`、`QUOTA_DAILY_LIMIT`、`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`，及 Vercel KV 注入的 `KV_REST_API_URL` / `KV_REST_API_TOKEN`）见 [`.env.example`](./.env.example) 与 [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)。
+   必填变量：`DEEPSEEK_API_KEY`（系统 Key）、`ADMIN_TOKEN`（管理接口认证）。完整清单（含可选的 `DEEPSEEK_API_URL`、`QUOTA_DAILY_LIMIT`、以及 Redis 的 `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`）见 [`.env.example`](./.env.example) 与 [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)。
 
 4. **启动开发服务器**
 
@@ -56,7 +56,7 @@
    npm run dev
    ```
 
-> 📦 **部署到 Vercel**：见 [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)（环境变量配置、Upstash、成本控制、管理接口）。
+> 📦 **部署**：见 [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)（环境变量配置、自建 Redis、成本控制、管理接口）。
 
 5. **访问应用**
 
@@ -133,7 +133,7 @@
 - `{ "type": "content", "content": "文本片段" }` — AI 增量内容
 - `{ "type": "complete" }` — 流结束
 
-系统 Key 路径的守卫顺序：免费试用（每设备 1 次）→ IP 限流（3 小时 5 次）→ 每日配额熔断（默认 50 次/天）。用户自带 Key 不经过以上限制。
+系统 Key 路径的守卫顺序：每日配额熔断（默认 50 次/天，已超限直接 429 且不消耗）→ 免费试用（每设备 1 次）→ IP 限流（3 小时 5 次）→ 调用成功后计数并标记该设备已试用。用户自带 Key 不经过以上限制。
 
 ### 建议问题接口
 

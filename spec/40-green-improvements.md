@@ -1,4 +1,4 @@
-# 🟢 绿级：质量提升（G1–G4）
+# 🟢 绿级：质量提升（G1–G7、G14）
 
 > 绿级条目为可选的质量提升，红/橙/黄全部完成后按需实施。
 
@@ -10,6 +10,7 @@
 | G2 | AI 解析健壮性（降级提取 + prompt 加固） | 质量提升 | ✅ 完成 |
 | G3 | .env.example 与部署文档 | 质量提升 | ✅ 完成 |
 | G4 | 收尾：依赖审计、分支处置、可选 CI | 质量提升 | ⬜ 待开发 |
+| G5 | 每日熔断配额 + 管理开关接口 | 质量提升（成本控制） | ✅ 完成 |
 | G6 | 牌桌抽牌体验升级（78 张铺开 + 缩放 + 盲选抽取） | 质量提升（交互） | ✅ 完成（旧扇形/缩放流程，已被 G9/G10 取代） |
 | G7 | 结果页 UI 视觉升级（深邃夜空风） | 质量提升（视觉） | ✅ 完成 |
 | G8 | 抽牌交互模块重做（点击即选 + 原位翻牌 + 飞入槽位 + 多轮循环） | 质量提升（交互） | ✅ 完成 |
@@ -144,7 +145,7 @@ export function recommendSpread(question: string): TarotSpread {
 
 - **优先级**: 🟢
 - **类别**: 文档
-- **状态**: ⬜ 待开发
+- **状态**: ✅ 完成
 
 ### 问题描述
 
@@ -157,9 +158,9 @@ export function recommendSpread(question: string): TarotSpread {
 
 ### 验收标准
 
-- [ ] 仓库含 `.env.example`：`DEEPSEEK_API_KEY`、`DEEPSEEK_API_URL`（可选）、`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`（可选），均带中文注释
+- [ ] 仓库含 `.env.example`：`DEEPSEEK_API_KEY`、`DEEPSEEK_API_URL`（可选）、`REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`（可选）、`QUOTA_DAILY_LIMIT`、`ADMIN_TOKEN`，均带中文注释（原为 `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`，G14 迁移后变更）
 - [ ] `.gitignore` 增加 `!.env.example` 例外，`.env.example` 可被 git 跟踪
-- [ ] README 部署章节引用 `.env.example` 并说明 Vercel 环境变量配置
+- [ ] README 部署章节引用 `.env.example` 并说明部署环境变量配置（G14 后部署平台由 Vercel 改为腾讯云自建，见 `docs/DEPLOYMENT.md`）
 
 ### 技术方案
 
@@ -257,7 +258,7 @@ export function recommendSpread(question: string): TarotSpread {
 1. 系统 Key 每天最多 50 次（上海时区自然日），超限熔断返回 `quota_exhausted`；
 2. 管理接口可查询状态、开启/关闭熔断（Bearer ADMIN_TOKEN 认证）；
 3. 关闭期间不计数不熔断；重新开启后从关闭时刻计数继续（不清零）；
-4. Redis（Upstash）持久化，重启/跨实例不清零；未配置回退内存（开发）。
+4. Redis 持久化，重启/跨实例不清零；未配置回退内存（开发）。
 
 ### 验收标准
 
@@ -271,11 +272,11 @@ export function recommendSpread(question: string): TarotSpread {
 
 ### 技术方案
 
-- 新增 `lib/server/quota.ts`：`QuotaGuard`（`getStatus` / `setEnabled` / `consume` / `increment`），内存版（Map + 上海日期 key + 惰性清理）+ Redis 版（`quota:enabled`、`quota:count:<dateKey>` + `EXPIRE` 到当天 24:00），工厂 `getQuotaGuard()`（UPSTASH_* 环境变量决定）；
+- 新增 `lib/server/quota.ts`：`QuotaGuard`（`getStatus` / `setEnabled` / `consume` / `increment`），内存版（Map + 上海日期 key + 惰性清理）+ Redis 版（`quota:enabled`、`quota:count:<dateKey>` + `EXPIRE` 到当天 24:00），工厂 `getQuotaGuard()`（`REDIS_HOST`/`REDIS_PASSWORD` 决定，见 G14）；
 - 路由 `/api/deepseek-stream` 系统 key 路径：先配额熔断检查（`getStatus`），成功后 `increment`（与试用 markUsed 同处，上游错误不计数）；
 - 管理接口 `app/api/admin/quota/route.ts`：`GET` 查询 / `POST {enabled}` 切换，`Authorization: Bearer <ADMIN_TOKEN>` 认证；
 - 客户端 `lib/deepseek.ts` 识别 `quota_exhausted` → `onError`；result 页显示引导文案；
-- 环境变量：`QUOTA_DAILY_LIMIT`（默认 50）、`ADMIN_TOKEN`（管理认证）、`UPSTASH_REDIS_REST_URL/TOKEN`。
+- 环境变量：`QUOTA_DAILY_LIMIT`（默认 50）、`ADMIN_TOKEN`（管理认证）、`REDIS_HOST` / `REDIS_PASSWORD`（原为 `UPSTASH_REDIS_REST_URL/TOKEN`，G14 迁移后变更）。
 
 ### TDD 测试计划
 
@@ -294,7 +295,7 @@ export function recommendSpread(question: string): TarotSpread {
 ### 风险与假设
 
 - 假设：自然日以 Asia/Shanghai（UTC+8）为界；计数按"成功解析次数"，token 消耗监控留作后续。
-- 风险：内存版重启即清零（仅开发）；生产必须配置 Upstash 才能持久化。
+- 风险：内存版重启即清零（仅开发）；生产必须配置 Redis 才能持久化。
 
 
 ---
@@ -424,7 +425,7 @@ export function recommendSpread(question: string): TarotSpread {
 
 - 新增：`lib/pick.ts`、`lib/useSpreadZoom.ts`、`lib/__tests__/pick.test.ts`、`app/draw/__tests__/page.test.tsx`
 - 修改：`app/draw/page.tsx`（draw 步骤重写 + 缩放 + 盲选）
-- 备注：`lib/store.ts` 的 `getRandomCards` 自此无调用方（接口保留，待 Y2/G4 评估移除）
+- 备注：`lib/store.ts` 的 `getRandomCards` 自此无调用方（已于 2026-09-16 前随 Y2 死代码清理移除）；`lib/pick.ts` 随后也因选牌子页改用 `pickedIndexesFromSlots` 而失效，已于 **2026-09-16 删除**
 
 ### 风险与假设
 
@@ -432,3 +433,56 @@ export function recommendSpread(question: string): TarotSpread {
 - 风险1：React Compiler 规则（`react-hooks/refs`）禁止渲染期访问 ref——hook 用 `registerContainerRef` 回调 + 组件内解构局部变量规避。
 - 风险2：jsdom 无法模拟真实触摸/滚轮——缩放交互以手动验收为准；测试覆盖数据流与 DOM 结构。
 - 风险3：78 张 `next/image` 不涉及（CSS 牌背无图片请求）；结果页仍用真实牌图（G7 不变）。
+
+---
+
+## [G14] 腾讯云迁移适配：ioredis + deviceId 兼容 HTTP
+
+- **优先级**: 🟢
+- **类别**: 部署
+- **状态**: ✅ 完成
+- **关联条目**: D10、D11；部署记录见 [`docs/MIGRATION_CN_ARCHIVE.md`](../docs/MIGRATION_CN_ARCHIVE.md) §6
+
+### 问题描述
+
+- 项目原部署在 Vercel（海外），中国大陆访问需 VPN；迁移到腾讯云轻量应用服务器后暴露两个不兼容点：
+  1. 状态存储用 Upstash Redis **REST**（海外 SaaS），需换成服务器自建的境内 Redis；
+  2. 公网 IP 直连只能是 HTTP（非安全上下文），`crypto.randomUUID()` 返回 `undefined`，deviceId 生成失败 → AI 解析报 `TypeError: crypto.randomUUID is not a function`。
+
+### 目标
+
+1. 存储层换为 ioredis 连自建 Redis，环境变量改为 `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`，**调用方零改动**；
+2. deviceId 在 HTTP 下仍可生成，免费试用/限流链路可用。
+
+### 验收标准
+
+- [x] `redisCommand(commands)` 接口与返回结构 `RedisCommandResult[]` 不变，`trial.ts` / `rate-limit.ts` / `quota.ts` 无需改动
+- [x] 单命令直连、多命令走 pipeline（语义与旧 Upstash REST `/pipeline` 一致）
+- [x] `hasRedisConfig()` 判定 `REDIS_HOST && REDIS_PASSWORD`；缺一回退单实例内存
+- [x] HTTP 部署下 deviceId 可正常生成（`crypto.getRandomValues()` 手写 UUID v4）
+- [x] `type-check` / `lint` / 全量测试通过
+
+### 技术方案
+
+1. **存储层**（commit `01db5a6`）：`package.json` 增加 `ioredis`；`lib/server/upstash.ts` 内 `redisCommand` 由「Upstash REST fetch」改为「ioredis 执行命令」（单命令 `redis.call`，多命令 `pipeline`）；连接错误用空 handler 挂起，避免进程退出，命令失败仍由 `redisCommand` 捕获返回。
+2. **deviceId**（commit `c09d5c1`）：`lib/deviceId.ts` 改用 `crypto.getRandomValues()` 手写 UUID v4，HTTP 下同样可用。
+3. **连带降级**（D10）：`crypto.subtle` 同样仅在安全上下文可用 → `setApiKey` 已 try/catch 降级为不持久化 API Key（内存可用、刷新需重填），上 HTTPS 才能恢复。
+
+### TDD 测试计划
+
+| 测试文件 | 断言要点 |
+|---|---|
+| `lib/__tests__/deviceId.test.ts` | 生成的 ID 符合 UUID v4 格式；重复调用不重复；无 `crypto.randomUUID` 依赖 |
+| `lib/server/__tests__/{trial,rate-limit,quota}.test.ts` | 工厂在无 Redis 配置时回退内存版；内存版行为不变（本次改动不影响这些契约） |
+
+### 影响范围
+
+- 修改：`package.json`（+ioredis）、`lib/server/upstash.ts`、`lib/deviceId.ts`
+- 环境：`UPSTASH_*` / `KV_*` → `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`（同步 `.env.example` 与部署文档）
+- 文档：`docs/DEPLOYMENT.md`、`docs/MIGRATION_CN{,_ARCHIVE}.md`
+
+### 风险与假设
+
+- 假设：自建 Redis 只监听 `127.0.0.1` + `requirepass` + AOF，语义与 Upstash 等价（`SET/GET/EXISTS/INCR/EXPIRE` 均为原生命令）。
+- 风险1：客户端用模块级单例连接，Next.js 热重载/多实例下可能产生多条连接（已用 `client.on("error", () => {})` 防止错误冒泡退出进程）。
+- 风险2：HTTP 下 API Key「记住」功能永久失效，属固有限制，非本条目可解（需 HTTPS + 域名 + ICP 备案）。
