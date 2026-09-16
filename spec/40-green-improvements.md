@@ -186,7 +186,7 @@ export function recommendSpread(question: string): TarotSpread {
 
 - **优先级**: 🟢
 - **类别**: 质量提升
-- **状态**: ⬜ 待开发
+- **状态**: ✅ 完成（2026-09-16；可选 CI 经评估决定不加）
 - **关联条目**: O2（less-modules 分支处置依据）
 
 ### 问题描述
@@ -200,9 +200,9 @@ export function recommendSpread(question: string): TarotSpread {
 
 ### 验收标准
 
-- [ ] `npm audit` 无 high/critical 漏洞（或记录处理计划）
-- [ ] README 注明 `feature/less-modules` 已废弃（被 O2 取代），避免误合并
-- [ ] （可选）新增 `.github/workflows/ci.yml`：push/PR 运行 type-check、lint、test:run
+- [x] `npm audit` 无 high/critical 漏洞
+- [x] 分支处置：**已直接删除远端 `feature/less-modules`**（比"README 注明废弃"更彻底——分支不存在即无误合并风险）
+- [x] （可选）CI：**经评估决定不加**，理由见 `docs/MIGRATION_CN_ARCHIVE.md` §13（使用周期约 2 个月、GitHub runner 海外到国内服务器链路不稳、SSH 私钥入 Secrets 增加泄露面、手工部署仅一条命令）
 
 ### 技术方案
 
@@ -232,13 +232,37 @@ export function recommendSpread(question: string): TarotSpread {
 
 ### 影响范围
 
-- 可选新增：`.github/workflows/ci.yml`
-- 修改：`README.md`
+- 可选新增：`.github/workflows/ci.yml`（**未创建**）
+- 修改：`package.json`、`package-lock.json`（依赖升级）
+- 备注：`feature/less-modules` 分支已删除，README 无需再加废弃声明
 
 ### 风险与假设
 
 - 假设：仓库启用 GitHub Actions（免费）；未启用则跳过 CI 部分。
 - 风险：`npm audit` 若发现漏洞，按严重度安排修复或记录豁免理由。
+
+### 处理记录（2026-09-16）
+
+**审计基线**：`npm audit` 报 15 项（1 critical / 10 high / 3 moderate / 1 low），其中**仅 `next` 为直接依赖**，其余均为传递依赖。
+
+**可达性分析**（升级前）：
+
+| 漏洞 | 是否可达 |
+|---|---|
+| critical：Windows 宿主未认证 RCE（GHSA-p293-qw3h-jr36） | ❌ 服务器为 Ubuntu 22.04 |
+| critical：Image Optimization AVIF RCE（GHSA-2xp9-vwfh-vxw4） | ❌ 无 `images` 配置 → 默认 `formats: ['image/webp']`；未配 `remotePatterns`（远程 URL 被拒），本地图片全为 JPG |
+| 7 条 middleware/proxy bypass（high） | ❌ 项目无 `middleware.ts` |
+| Server Actions 相关 DoS/SSRF（high） | ❌ 项目未使用 Server Actions |
+| 其余（DoS、缓存投毒、图片优化 DoS） | ⚠️ 部分可达——`/_next/image` 公网开放 |
+
+**处置**：尽管 critical 不可达，同版本区间内仍有大量 high 且 `next` 为唯一直接依赖，故直接升级而非记录豁免。
+
+1. `npm audit fix`（非破坏性）→ 15 项降至 3 项（仅剩 next / postcss / sharp）；
+2. `next` 与 `eslint-config-next` 同步 `16.1.6` → `16.3.5`（保持 `--save-exact` 精确锁定，与既有风格一致）→ **`found 0 vulnerabilities`**。
+
+**升级后验证**：`npm run build`（Next.js 16.3.5 + Turbopack，12 个路由全部产出）✅、`type-check` ✅、`lint` ✅、190 个测试全绿 ✅。
+
+> ⚠️ 服务器上运行的是旧版本构建产物，**需重新部署才生效**（`npm ci && npm run build && pm2 restart indigo-tarot`）。
 
 ---
 

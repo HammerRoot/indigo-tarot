@@ -41,7 +41,7 @@
 | G1 | 牌阵推荐逻辑增强（评分制） | 🟢 | 质量提升 | ✅ 完成 |
 | G2 | AI 解析健壮性（降级提取 + prompt 加固） | 🟢 | 质量提升 | ✅ 完成 |
 | G3 | .env.example 与部署文档 | 🟢 | 文档 | ✅ 完成 |
-| G4 | 收尾：依赖审计、分支处置、可选 CI | 🟢 | 质量提升 | ⬜ 待开发 |
+| G4 | 收尾：依赖审计、分支处置、可选 CI | 🟢 | 质量提升 | ✅ 完成（CI 经评估不加） |
 | G5 | 每日熔断配额 + 管理开关接口 | 🟢 | 质量提升（成本控制） | ✅ 完成 |
 | G6 | 牌桌抽牌体验升级（78 张铺开 + 缩放 + 盲选抽取） | 🟢 | 质量提升（交互） | ✅ 完成（旧扇形/缩放流程，已被 G9/G10 取代） |
 | G7 | 结果页 UI 视觉升级（深邃夜空风） | 🟢 | 质量提升（视觉） | ✅ 完成 |
@@ -86,8 +86,10 @@ F0（测试设施，先行）
   → 🟢 G6 → G7（交互/视觉）
   → 🟢 G8 → G9 → G10 → G11 → G12 → G13（抽牌交互模块重做，详见 draw-interaction.md）
   → 🟢 G14（腾讯云迁移：ioredis + deviceId 兼容 HTTP）
-  → 🟢 G4（收尾：依赖审计、分支处置、可选 CI）← 唯一未完成
+  → 🟢 G4（收尾：依赖审计、分支处置、可选 CI）
 ```
+
+> **全部条目已完成**，无待开发项。
 
 > G8–G13 的详细条目见 [`draw-interaction.md`](./draw-interaction.md)；G14 见 [`40-green-improvements.md`](./40-green-improvements.md)。Y8/Y9 为 Y1 历史记录页的后续修复，随该页迭代完成。
 
@@ -166,14 +168,18 @@ F0（测试设施，先行）
 
 ### 待开发条目
 
-⬜ **G4**（依赖审计/可选 CI；分支处置已于 2026-09-16 完成）。
+**无**（截至 2026-09-16，全部条目已完成）。
 
-> **2026-09-16 文档审查收尾**（原条目已标完成，但实现未真正生效/已失效，均已修复）：
+> **2026-09-16 收尾记录**：
 >
+> ✅ **G4**：`npm audit` 报 15 项（1 critical / 10 high）→ 经可达性分析（两条 critical 均不可达：Windows 宿主 RCE 与服务器系统不符；AVIF RCE 因无 `images` 配置且不接远程 URL）后仍决定升级——`npm audit fix` + `next` 16.1.6 → **16.3.5** → **`found 0 vulnerabilities`**；`feature/less-modules` 分支已删除；可选 CI 经评估决定不加（理由见归档 §13）。详见 [40-green-improvements.md](./40-green-improvements.md) G4 条目处理记录。
 > ✅ **O4 收尾**：`shuffle()` 原本无生产调用方（唯一调用方 `store.getRandomCards` 被 Y2 删除），而 `/api/suggested-questions` 仍在用 `sort(() => Math.random() - 0.5)` → 已改为 `shuffle(categories)`。
 > ✅ **Y2 收尾**：`lib/pick.ts` 仅被自身测试引用（选牌子页改用 `pickedIndexesFromSlots`）→ 已删除 `lib/pick.ts` 与 `lib/__tests__/pick.test.ts`。
 >
-> 两者均已纳入 [`tests/no-dead-code.test.ts`](../tests/no-dead-code.test.ts) 契约（禁止有偏 sort 洗牌、`shuffle()` 必须有生产调用方、`pickCardsByIndex` 不得再现）。
+> O4/Y2 两项已纳入 [`tests/no-dead-code.test.ts`](../tests/no-dead-code.test.ts) 契约（禁止有偏 sort 洗牌、`shuffle()` 必须有生产调用方、`pickCardsByIndex` 不得再现）。
+>
+> ⚠️ **待部署**：服务器仍运行旧版本构建产物，Next 升级需重新部署才生效
+> （`npm ci && npm run build && pm2 restart indigo-tarot`）。
 
 > 完成顺序严格按上方依赖图执行；每个条目完成后更新本表与对应文档状态。
 

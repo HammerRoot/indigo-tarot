@@ -31,7 +31,7 @@
 | N3 | 来源审计（调用日志 + 统计接口） | 未实施 | 决策：你 / 实现：我 | 可选，需同步改 README 隐私表述 |
 | N4 | 重启服务器验证 AOF：计数不重置 | 待验证 | **你**（服务器重启） | 归档 §8 唯一未勾选项 |
 | N5 | PM2 `max_memory_restart` + 日志轮转 | 未配置 | **你**（服务器操作） | 无日志轮转会导致磁盘写满 |
-| N6 | 依赖审计（spec G4 剩余部分） | 待办 | 我 | 仅剩 `npm audit` + 可选 CI |
+| N6 | 依赖审计（spec G4） | ✅ 已完成（2026-09-16） | 我 | 15 项（1 critical / 10 high）→ 升级 `next` 16.1.6 → **16.3.5** + `npm audit fix` → **0 漏洞**；可选 CI 经评估不加（归档 §13）。⚠️ **需重新部署才生效** |
 | N7 | 分支处置（spec G4） | ✅ 已完成（2026-09-16） | 我 | `feature/less-modules` 已删除（被决策 D4/O2 取代，最后提交 `3e40e49`）；`feat/tencent-migration` 已并入 main |
 
 ### N1 执行要点（0 成本，约十分钟）
@@ -72,7 +72,7 @@
 | 编号 | 疑点 | 现状结论 | 待办 |
 |---|---|---|---|
 | Q1 | 客户端自带 `X-Forwarded-For` 是否可伪造限流键 | **代码依据表明可伪造**：Next 仅在头缺失时用 socket 地址填充（`node_modules/next/dist/server/base-server.js` 的 `??=` 语义），当前无前置代理，客户端自带的头会被保留 → 换头即换限流桶，配合客户端可控的 `x-device-id` 可使免费试用 + IP 限流同时失效（成本仍由每日 50 次配额兜底） | 需在服务器实测确认（带自定义 `X-Forwarded-For` 发一次请求，观察 Redis 是否新增 `rl:system_<伪造值>`）；确认后决定加固方式（前置 Nginx 覆写并丢弃客户端同名头，或改用 socket 远端地址） |
-| Q2 | Vercel 旧部署是否仍是可用入口 | 归档 §12：项目保留、自动发布已关闭；但代码的 Redis 判定只认 `REDIS_HOST/REDIS_PASSWORD`，Vercel 上未配置 → 配额/试用回退单实例内存（冷启动清零），若该系统 Key 仍在，Vercel 域名会是一条绕过每日熔断的旁路 | 待核实：Vercel 项目是否仍配 `DEEPSEEK_API_KEY`、域名是否仍可访问；若不再需要则删除项目或移除系统 Key |
+| Q2 | Vercel 旧部署是否仍是可用入口 | 归档 §12：项目保留、自动发布已关闭；但代码的 Redis 判定只认 `REDIS_HOST/REDIS_PASSWORD`，Vercel 上未配置 → 配额/试用回退单实例内存（冷启动清零），若该系统 Key 仍在，Vercel 域名会是一条绕过每日熔断的旁路 | 待核实：Vercel 项目是否仍配 `DEEPSEEK_API_KEY`、域名是否仍可访问；若不再需要则删除项目或移除系统 Key。**定位用标识**（本地 `.vercel/` 已于 2026-09-16 删除，故记录于此）：项目 `indigo-tarot` / `projectId=prj_qZRJo5j87GSkF1r7QGo0K38TziFF` / `orgId=team_osoInUw5fkME7TBxHicL7eCB` |
 | Q3 | IP 限流地址来源 | 已实测澄清（正常客户端按真实 IP 生效） | 已归档 §15，无需再查 |
 
 ---
@@ -89,7 +89,7 @@
 | `ADMIN_TOKEN` 轮换为生产独立值、不复用他环境 | **你**（服务器操作） | 我有现成命令，可在服务器执行后重启 PM2 |
 | 伪造 `X-Forwarded-For` 处置（Nginx 覆写或改用 socket 地址） | 我（代码） | 先由 Q1 实测确认，再决定改法 |
 | 安全响应头补全（`frame-ancestors`、`nosniff`、Referrer-Policy 等） | 我（代码） | 本地构建后 curl 响应头比对 |
-| 依赖审计（`npm audit`） | 我 | 本地执行并出结论 |
+| 依赖审计（`npm audit`） | ✅ 已完成 | 2026-09-16：`next` 升至 16.3.5 后 **0 漏洞**；服务器需重新部署 |
 | Redis 强口令、`.env.local` 权限 600、SSH 密钥登录 | **你**（服务器操作） | 服务器执行命令核对 |
 
 > 我能独立完成的部分（代码侧 + 可达性/响应头探测）可以随时开跑；需要账号或线上变更的部分必须由你确认，我不会代为操作。
