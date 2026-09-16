@@ -107,24 +107,27 @@ function createRedisStatsGuard(now: () => number): StatsGuard {
     kind: "redis",
     async record(event) {
       const date = shanghaiDateKey(now());
-      const commands: unknown[][] = [["INCR", k(date, "calls")]];
+      const counters: unknown[][] = [["INCR", k(date, "calls")]];
       if (event.keyType === "system") {
-        commands.push(["INCR", k(date, "syskey")]);
+        counters.push(["INCR", k(date, "syskey")]);
       } else {
-        commands.push(["INCR", k(date, "userkey")]);
+        counters.push(["INCR", k(date, "userkey")]);
       }
       if (!event.ok) {
-        commands.push(["INCR", k(date, "fail")]);
+        counters.push(["INCR", k(date, "fail")]);
       }
       if (event.deviceId) {
         // HyperLogLog：只累积基数草图，不保存原始 deviceId
-        commands.push(["PFADD", k(date, "devices"), event.deviceId]);
+        counters.push(["PFADD", k(date, "devices"), event.deviceId]);
       }
-      // 为本次触及的键续期，保证聚合数据到期自动清理
-      for (const cmd of commands) {
-        commands.push(["EXPIRE", String(cmd[1]), String(RETENTION_SEC)]);
-      }
-      await redisCommand(commands);
+      // 为本次触及的键续期，保证聚合数据到期自动清理。
+      // 注意：必须构造新数组，不可边遍历 counters 边 push（会无限循环）。
+      const expiries = counters.map((cmd) => [
+        "EXPIRE",
+        String(cmd[1]),
+        String(RETENTION_SEC),
+      ]);
+      await redisCommand([...counters, ...expiries]);
     },
     async getDaily(dateKey) {
       const [mget, pfcount] = await redisCommand([
