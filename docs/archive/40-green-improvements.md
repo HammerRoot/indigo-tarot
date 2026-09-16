@@ -266,7 +266,7 @@ export function recommendSpread(question: string): TarotSpread {
 
 **升级后验证（2026-09-16 当时快照）**：`npm run build`（Next.js 16.3.5 + Turbopack，12 个路由全部产出）✅、`type-check` ✅、`lint` ✅、测试全绿 ✅。
 
-> 当前测试规模以 [`docs/README.md`](../README.md) 的「测试规模」一行为唯一出处。
+> 上行为升级当天的历史快照；本文档不记录当前测试数量（该数字随时变化，记录无意义）。
 
 **部署（2026-09-16 已完成）**：服务器已按归档 §11 流程重新部署（下载 tarball → `npm ci` → `npm run build` → `pm2 restart`），构建 `BUILD_EXIT=0`、10 个路由全部产出，`node_modules/next` 实测 `16.3.5`；站点外部验证 HTTP 200、`/api/trial-status` 与 `/api/suggested-questions` 均正常（Redis 连接未受影响）。
 
