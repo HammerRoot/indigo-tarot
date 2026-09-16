@@ -53,6 +53,7 @@ describe("Y2 死代码清理静态契约", () => {
       /generateTarotReading\(/,
       /useImagePreloader/,
       /currentReading/,
+      /pickCardsByIndex/,
     ];
     for (const file of [...walk("app"), ...walk("lib")]) {
       const content = readSource(file);
@@ -60,5 +61,51 @@ describe("Y2 死代码清理静态契约", () => {
         expect(content, `${file} 不应包含 ${p}`).not.toMatch(p);
       }
     }
+  });
+
+  it("lib/pick.ts 已删除（选牌子页改用 pickedIndexesFromSlots）", () => {
+    expect(existsSync(resolve(root, "lib/pick.ts"))).toBe(false);
+  });
+});
+
+// 规格 O4 收尾（2026-09-16 文档审查）：
+// shuffle() 原本只在已删除的 store.getRandomCards 中调用，此后沦为死代码，
+// 而 /api/suggested-questions 仍在用 O4 要消灭的有偏写法。本契约锁定收尾结果。
+describe("O4 洗牌契约", () => {
+  const walkSources = (dir: string): string[] => {
+    const out: string[] = [];
+    for (const entry of readdirSync(resolve(root, dir), { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        out.push(...walkSources(full));
+      } else if (/\.(ts|tsx)$/.test(entry.name) && !entry.name.includes(".test.")) {
+        out.push(full);
+      }
+    }
+    return out;
+  };
+
+  it("全库不再使用 sort(() => Math.random() - 0.5) 有偏洗牌", () => {
+    const biased = /\.sort\(\s*\(\s*\)\s*=>\s*Math\.random\(\)\s*-\s*0\.5\s*\)/;
+    for (const file of [...walkSources("app"), ...walkSources("lib")]) {
+      // 去掉注释后再匹配：shuffle.ts 的说明性注释里正当地引用了这个反例
+      const code = readSource(file)
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/\/\/.*$/gm, "");
+      expect(
+        code,
+        `${file} 应改用 lib/shuffle.ts，而非比较器不稳定的 sort 洗牌`,
+      ).not.toMatch(biased);
+    }
+  });
+
+  it("lib/shuffle.ts 有生产调用方（防止再次沦为死代码）", () => {
+    const callers = walkSources("app").filter((f) =>
+      /from\s+['"]@\/lib\/shuffle['"]/.test(readSource(f)),
+    );
+    expect(
+      callers.length,
+      "shuffle() 应至少被一个 app/ 下的非测试文件引用",
+    ).toBeGreaterThan(0);
   });
 });

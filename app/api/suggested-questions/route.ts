@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { shuffle } from '@/lib/shuffle';
 
 // 预设的问题库，按类别分组
 const questionBank = {
@@ -82,9 +83,9 @@ export async function GET() {
     const categories = Object.keys(questionBank);
     const selectedQuestions: string[] = [];
     
-    // 随机选择3个不同类别
-    const shuffledCategories = categories.sort(() => Math.random() - 0.5);
-    const selectedCategories = shuffledCategories.slice(0, 3);
+    // 随机选择3个不同类别（Fisher-Yates 均匀洗牌，规格 O4）
+    // 注：不可用 sort(() => Math.random() - 0.5)——比较器不稳定，分布有偏且会原地修改数组
+    const selectedCategories = shuffle(categories).slice(0, 3);
     
     // 从每个选中的类别随机选择一个问题
     selectedCategories.forEach(category => {
