@@ -37,6 +37,7 @@
 | N6 | 依赖审计（spec G4） | ✅ 已完成并上线（2026-09-16） | 我 | 15 项（1 critical / 10 high）→ 升级 `next` 16.1.6 → **16.3.5** + `npm audit fix` → **0 漏洞**；可选 CI 经评估不加（归档 §13）。**服务器已重新部署，`node_modules/next` 实测 `16.3.5`** |
 | N7 | 分支处置（spec G4） | ✅ 已完成（2026-09-16） | 我 | `feature/less-modules` 已删除（被决策 D4/O2 取代，最后提交 `3e40e49`）；`feat/tencent-migration` 已并入 main |
 | N8 | 补齐 Redis 分支测试（quota / rate-limit / trial） | ✅ 已完成（2026-09-16） | 我 | 由 N3 事故暴露的**系统性测试盲区**。已补 26 例（quota 11 / rate-limit 7 / trial 8），并做变异验证证明测试确实能抓到对应缺陷。**全部内容见 [`N8-redis-branch-tests.md`](./N8-redis-branch-tests.md)，本文不重复** |
+| N9 | Redis 故障**静默降级**无告警 | ⬜ 待办 | 待定 | [`lib/server/upstash.ts`](../lib/server/upstash.ts) 用空函数吞掉所有 `error` 事件，Redis 挂掉时配额/试用/限流会**静默失效**且无人知晓——防滥用体系整套失灵，但站点看起来一切正常。`/api/health` 能探到（Redis 配了却连不上时返回 503），但**目前没有针对该端点的告警**。修复方向：接现有监控（UptimeRobot 或云监控）监听 `/api/health`，或改掉空 error handler 让它不再无声 |
 
 ---
 
@@ -46,8 +47,7 @@
 - **HTTP 下 Web Crypto 受限**（✅ 2026-09-16 已决策：接受现状）：`crypto.subtle` 在非安全上下文不可用，API Key「记住」功能在 HTTP 下失效（刷新丢 Key），属固有限制，**上 HTTPS 才能恢复**（见归档 §6.2 连带说明）。
 - **Redis / 服务器安全**：自建 Redis 虽只监听本机，仍需强密码；服务器只放行必要端口（22、80），建议 SSH 用密钥登录、`.env.local` 权限 600。
 - **无调用日志**：出问题无法回溯「谁在什么时候用了什么」，只能看到计数（见归档 §14.1）。
-- **Redis 故障静默降级**：[`lib/server/upstash.ts`](../lib/server/upstash.ts) 用空函数吞掉所有 `error` 事件，Redis 挂掉时配额/试用/限流会**静默失效**且无人知晓；`/api/health` 能探到（返回 503），但目前**未配置针对该端点的告警**。
-- **Redis 分支缺测试覆盖**：`lib/server/` 下 `quota.ts` / `rate-limit.ts` / `trial.ts` 的 Redis 实现分支目前无测试（仅内存版有覆盖）；`stats.ts` 的 Redis 分支已有 `stats.redis.test.ts`。这三个模块正跑在生产上、直接管成本熔断与防滥用——其缺陷在本地内存版下无法复现。
+- **Redis 故障静默降级**：Redis 挂掉时配额/试用/限流会**静默失效**且无人知晓——详见台账 **N9**（已登记为待办）。
 - **公网 IP 持续被扫描**：`indigo-tarot-error.log` 中可见 `Failed to find Server Action "x"` 报错（2026-09-15 记录 4 条）——这是扫描器在探测 Next.js Server Action，本项目并未使用 Server Actions，Next 正确拒绝，**无实际影响**。属公网 IP 的正常背景噪音，但说明站点确实在被自动扫描（这也是及时升级依赖的理由之一）。
 
 ---
