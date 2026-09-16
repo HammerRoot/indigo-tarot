@@ -54,6 +54,7 @@ describe("Y2 死代码清理静态契约", () => {
       /useImagePreloader/,
       /currentReading/,
       /pickCardsByIndex/,
+      /gridClassFor/,
     ];
     for (const file of [...walk("app"), ...walk("lib")]) {
       const content = readSource(file);
@@ -65,6 +66,14 @@ describe("Y2 死代码清理静态契约", () => {
 
   it("lib/pick.ts 已删除（选牌子页改用 pickedIndexesFromSlots）", () => {
     expect(existsSync(resolve(root, "lib/pick.ts"))).toBe(false);
+  });
+
+  it("gridClassFor 已删除（G11 起结果页改用 flex 换行，该函数无生产调用方）", () => {
+    // O1 为它写过单测，G11 把结果页改成 flex 换行后它就只剩测试引用了——
+    // 正是本契约禁止的那种「有测试、没调用方」的伪活代码。
+    // 注意：这与 shuffle() 的处置相反（那个是接回生产调用方），依据是它还有用没有。
+    expect(readSource("lib/utils.ts")).not.toContain("gridClassFor");
+    expect(existsSync(resolve(root, "lib/__tests__/grid.test.ts"))).toBe(false);
   });
 
   it("变异测试的临时目录 __mutation__ 不得残留（N8 用它验证 Redis 分支测试有效性）", () => {

@@ -232,7 +232,7 @@
 
 1. **`app/draw/select/page.tsx`**：`gridTemplateColumns` 由 `repeat(13, minmax(0, 1fr))` 改为 `repeat(8, minmax(0, 1fr))`。
 2. **`app/result/page.tsx`**：抽牌结果区移除 `gridClassFor(...)`/`grid-rows-2`/`col-start-2`，改为 `flex flex-wrap justify-center gap-5 md:gap-6`，每张牌上方新增位置标注；把「核心建议」section 整段移到「AI 深度解析」之前（顺序：问题 → 抽牌结果 → 核心建议 → AI 深度解析）；移除 `gridClassFor` 导入。
-3. **`lib/utils.ts`**：`gridClassFor` 保留（工具函数 + 单元测试，仅结果页不再引用）。
+3. **`lib/utils.ts`**：`gridClassFor` 保留（工具函数 + 单元测试，仅结果页不再引用）。**后续（2026-09-16）已彻底删除**——无生产调用方即死代码，见 `tests/no-dead-code.test.ts` 契约。
 
 ### TDD 测试计划
 
@@ -246,7 +246,7 @@
 
 - 修改：`app/draw/select/page.tsx`、`app/result/page.tsx`、`app/draw/select/__tests__/page.test.tsx`、`app/result/__tests__/page.test.tsx`、规格表
 - 新增：无
-- 删除：结果页 `gridClassFor` 引用（工具函数与测试保留）
+- 删除：结果页 `gridClassFor` 引用（工具函数与测试当时保留，**2026-09-16 已一并删除**）
 
 ### 风险与假设
 
