@@ -30,7 +30,7 @@
 | N2 | `/api/health` 健康检查端点 | 未实施 | 我（需改代码） | 可选，配合 UptimeRobot 更准 |
 | N3 | 来源审计（调用日志 + 统计接口） | 未实施 | 决策：你 / 实现：我 | 可选，需同步改 README 隐私表述 |
 | N4 | 重启服务器验证 AOF：计数不重置 | 待验证 | **你**（服务器重启） | 归档 §8 唯一未勾选项 |
-| N5 | PM2 `max_memory_restart` + 日志轮转 | 未配置 | **你**（服务器操作） | 无日志轮转会导致磁盘写满 |
+| N5 | PM2 `max_memory_restart` + 日志轮转 | ✅ 已完成（2026-09-16） | 我 | `max_memory_restart=500M`；已装 `pm2-logrotate 3.0.0`（`max_size 10M` / `retain 7` / `compress true` / 每日 0 点轮转），已 `pm2 save` 持久化到 `dump.pm2` |
 | N6 | 依赖审计（spec G4） | ✅ 已完成并上线（2026-09-16） | 我 | 15 项（1 critical / 10 high）→ 升级 `next` 16.1.6 → **16.3.5** + `npm audit fix` → **0 漏洞**；可选 CI 经评估不加（归档 §13）。**服务器已重新部署，`node_modules/next` 实测 `16.3.5`** |
 | N7 | 分支处置（spec G4） | ✅ 已完成（2026-09-16） | 我 | `feature/less-modules` 已删除（被决策 D4/O2 取代，最后提交 `3e40e49`）；`feat/tencent-migration` 已并入 main |
 
@@ -64,6 +64,7 @@
 - **HTTP 下 Web Crypto 受限**：`crypto.subtle` 在非安全上下文不可用，API Key「记住」功能在 HTTP 下失效（刷新丢 Key），属固有限制，**上 HTTPS 才能恢复**（见归档 §6.2 连带说明）。
 - **Redis / 服务器安全**：自建 Redis 虽只监听本机，仍需强密码；服务器只放行必要端口（22、80），建议 SSH 用密钥登录、`.env.local` 权限 600。
 - **无调用日志**：出问题无法回溯「谁在什么时候用了什么」，只能看到计数（见归档 §14.1）。
+- **公网 IP 持续被扫描**：`indigo-tarot-error.log` 中可见 `Failed to find Server Action "x"` 报错（2026-09-15 记录 4 条）——这是扫描器在探测 Next.js Server Action，本项目并未使用 Server Actions，Next 正确拒绝，**无实际影响**。属公网 IP 的正常背景噪音，但说明站点确实在被自动扫描（这也是及时升级依赖的理由之一）。
 
 ---
 
