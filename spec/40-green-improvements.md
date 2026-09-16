@@ -262,7 +262,9 @@ export function recommendSpread(question: string): TarotSpread {
 
 **升级后验证**：`npm run build`（Next.js 16.3.5 + Turbopack，12 个路由全部产出）✅、`type-check` ✅、`lint` ✅、190 个测试全绿 ✅。
 
-> ⚠️ 服务器上运行的是旧版本构建产物，**需重新部署才生效**（`npm ci && npm run build && pm2 restart indigo-tarot`）。
+**部署（2026-09-16 已完成）**：服务器已按归档 §11 流程重新部署（下载 tarball → `npm ci` → `npm run build` → `pm2 restart`），构建 `BUILD_EXIT=0`、10 个路由全部产出，`node_modules/next` 实测 `16.3.5`；站点外部验证 HTTP 200、`/api/trial-status` 与 `/api/suggested-questions` 均正常（Redis 连接未受影响）。
+
+> 部署前已备份旧构建产物至服务器 `/root/next-backup-before-upgrade`，确认稳定后可删除。
 
 ---
 

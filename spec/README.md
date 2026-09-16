@@ -178,8 +178,8 @@ F0（测试设施，先行）
 >
 > O4/Y2 两项已纳入 [`tests/no-dead-code.test.ts`](../tests/no-dead-code.test.ts) 契约（禁止有偏 sort 洗牌、`shuffle()` 必须有生产调用方、`pickCardsByIndex` 不得再现）。
 >
-> ⚠️ **待部署**：服务器仍运行旧版本构建产物，Next 升级需重新部署才生效
-> （`npm ci && npm run build && pm2 restart indigo-tarot`）。
+> ✅ **已部署**（2026-09-16）：服务器已重新部署，`node_modules/next` 实测 `16.3.5`，站点外部验证正常。
+> 旧的 `.env.local` 权限也一并修正为 600（原为 644）。
 
 > 完成顺序严格按上方依赖图执行；每个条目完成后更新本表与对应文档状态。
 
