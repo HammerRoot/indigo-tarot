@@ -36,6 +36,7 @@
 | N5 | PM2 `max_memory_restart` + 日志轮转 | ✅ 已完成（2026-09-16） | 我 | `max_memory_restart=500M`；已装 `pm2-logrotate 3.0.0`（`max_size 10M` / `retain 7` / `compress true` / 每日 0 点轮转），已 `pm2 save` 持久化到 `dump.pm2` |
 | N6 | 依赖审计（spec G4） | ✅ 已完成并上线（2026-09-16） | 我 | 15 项（1 critical / 10 high）→ 升级 `next` 16.1.6 → **16.3.5** + `npm audit fix` → **0 漏洞**；可选 CI 经评估不加（归档 §13）。**服务器已重新部署，`node_modules/next` 实测 `16.3.5`** |
 | N7 | 分支处置（spec G4） | ✅ 已完成（2026-09-16） | 我 | `feature/less-modules` 已删除（被决策 D4/O2 取代，最后提交 `3e40e49`）；`feat/tencent-migration` 已并入 main |
+| N8 | 补齐 Redis 分支测试（quota / rate-limit / trial） | ✅ 已完成（2026-09-16） | 我 | 由 N3 事故暴露的**系统性测试盲区**。已补 26 例（quota 11 / rate-limit 7 / trial 8），并做变异验证证明测试确实能抓到对应缺陷。**全部内容见 [`N8-redis-branch-tests.md`](./N8-redis-branch-tests.md)，本文不重复** |
 
 ---
 

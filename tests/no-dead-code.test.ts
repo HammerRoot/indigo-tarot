@@ -66,6 +66,15 @@ describe("Y2 死代码清理静态契约", () => {
   it("lib/pick.ts 已删除（选牌子页改用 pickedIndexesFromSlots）", () => {
     expect(existsSync(resolve(root, "lib/pick.ts"))).toBe(false);
   });
+
+  it("变异测试的临时目录 __mutation__ 不得残留（N8 用它验证 Redis 分支测试有效性）", () => {
+    // 验证「测试能否抓到 bug」时会在 lib/server/__mutation__/ 放刻意写坏的副本。
+    // 那是临时脚手架，绝不能提交——本项目曾因线上 OOM 事故付出过代价，
+    // 一个残留的坏 stats.ts 副本会是最恶劣的那种「看起来像正式代码」的陷阱。
+    for (const dir of ["lib/server/__mutation__", "lib/__mutation__"]) {
+      expect(existsSync(resolve(root, dir)), `${dir} 不应存在`).toBe(false);
+    }
+  });
 });
 
 // 规格 O4 收尾（2026-09-16 文档审查）：
