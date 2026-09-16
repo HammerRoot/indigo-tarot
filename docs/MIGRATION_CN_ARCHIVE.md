@@ -216,6 +216,31 @@ pm2 startup        # 生成并启用 systemd 服务 pm2-root，开机自动 resu
 | 3 | 服务器直接 `git clone` GitHub 超时 | 服务器到 GitHub 网络不通 | 用 `ghfast.top` 镜像下载 tar.gz |
 | 4 | 端口 80 被遗留 sshd 占用，访问返回 `SSH-2.0-...` | 之前临时 sshd 监听 80 未清理 | 从 `ss -ltnp` 提取 pid 并 kill，再启动 PM2 |
 | 5 | 浏览器端 AI 解析报错 `crypto.randomUUID is not a function` | Web Crypto API 在 HTTP 非安全上下文不可用 | deviceId 改用 `getRandomValues` 手写 UUID（commit `c09d5c1`） |
+| 6 | **上线 N3 后 AI 解析 502，一次调用即打挂应用** | **本次引入**：`lib/server/stats.ts` 的 Redis 版 `record()` 在 `for...of` 遍历 `commands` 的同时向同一数组 `push` EXPIRE 命令 → 循环永不终止、数组无限增长 → V8 堆耗尽，`next-server` `Aborted (core dumped)`（见下方详述） | 改为先构造 `counters`，再 `map` 出独立的 `expiries`，最后合并下发（commit `c5280ac`）。**并补齐此前完全缺失的 Redis 分支测试**——内存版写对、Redis 版从未被验证，正是漏洞来源 |
+
+### 10.1 事故 6 详述（2026-09-16）
+
+**症状**：N3 部署完成后，任何一次 `/api/deepseek-stream` 调用都返回 nginx 502。首页与 `/api/health` 仍正常——因为崩溃只发生在处理具体请求时。
+
+**定位过程**：
+- 配额计数从 2 变 3，说明 DeepSeek 调用本身成功 → 崩在「记录统计」那一步之后；
+- `pm2 describe` 显示 `restarts = 2`；
+- `indigo-tarot-error.log` 尾部为 V8 堆分配失败栈 + `Aborted (core dumped)`。
+
+**根因代码**：
+
+```js
+const commands = [["INCR", ...]];
+for (const cmd of commands) {
+  commands.push(["EXPIRE", ...]);   // 边遍历边追加 → 无限循环
+}
+```
+
+**为什么测试没拦住**：`stats.test.ts` 只覆盖了内存实现；`quota.test.ts` / `rate-limit.test.ts` 同样**只测内存版**。Redis 分支在整个项目里此前没有任何测试覆盖——这是系统性的测试盲区，不只是这一个 bug。
+
+**回归防护**：新增 `lib/server/__tests__/stats.redis.test.ts`（8 例，mock `redisCommand` 后断言下发的命令数组）。已用「恢复旧代码」的方式验证该测试确实能抓到本 bug（旧代码下直接 OOM 崩溃）。
+
+> 建议后续：为 `quota.ts` / `rate-limit.ts` / `trial.ts` 的 Redis 分支补同类型测试——它们目前处于同样的盲区。
 
 ---
 
