@@ -48,3 +48,35 @@ describe("R1 静态契约：API Key 安全", () => {
     expect(partializeBlock).not.toContain("apiKey:");
   });
 });
+
+// 2026-09-16 上线前安全清单：安全响应头补全
+describe("安全响应头契约（next.config.ts）", () => {
+  const config = () => readSource("next.config.ts");
+
+  it("配置了 nosniff（防 MIME 嗅探）", () => {
+    expect(config()).toContain("X-Content-Type-Options");
+    expect(config()).toContain("nosniff");
+  });
+
+  it("配置了点击劫持防护（X-Frame-Options + CSP frame-ancestors 双保险）", () => {
+    const c = config();
+    expect(c).toContain("X-Frame-Options");
+    expect(c).toContain("DENY");
+    expect(c).toContain("frame-ancestors 'none'");
+  });
+
+  it("配置了 Referrer-Policy", () => {
+    expect(config()).toContain("Referrer-Policy");
+    expect(config()).toContain("strict-origin-when-cross-origin");
+  });
+
+  it("CSP 同时限制了 base-uri 与 form-action", () => {
+    const c = config();
+    expect(c).toContain("base-uri 'self'");
+    expect(c).toContain("form-action 'self'");
+  });
+
+  it("未引入 HSTS（站点为 HTTP 明文，HSTS 无意义且会干扰后续 HTTPS 迁移）", () => {
+    expect(config()).not.toContain("Strict-Transport-Security");
+  });
+});
