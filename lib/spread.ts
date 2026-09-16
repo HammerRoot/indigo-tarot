@@ -7,7 +7,7 @@
 //   2. 其余按关键词命中数计分取最高；平局取规则表靠前者；
 //   3. 无匹配默认 single-card；>50 字长问题给 life-guidance 加分。
 // 注意：已移除单字 '爱'、'关系'、'喜欢' 等过宽词（工作语境常见，会误判）。
-// 表驱动用例以 spec/40-green-improvements.md 的 TDD 计划为验收基准。
+// 表驱动用例以 docs/archive/40-green-improvements.md 的 TDD 计划为验收基准。
 
 // 强关系信号：出现即判为情感问题（"感情"+"选择/应该"等决策词干扰场景也正确）
 const STRONG_RELATIONSHIP_KEYWORDS = [
