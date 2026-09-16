@@ -88,7 +88,32 @@ curl -X POST http://<你的地址>/api/admin/quota \
 openssl rand -hex 16
 ```
 
-> 用量明细（谁在什么时候用了多少）的查询方法见 [`MIGRATION_CN_ARCHIVE.md`](./MIGRATION_CN_ARCHIVE.md) §14。
+## 五之二、来源审计统计（聚合）
+
+```bash
+# 最近 7 天（默认）
+curl http://<你的地址>/api/admin/stats \
+  -H "Authorization: Bearer <ADMIN_TOKEN>"
+
+# 最近 30 天（上限 30）
+curl "http://<你的地址>/api/admin/stats?days=30" \
+  -H "Authorization: Bearer <ADMIN_TOKEN>"
+```
+
+返回示例：
+
+```json
+{
+  "days": 7,
+  "stats": [
+    { "date": "2026-09-16", "calls": 12, "systemKey": 9, "userKey": 3, "failures": 1, "distinctDevices": 5 }
+  ]
+}
+```
+
+> **隐私边界**：该接口只返回聚合数字。不记录问题内容、不记录 IP、不记录单次调用明细；去重设备数用 Redis HyperLogLog 估算，服务端不保存原始设备标识。聚合数据保留 30 天后自动过期。
+>
+> 需要**更底层的排查**（如查某个 IP 的限流键、Redis 原始键结构）见 [`MIGRATION_CN_ARCHIVE.md`](./MIGRATION_CN_ARCHIVE.md) §14 的 redis-cli 速查。
 
 ## 六、上线前检查清单
 

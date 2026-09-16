@@ -7,6 +7,7 @@ import {
 import { getRateLimiter } from "@/lib/server/rate-limit";
 import { getTrialGuard } from "@/lib/server/trial";
 import { getQuotaGuard } from "@/lib/server/quota";
+import { recordCallSafely } from "@/lib/server/stats";
 
 export async function POST(request: NextRequest) {
   try {
@@ -113,6 +114,11 @@ export async function POST(request: NextRequest) {
       // 上游错误：不标记试用，用户可重试
       const errorText = await response.text();
       console.error("DeepSeek API错误:", response.status, errorText);
+      // 来源审计：仅记一次失败计数（不含 IP / 内容 / 明细）
+      await recordCallSafely({
+        keyType: usingSystemKey ? "system" : "user",
+        ok: false,
+      });
       return new Response(
         JSON.stringify({ error: "AI服务暂时不可用" }),
         { status: 500, headers: { "Content-Type": "application/json" } },
@@ -126,6 +132,14 @@ export async function POST(request: NextRequest) {
       trialUsed = true;
       await getQuotaGuard().increment();
     }
+
+    // 来源审计（N3）：仅累加当日聚合计数；deviceId 只进 HyperLogLog 估算去重数，
+    // 不落库为可读值。recordCallSafely 内部吞异常，统计失败不影响本次解析。
+    await recordCallSafely({
+      keyType: usingSystemKey ? "system" : "user",
+      ok: true,
+      deviceId: request.headers.get("x-device-id") ?? undefined,
+    });
 
     // 构建 SSE 转发流（meta → content* → complete）
     const readable = new ReadableStream({
