@@ -33,6 +33,7 @@
 | N5 | PM2 `max_memory_restart` + 日志轮转 | ✅ 已完成（2026-09-16） | 我 | `max_memory_restart=500M`；已装 `pm2-logrotate 3.0.0`（`max_size 10M` / `retain 7` / `compress true` / 每日 0 点轮转），已 `pm2 save` 持久化到 `dump.pm2` |
 | N6 | 依赖审计（spec G4） | ✅ 已完成并上线（2026-09-16） | 我 | 15 项（1 critical / 10 high）→ 升级 `next` 16.1.6 → **16.3.5** + `npm audit fix` → **0 漏洞**；可选 CI 经评估不加（归档 §13）。**服务器已重新部署，`node_modules/next` 实测 `16.3.5`** |
 | N7 | 分支处置（spec G4） | ✅ 已完成（2026-09-16） | 我 | `feature/less-modules` 已删除（被决策 D4/O2 取代，最后提交 `3e40e49`）；`feat/tencent-migration` 已并入 main |
+| N8 | **补齐 Redis 分支测试**（quota / rate-limit / trial） | 待办 | 我 | 由 N3 事故暴露的**系统性测试盲区**：这四个模块均只测了内存版，Redis 分支零覆盖——`stats.ts` 的无限循环 OOM 即由此漏出（见归档 §10.1）。这三个模块正跑在生产上、直接管成本与防滥用 |
 
 ### N1 执行要点（0 成本，约十分钟）
 
@@ -86,7 +87,7 @@
 | 监控告警已配置 | ✅ 已完成（2026-09-16） | UptimeRobot 两条监控 + 云监控三条阈值策略 |
 | Vercel 旧部署已删除或已移除系统 Key | 进行中（**你**，2026-09-16） | **已实测确认 Vercel 仍配着系统 Key**（探测返回「缺少设备标识」= 通过了密钥解析）且该域名仍可达 → 是绕过每日熔断的活旁路 |
 | 是否继续接受 HTTP 明文传输（安全 vs 免备案取舍） | ✅ **已决策：接受**（2026-09-16） | 维持 HTTP 现状，文档保留风险声明 |
-| `ADMIN_TOKEN` 轮换为生产独立值、不复用他环境 | 待办（已确认保留） | 改服务器 `.env.local` + `pm2 restart` 即可，无需重新 build（已实测环境变量为运行时读取） |
+| `ADMIN_TOKEN` 轮换为生产独立值、不复用他环境 | **暂缓**（2026-09-16 决定） | 操作：改服务器 `.env.local` + `pm2 restart`，无需重新 build（已实测环境变量为运行时读取）。<br>**实测现状**：生产 token 与本地 `.env.local` **完全相同**（指纹均 `40d590b8…`）；长度 32 hex（强随机）；`.env.local` 从未被 git 跟踪；唯一副本（Vercel 环境变量）已于 Q2 清理。**判定为低风险卫生项，非活跃漏洞**。<br>唯一站得住的理由：生产与本地共用同一值，笔记本失窃即等于生产管理权失窃。触发条件：设备丢失/送修、`.env.local` 外发、或需向他人演示服务器 |
 | 伪造 `X-Forwarded-For` 处置（Nginx 覆写或改用 socket 地址） | ✅ 已完成并上线（2026-09-16） | 采用方案 A：前置 Nginx 覆写 `X-Forwarded-For $remote_addr`；修复后伪造值不再进入 Redis |
 | 安全响应头补全（`frame-ancestors`、`nosniff`、Referrer-Policy 等） | ✅ 已完成并上线（2026-09-16） | `next.config.ts` 加 5 条响应头 + CSP 扩展；生产 curl 实测全部生效 |
 | 依赖审计（`npm audit`） | ✅ 已完成并上线 | 2026-09-16：`next` 升至 16.3.5 后 **0 漏洞**，服务器已重新部署并验证站点正常 |

@@ -168,7 +168,13 @@ F0（测试设施，先行）
 
 ### 待开发条目
 
-**无**（截至 2026-09-16，全部条目已完成）。
+⬜ **测试补强：Redis 分支覆盖**。补齐 `lib/server/` 下 `quota.ts` / `rate-limit.ts` / `trial.ts` 的 **Redis 实现分支测试**——这三个模块目前**只测了内存版，Redis 分支零覆盖**。
+
+> 这是 2026-09-16 N3 上线事故暴露的**系统性盲区**：`stats.ts` 的 Redis 版 `record()` 存在"边遍历数组边 push"的无限循环，导致线上 OOM、`next-server` core dump、AI 解析全部 502。内存版写对了，Redis 版从未被验证（详见 `docs/MIGRATION_CN_ARCHIVE.md` §10.1）。
+>
+> `stats.ts` 已补 `stats.redis.test.ts`（8 例）；其余三个模块**同一盲区仍在**，且它们正跑在生产上、直接管成本熔断与防滥用。
+
+> 全部功能条目（F0/R/O/Y/G 系列）已完成。
 
 > **2026-09-16 收尾记录**：
 >
