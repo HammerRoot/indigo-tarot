@@ -32,7 +32,7 @@
 | N1 | 监控告警配置（UptimeRobot + 腾讯云云监控） | ✅ 已完成（2026-09-16） | 你 | **UptimeRobot**（间隔 5 分钟，免费版，通知=邮件）：① Keyword 监控——地址 `http://<SERVER_IP>`，关键字填「塔罗」；② HTTP(s) 状态码监控——与 ① 交叉验证。**腾讯云云监控**：三条阈值策略 CPU>80% / 内存>85% / 磁盘>85%（持续 5 分钟，满足条件=任意），通知绑微信公众号（短信每月 1000 条免费额度）。**刻意不自建 Uptime Kuma**——监控与被监控同机，机器一挂两者同时失效 |
 | N2 | `/api/health` 健康检查端点 | ✅ 已完成并上线（2026-09-16） | 我 | `app/api/health/route.ts`；Redis 配了却连不上时返回 503，而首页此时仍 200（降级为内存），纯页面探测发现不了。生产实测 `{"status":"ok","checks":{"redis":"ok"}}` |
 | N3 | 来源审计（聚合统计 + 查询接口） | ✅ 已完成并上线（2026-09-16） | 我 | 决策为**仅聚合计数**：`lib/server/stats.ts` + `GET /api/admin/stats`；记录每日调用数 / 系统 Key / 用户 Key / 失败数 / 去重设备数。**不记 IP、不记问题内容、不记单次明细**；去重设备数用 Redis HyperLogLog 估算，**服务端不保存原始 deviceId**；聚合数据保留 30 天。README 隐私表述已同步 |
-| N4 | 重启服务器验证 AOF：计数不重置 | 待验证 | **你**（服务器重启） | 归档 §8 唯一未勾选项 |
+| N4 | 重启服务器验证 AOF：计数不重置 | ✅ 已完成（2026-09-16） | 你（服务器重启） | 实测：重启前 `quota:count` = **4**、`trial:*` 键 **10** 个、`appendonly yes`；控制台重启服务器后，两者**原样保留**、站点正常 → **AOF 持久化生效** |
 | N5 | PM2 `max_memory_restart` + 日志轮转 | ✅ 已完成（2026-09-16） | 我 | `max_memory_restart=500M`；已装 `pm2-logrotate 3.0.0`（`max_size 10M` / `retain 7` / `compress true` / 每日 0 点轮转），已 `pm2 save` 持久化到 `dump.pm2` |
 | N6 | 依赖审计（spec G4） | ✅ 已完成并上线（2026-09-16） | 我 | 15 项（1 critical / 10 high）→ 升级 `next` 16.1.6 → **16.3.5** + `npm audit fix` → **0 漏洞**；可选 CI 经评估不加（归档 §13）。**服务器已重新部署，`node_modules/next` 实测 `16.3.5`** |
 | N7 | 分支处置（spec G4） | ✅ 已完成（2026-09-16） | 我 | `feature/less-modules` 已删除（被决策 D4/O2 取代，最后提交 `3e40e49`）；`feat/tencent-migration` 已并入 main |

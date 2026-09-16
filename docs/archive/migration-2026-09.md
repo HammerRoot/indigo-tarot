@@ -195,7 +195,9 @@ pm2 startup        # 生成并启用 systemd 服务 pm2-root，开机自动 resu
 - [x] 抽牌流程（选牌 → 翻牌 → 结果页）正常
 - [x] AI 深度解析流式返回成功（出现「💡 核心建议」与「🔮 深度解析」）
 - [x] 历史记录正常保存/读取
-- [ ] 重启服务器后，免费试用/每日配额计数不重置（Redis AOF 持久化生效）——**未完成，见 [OPERATIONS.md](../OPERATIONS.md) 待办 N4**
+- [x] 重启服务器后，免费试用/每日配额计数不重置（Redis AOF 持久化生效）
+      —— **2026-09-16 实测通过**：重启前 `quota:count` = 4、`trial:*` = 10 个键，
+      控制台重启服务器后原样保留（见 [OPERATIONS.md](../OPERATIONS.md) 台账 N4）
 
 ---
 

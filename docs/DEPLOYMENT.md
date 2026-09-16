@@ -127,7 +127,7 @@ curl "http://<你的地址>/api/admin/stats?days=30" \
 - [ ] Redis 已开启 AOF 且只监听 `127.0.0.1`
 - [ ] 环境变量已配置并重启 PM2 进程
 - [ ] DeepSeek 账户为固定充值余额
-- [ ] 重启服务器后验证计数不重置（见 [`OPERATIONS.md`](./OPERATIONS.md) 台账 N4）
+- [x] 重启服务器后验证计数不重置（✅ 2026-09-16 实测通过，见 [`OPERATIONS.md`](./OPERATIONS.md) 台账 N4）
 - [x] 监控告警已配置（✅ 2026-09-16 完成，见 [`OPERATIONS.md`](./OPERATIONS.md) 台账 N1）
 - [ ] 无痕窗口实测：不填 Key 占卜 1 次成功 → 再次占卜提示"免费试用已用完" → 填个人 Key 后可正常占卜
 
