@@ -45,7 +45,6 @@
 | [`../README.md`](../README.md) | 面向使用者：功能、技术栈、快速开始、API 契约、隐私边界 |
 | [`DEPLOYMENT.md`](./DEPLOYMENT.md) | 环境变量、本地开发、生产部署步骤、成本控制、管理接口、上线检查清单 |
 | [`OPERATIONS.md`](./OPERATIONS.md) | 部署现状速览、待办台账（N 系列）、已知限制与风险、疑点、安全清单 |
-| [`N8-redis-branch-tests.md`](./N8-redis-branch-tests.md) | **N8 单一条目**：背景、缺口、断言点、验证方法、验收标准 | 其他条目、其他待办 |
 | **本文** | 文档规则 + 规格台账（条目状态 / 决策）+ 文件清单 |
 
 ### 归档文档（不再更新）
@@ -55,6 +54,7 @@
 | 文件 | 内容 |
 |---|---|
 | [`migration-2026-09.md`](./archive/migration-2026-09.md) | 腾讯云迁移：部署执行记录、代码改动、问题排查、运维速查、Nginx 接入 |
+| [`n8-redis-branch-tests.md`](./archive/n8-redis-branch-tests.md) | **N8** Redis 分支测试补强：缺口背景、断言点、变异验证、验收结果 |
 | [`00-foundation-testing.md`](./archive/00-foundation-testing.md) | **F0** 测试基础设施（Vitest + RTL，TDD 前提，最先做） |
 | [`10-red-security.md`](./archive/10-red-security.md) | 🔴 红级：安全修复 R1–R4 |
 | [`20-orange-functional.md`](./archive/20-orange-functional.md) | 🟠 橙级：功能缺陷 O1–O5 |

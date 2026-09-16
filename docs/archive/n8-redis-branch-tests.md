@@ -1,18 +1,23 @@
 # N8：Redis 分支测试补强
 
-> **本文只负责**：N8 这一件事——背景、范围、测试内容、验证方法、当前状态。
-> **本文不写**：其他运维待办（→ [`OPERATIONS.md`](./OPERATIONS.md)）、条目总表与决策记录
-> （→ [`README.md`](./README.md)）、事故完整经过（→ [`archive/migration-2026-09.md`](./archive/migration-2026-09.md) §10.1）。
+> **归档日期**：2026-09-16 ｜ **条目状态**：✅ 已完成
+>
+> ⚠️ **本文是历史记录，不描述当前状态。** 文中"当前 / 现在"等表述均指归档当时。
+> 运维现状与待办见 [`OPERATIONS.md`](../OPERATIONS.md)，文档规则与规格台账见 [`README.md`](../README.md)。
+>
+> **本文只负责**：N8 这一件事——背景、范围、测试内容、验证方法、验收结果。
+> **本文不写**：其他运维待办（→ [`OPERATIONS.md`](../OPERATIONS.md)）、条目总表与决策记录
+> （→ [`README.md`](../README.md)）、事故完整经过（→ [`migration-2026-09.md`](./migration-2026-09.md) §10.1）。
 >
 > 其他文档提到 N8 时**只能链接本文**，不得复写其内容。
 
 ---
 
-## 一、当前状态
+## 一、完成结果（归档时）
 
 | 项 | 值 |
 |---|---|
-| 状态 | ✅ **已完成** |
+| 状态 | ✅ **已完成**（2026-09-16） |
 | 测试文件 | `lib/server/__tests__/{quota,rate-limit,trial}.redis.test.ts` |
 | 新增用例 | **26 例**（quota 11 / rate-limit 7 / trial 8） |
 | 分支 | `feat/n8-redis-branch-tests` |
@@ -40,7 +45,7 @@ for (const cmd of commands) {
 是**系统性测试盲区**。
 
 > 事故完整经过（症状、定位过程、根因、为何测试没拦住）见
-> [`archive/migration-2026-09.md`](./archive/migration-2026-09.md) §10.1，本文不复述。
+> [`migration-2026-09.md`](./migration-2026-09.md) §10.1，本文不复述。
 
 ---
 
