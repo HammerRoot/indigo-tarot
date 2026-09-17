@@ -1,6 +1,11 @@
 # O6 — HTTP 下「记住 Key」静默失效（隐藏勾选框）
 
-> **优先级**：🟠 橙级（可复现功能缺陷）｜**状态**：实现完成，待在真实页面确认后归档
+> **归档日期**：2026-09-17 ｜ **条目状态**：✅ 已完成（已合并 `main` @ `06f3a4d`）
+>
+> ⚠️ **本文是历史记录，不描述当前状态。** 文中"待确认 / 在飞"等表述均为**当时**的情况。
+> 当前行为以代码为准：`app/components/ApiKeySettings.tsx`。
+>
+> **优先级**：🟠 橙级（可复现功能缺陷）
 
 ## 背景与根因
 
@@ -61,6 +66,23 @@
 > 结论：`generateSessionKey()` 在整个仓库里唯一的可达路径是 `store.ts` 中
 > `if (remember && apiKey)` 分支内的 `ensureSessionKey()`。`remember=false` 时该分支整体跳过，
 > 因此 `crypto.subtle` 一次都不会被触碰。
+
+### 真实浏览器验证（2026-09-17，用户执行）
+
+本地起 dev server，用两个源对照（两者都是 `http://`，区别只在"是不是环回地址"）：
+
+| 源 | `isSecureContext` | `crypto.subtle` | 「记住 Key」那一行 |
+|---|---|---|---|
+| `http://127.0.0.1:3000`（环回 = 安全上下文） | `true` | `object` | 显示，默认勾选 |
+| `http://192.168.0.104:3000`（私网 IP = **非安全上下文**，等价于生产） | `false` | `undefined` | **不显示** |
+
+**这组对照同时验证了两件事**：① O6 的隐藏逻辑按"能力"而非"环境"判定，在真正的非安全上下文下生效；
+② 生产的那条控制台报错（`Cannot read properties of undefined (reading 'generateKey')`）不会再现。
+
+> 排查过程中踩到的两个 Next 16 dev 坑（与 O6 无关，但会伪装成"O6 把页面改坏了"）：
+> `allowedDevOrigins` 默认只认 `localhost`，用 `127.0.0.1` 或局域网 IP 访问会被当跨源拦掉 dev 资源，
+> 页面停在 SSR 的 framer-motion 入场初值（`opacity: 0`）上表现为整页空白，且**没有任何 JS 报错**；
+> 详见 `next.config.ts` 与仓库根 `AGENTS.md`。
 
 ## 影响范围
 
