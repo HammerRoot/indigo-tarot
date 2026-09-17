@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { hasRedisConfig, redisCommand } from "@/lib/server/upstash";
 
-// 健康检查端点（部署待办 N2）
+// 健康检查端点（运维台账 N2，已上线）
 //
 // 供 UptimeRobot 等外部监控探测。相比探测首页，它能回答"应用是否真的健康"：
 // Redis 配了却连不上时返回 503，而首页此时仍会返回 200（降级为单实例内存），

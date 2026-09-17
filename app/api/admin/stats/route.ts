@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStatsGuard, shanghaiDateKey } from "@/lib/server/stats";
 
-// 来源审计统计接口（部署待办 N3）
+// 来源审计统计接口（运维台账 N3，已上线）
 //
 // GET /api/admin/stats?days=7 —— 查询最近 N 天（默认 7，上限 30）的匿名聚合计数
 // 认证：Authorization: Bearer <ADMIN_TOKEN>（与 /api/admin/quota 一致）

@@ -393,6 +393,10 @@ rl:system_::ffff:127.0.0.1
 
 ## 16. Nginx 反向代理接入（2026-09-16，修复 Q1）
 
+> **本节是历史记录。** Nginx 的**当前配置全文与安装/启用步骤**已移入
+> [`DEPLOYMENT.md`](../DEPLOYMENT.md) §三 第 6 条（2026-09-17 迁出，避免"当前配置只存在于归档里"）；
+> 本节保留的是"为什么这么改"、当时的切换过程与实测结果。
+
 ### 16.1 背景
 
 疑点 Q1 经实测确认：客户端自带的 `X-Forwarded-For` 被完全信任，换头即换限流桶（实测伪造 `203.0.113.77` → Redis 键 `rl:system_203.0.113.77`）。由于 Next.js App Router 无法直接读取 socket 远端地址，采用**前置 Nginx 覆写请求头**的方案（Q1 方案 A）。
@@ -406,35 +410,7 @@ rl:system_::ffff:127.0.0.1
 | 客户端 IP 来源 | 客户端可伪造的 `X-Forwarded-For` | Nginx 以 `$remote_addr` **覆写**该头 |
 | 应用代码 | — | **零改动**（仍读 `x-forwarded-for`，但值已可信） |
 
-### 16.3 安装与配置
-
-```bash
-apt-get install -y nginx        # 安装时不会启动（80 被 Next 占用，属预期）
-```
-
-配置文件 `/etc/nginx/sites-available/indigo-tarot`（软链到 `sites-enabled/`，已删除默认站点）：
-
-```nginx
-server {
-    listen 80 default_server;
-    server_name _;
-
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $remote_addr;   # 关键：覆写而非追加
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        proxy_buffering off;      # 关键：SSE 流式必需，否则逐字输出退化为一次性刷出
-        proxy_cache off;
-        proxy_read_timeout 300s;  # AI 解读耗时可能超过默认 60s
-    }
-}
-```
-
-### 16.4 切换步骤（含应用端口迁移）
+### 16.3 切换步骤（含应用端口迁移）
 
 ```bash
 # 1. 启用配置并校验
@@ -454,7 +430,7 @@ systemctl enable nginx
 
 > ⚠️ `pm2 delete` 会连带清掉此前设置的 `max_memory_restart`，重建时必须重新带上该参数。
 
-### 16.5 验证结果（实测）
+### 16.4 验证结果（实测）
 
 | 项 | 结果 |
 |---|---|
@@ -468,9 +444,9 @@ systemctl enable nginx
 
 > 修复前遗留的 `rl:system_203.0.113.77` 键有 3 小时 TTL，会自行过期，无需手工清理。
 
-### 16.6 对部署流程的影响
+### 16.5 对部署流程的影响
 
 - **日常更新命令不变**：`pm2 restart indigo-tarot` 会保留 `-p 3000` 参数，归档 §11 的流程照旧可用。
-- **若需重建 PM2 进程**：必须带上 `-p 3000 --max-memory-restart 500M`，并按 16.4 执行 `pm2 save`。
+- **若需重建 PM2 进程**：必须带上 `-p 3000 --max-memory-restart 500M`，并按 16.3 执行 `pm2 save`。
 - **Nginx 配置变更后**：`nginx -t && systemctl reload nginx`（不断连接）。
 - **附带收益**：将来上 HTTPS 只需在本配置中加证书与 443 server 块，应用侧无需改动。
