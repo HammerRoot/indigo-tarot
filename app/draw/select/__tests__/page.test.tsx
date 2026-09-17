@@ -132,7 +132,7 @@ describe("G17 选牌子页(/draw/select)：洗牌 → 连续选满 → 飞入揭
     expect(useTarotStore.getState().selectedSlots[1]?.cardIndex).toBe(20);
   });
 
-  it("S2 网格 6 列、78 个牌位；页头为两行纯文字；无紧凑槽位条", () => {
+  it("S2 网格 6 列、78 个牌位；页头为两行纯文字", () => {
     render(<SelectPage />);
     expect(
       document.querySelector("[data-grid-columns]")!.getAttribute("data-grid-columns"),
@@ -142,9 +142,6 @@ describe("G17 选牌子页(/draw/select)：洗牌 → 连续选满 → 飞入揭
     expect(screen.getByText("为「过去」选一张牌")).toBeInTheDocument();
     expect(screen.getByText(/「猫咪想说」的起点/)).toBeInTheDocument();
     expect(screen.getByText(/已选\s*0\s*\/\s*3/)).toBeInTheDocument();
-
-    // 上一版的常驻槽位条已移除
-    expect(document.querySelector('[data-compact-slots="true"]')).toBeNull();
   });
 
   it("S3 点击位置 p 落定的是 deckOrder[p] 对应的牌（牌序真的生效）", () => {
