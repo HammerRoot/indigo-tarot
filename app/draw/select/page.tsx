@@ -17,6 +17,7 @@ import {
   firstEmptySlot,
   pickedIndexesFromSlots,
   randomReversal,
+  type SelectionFill,
 } from "@/lib/drawFlow";
 
 // 选牌子页(规格 G17):洗牌进场 → 连续选满 → 飞入揭示 → 缩回落位
@@ -158,6 +159,16 @@ export default function SelectPage() {
     () => pickedIndexesFromSlots(selectedSlots),
     [selectedSlots],
   );
+  // 牌组索引 → 该牌的槽位填充。网格按 cardIndex 取自己的逆位状态——
+  // 不能用 reveal 的状态:那会让所有已选位跟着当前揭示的牌一起翻面,
+  // 且收起浮层后 reveal 为 null,全部退回正位。
+  const fillByCardIndex = useMemo(() => {
+    const map = new Map<number, SelectionFill>();
+    for (const slot of selectedSlots) {
+      if (slot) map.set(slot.cardIndex, slot);
+    }
+    return map;
+  }, [selectedSlots]);
   const filledCount = useMemo(
     () => selectedSlots.filter((s) => s !== null).length,
     [selectedSlots],
@@ -283,7 +294,8 @@ export default function SelectPage() {
           >
             {deckOrder.map((cardIndex, position) => {
               const card = tarotCards[cardIndex];
-              const picked = pickedIndexes.includes(cardIndex);
+              const fill = fillByCardIndex.get(cardIndex);
+              const picked = fill !== undefined;
               // 揭示/缩回期间该位让位给飞行元素:格子仍占位(不能塌陷,否则飞行目标会移位),
               // 但对视觉与读屏都隐藏
               const isFlying = reveal?.position === position;
@@ -319,7 +331,7 @@ export default function SelectPage() {
                         isFlying && "opacity-0",
                       )}
                     >
-                      <CardFace card={card} reversed={reveal?.reversed ?? false} />
+                      <CardFace card={card} reversed={fill.reversed} />
                     </div>
                   ) : (
                     <GridCard

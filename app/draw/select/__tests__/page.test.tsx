@@ -42,8 +42,8 @@ const IDENTITY = Array.from({ length: tarotCards.length }, (_, i) => i);
 /** 非恒等牌序（整体后移一位）：用于验证「点击位置 → 牌面」的映射真的走了牌序 */
 const ROTATED = [...IDENTITY.slice(1), IDENTITY[0]];
 
-function fill(cardIndex: number): SelectionFill {
-  return { cardIndex, card: tarotCards[cardIndex], reversed: false };
+function fill(cardIndex: number, reversed = false): SelectionFill {
+  return { cardIndex, card: tarotCards[cardIndex], reversed };
 }
 
 function setupStore(
@@ -305,6 +305,28 @@ describe("G17 选牌子页(/draw/select)：洗牌 → 连续选满 → 飞入揭
     fireEvent.click(screen.getByLabelText("关闭选牌"));
     expect(pushMock).toHaveBeenCalledWith("/draw");
     expect(useTarotStore.getState().selectedSlots[0]?.cardIndex).toBe(7);
+  });
+
+  it("S12 已选位保留各自的逆位状态（不随当前揭示或收起而丢失）", () => {
+    setupStore([fill(7, true), null, null]);
+    render(<SelectPage />);
+
+    // 逆位槽位必须渲染成逆位——而不是被 reveal 的状态或默认值覆盖
+    const face = document.querySelector(
+      '[data-selected-card="7"] [data-reversed="true"]',
+    );
+    expect(face).not.toBeNull();
+  });
+
+  it("S12b 揭示新牌时，先前已选位的逆位状态不受影响", () => {
+    setupStore([fill(7, true), null, null]);
+    render(<SelectPage />);
+    pickAt(20);
+
+    // 揭示中的是位置 20，位置 7 是早先选的逆位牌——它不该被"传染"成当前这张的朝向
+    expect(
+      document.querySelector('[data-selected-card="7"] [data-reversed="true"]'),
+    ).not.toBeNull();
   });
 
   it("若已全满（直接访问）则回退到情况页", () => {
