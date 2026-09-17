@@ -122,9 +122,32 @@
   - 断言 B：`npm run type-check` **报 `TS2307: Cannot find module '@/lib/not-exist'`**——测试文件的类型检查能力没有被关掉，只是换到了正确的位置；
   - 变异文件已删除，无残留。
 - [x] **type-check 全绿**：`npm run type-check`（走 `tsconfig.test.json`）在干净树上通过。
-- [x] **测试全绿**：`npm run test:run` 40 文件 265 用例通过（exclude 未误伤 vitest——它读 `vitest.config.ts`，不读 tsconfig 的 exclude）。
+- [x] **测试全绿**：`npm run test:run` 通过（exclude 未误伤 vitest——它读 `vitest.config.ts`，不读 tsconfig 的 exclude）。
 - [x] **lint 全绿**：`npm run lint`。
-- [x] **范围复核**：`tsc -p tsconfig.json --listFilesOnly` 测试文件数 = **0**；`tsc -p tsconfig.test.json --listFilesOnly` 测试文件数 = **40**（39 + 新增契约测试）。**这同时验证了 §五风险 1 的 `extends` exclude 覆盖语义成立**。
+- [x] **范围复核**：`tsc -p tsconfig.json --listFilesOnly` 测试文件数 = **0**；`tsc -p tsconfig.test.json --listFilesOnly` 测试文件数 = **40**。**这同时验证了 §五风险 1 的 `extends` exclude 覆盖语义成立**。
+
+### 6.1 生产部署验证（2026-09-17）
+
+已按手工流程部署（`main` @ `c047e23`，回退锚点 `0ff5d65`），并从服务器内部与公网侧复核：
+
+| 检查 | 结果 |
+|---|---|
+| 部署前对账（服务器独有文件） | **空输出** —— 零漂移，`tar` 覆盖会产生正确的树 |
+| 包版本确认 | 含 `tsconfig.test.json`、`AGENTS.md`、本文件 —— 确为新版本 |
+| **`npm run build`** | **`BUILD_EXIT=0`** —— 这正是 2026-09-17 连续失败两次的那一步 |
+| `Finished TypeScript in 7.5s` | 类型检查跑了，且按新 `exclude` 范围 |
+| `pm2 restart` | `RESTART_EXIT=0`、状态 `online` |
+| 服务器内 `curl localhost:3000/api/health` | `{"status":"ok","checks":{"redis":"ok"}}` |
+| 公网首页 | HTTP 200 |
+| **G15 行为回归** | `w=384` 缓存头仍为 `max-age=2592000`（未回退） |
+| 已删路由 | `/api/deepseek` → 404（未复活） |
+
+> **部署期间站点未中断**：`npm ci && npm run build` 全程 PM2 继续跑旧构建，构建期间公网 health 与首页均正常；
+> 仅 `pm2 restart` 那一刻有秒级中断。
+>
+> **本条目部署后没有可观察的用户侧变化**——构建产物与运行时行为不变。它的价值体现在
+> **下一次部署不再被残留测试文件打挂**，而不是能从线上看出它生效了。这条特意写明，
+> 免得后人以为"看不出变化 = 部署失败"。
 
 ---
 
