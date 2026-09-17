@@ -17,8 +17,10 @@ import { TarotCard } from "@/app/components/TarotCard";
 import { tarotCards } from "@/lib/tarot-data";
 
 export default function Home() {
-  const [localQuestion, setLocalQuestion] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  // 从 store 回填已有问题（规格 G17）：从 /draw 返回首页时输入框不再清空，
+  // 用户想改措辞不必从头重打。注意这只是「初值」——后续编辑由 localQuestion 承载。
+  const storedQuestion = useTarotStore((s) => s.question);
+  const [localQuestion, setLocalQuestion] = useState(storedQuestion);
   const [localApiKey, setLocalApiKey] = useState("");
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(true);
@@ -111,20 +113,16 @@ export default function Home() {
       return;
     }
 
-    setIsLoading(true);
-
     // 重置之前的会话状态
     resetSession();
 
     // 设置新的问题
     setQuestion(localQuestion.trim());
 
-    // 跳转到抽牌页面
-    const t = setTimeout(() => {
-      setIsLoading(false);
-      clearTimeout(t);
-      router.push("/draw");
-    }, 666);
+    // 跳转到抽牌页面。
+    // 同步跳转,不设人为等待(规格 G17):resetSession/setQuestion 都是同步的 zustand 写入,
+    // 旧的 666ms 底下没有任何异步任务,只是让应用平白变慢。
+    router.push("/draw");
   };
 
   const handleQuestionSelect = (question: string) => {
@@ -194,20 +192,14 @@ export default function Home() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
+                    {/* 提交是同步的（规格 G17 去掉了 666ms 假等待），因此不存在加载态 */}
                     <MysticalButton
                       type="submit"
-                      disabled={isLoading || !localQuestion.trim()}
+                      disabled={!localQuestion.trim()}
                       className="w-full py-4 text-lg font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{ borderRadius: "8px" }}
                     >
-                      {isLoading ? (
-                        <div className="flex items-center">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-                          正在为你占卜...
-                        </div>
-                      ) : (
-                        "开始占卜"
-                      )}
+                      开始占卜
                     </MysticalButton>
                   </motion.div>
                 </div>

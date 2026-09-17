@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, within } from "@testing-library/react";
 import { useTarotStore } from "@/lib/store";
 import { tarotCards } from "@/lib/tarot-data";
 import {
@@ -191,10 +191,13 @@ describe("G17 选牌子页(/draw/select)：连续选满 + 揭示浮层 + 棋盘�
       vi.advanceTimersByTime(FLIP_DURATION_MS);
     });
     expect(overlay()).not.toBeNull();
-    expect(screen.getByText("过去")).toBeInTheDocument();
-    expect(screen.getByText(tarotCards[7].name)).toBeInTheDocument();
+
+    // 在浮层作用域内断言（「过去」等文案在页面的紧凑槽位条里也存在）
+    const modal = within(screen.getByTestId("card-modal-content"));
+    expect(modal.getByText("过去")).toBeInTheDocument();
+    expect(modal.getByText(tarotCards[7].name)).toBeInTheDocument();
     // 逆位为 30% 随机，故只断言二者必居其一
-    expect(screen.getByText(/^(正位|逆位)$/)).toBeInTheDocument();
+    expect(modal.getByText(/^(正位|逆位)$/)).toBeInTheDocument();
   });
 
   it("A7 三种收起方式均可关闭浮层，且全程不跳转", () => {
@@ -202,7 +205,9 @@ describe("G17 选牌子页(/draw/select)：连续选满 + 揭示浮层 + 棋盘�
 
     // ① 点「继续」——唯一断言按钮文案的地方，用于钉住 actionLabel 契约
     pickCard(7);
-    fireEvent.click(screen.getByRole("button", { name: "继续" }));
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "继续" }));
+    });
     expect(overlay()).toBeNull();
 
     // ② 点浮层外（遮罩）
@@ -212,7 +217,9 @@ describe("G17 选牌子页(/draw/select)：连续选满 + 揭示浮层 + 棋盘�
 
     // ③ ESC
     pickCard(33);
-    fireEvent.keyDown(document, { key: "Escape" });
+    act(() => {
+      fireEvent.keyDown(document, { key: "Escape" });
+    });
     expect(overlay()).toBeNull();
 
     expect(pushMock).not.toHaveBeenCalled();

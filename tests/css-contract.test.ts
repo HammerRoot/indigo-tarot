@@ -75,16 +75,15 @@ describe("O2 设计系统类全局契约", () => {
     expect(body, "该块应含真实的 animation 属性声明").toMatch(
       /animation(-duration|-iteration-count)?\s*:/,
     );
-    // 必须为 .stars 的 twinkle 停用动画
-    expect(body, "该块应为 .stars 停用动画").toMatch(
-      /\.stars[^{]*\{[^}]*animation/,
-    );
-    // 必须干掉 Tailwind 的 animate-pulse：直接覆盖，或用通配符统一降级
-    const killsPulse =
-      /\.animate-pulse/.test(body) || /(^|\n)\s*\*[^{]*\{/.test(body);
+    // 必须覆盖本仓库实际的无限 CSS 动画：
+    //   .astro-stars::before → animation: twinkle（注意 .stars 是 display:none，与动画无关）
+    //   .animate-pulse       → Tailwind 的脉冲（首页骨架屏、SpreadSlots 聚焦空位）
+    // 逐类点名或用通配符统一降级，两种都接受。
+    const universal = /(^|\n)\s*\*[^{]*\{/.test(body);
+    const named = /\.astro-stars/.test(body) && /\.animate-pulse/.test(body);
     expect(
-      killsPulse,
-      "该块应停用 animate-pulse，或用通配符统一降级所有 CSS 动画",
+      universal || named,
+      "该块应逐类停用（.astro-stars 的 twinkle、.animate-pulse），或用通配符统一降级",
     ).toBe(true);
   });
 

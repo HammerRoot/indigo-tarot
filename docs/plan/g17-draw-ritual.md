@@ -2,7 +2,7 @@
 
 - **优先级**: 🟢
 - **类别**: 质量提升（交互）
-- **状态**: 🚧 在飞（规格已定，待实现）
+- **状态**: 🚧 在飞（实现完成，待真机验收与收口）
 - **关联条目**: G8（点击即选 + 原位翻牌）、G9（平铺网格 + 减去已选牌）、G10（情况页/子页拆分）、G11（一行 8 张）、G15/D12（卡牌图片唯一小档）、O2（`mystical-*` 全局类）
 - **关联决策**: **本条目部分推翻 D12 的适用边界**（见「设计决策」第 12 条）
 
@@ -134,7 +134,7 @@
 
 ### 7. `app/layout.tsx` + `app/globals.css`
 
-- `layout.tsx` 外层包 `<MotionConfig reducedMotion="user">`。
+- 新增客户端边界组件 `app/components/MotionProvider.tsx`（`"use client"` + `MotionConfig reducedMotion="user"`），由 `layout.tsx` 包裹 `{children}`。**偏离原方案**，理由见「实现偏离记录」。
 - `globals.css` 增加 `@media (prefers-reduced-motion: reduce)` 块，停用 `animate-pulse` 与 `.stars` 的 `@keyframes twinkle`。
 
 ## TDD 测试计划
@@ -159,28 +159,30 @@
 | `app/__tests__/page.test.tsx` | C2 问题回填 | store 中 `question` 非空时，输入框 `value` 等于该问题 |
 | `app/components/__tests__/CardModal.test.tsx` | `actionLabel` 主按钮 | 传时按钮集合多出该项且点击调用 `onClose`；**不传时按钮集合恰为 `["关闭"]`**（正面断言，结果页行为不变） |
 | `app/components/__tests__/CardModal.test.tsx` | 既有行为回归 | ESC / 点遮罩 / 点关闭按钮的既有断言全部保持通过 |
-| `tests/css-contract.test.ts` | D1 reduced-motion 契约 | 块内须含**真实的 `animation:` 属性声明**（注释不算）；须为 `.stars` 停用动画；须停用 `.animate-pulse` **或**用通配符统一降级 |
+| `tests/css-contract.test.ts` | D1 reduced-motion 契约 | 块内须含**真实的 `animation:` 属性声明**（注释不算）；须覆盖 `.astro-stars` 的 twinkle 与 `.animate-pulse`，**或**用通配符统一降级 |
 | `tests/card-image-variant.test.ts` | 图片不变量回归 | 既有 7 条断言全绿；`sizes` 例外仍**只有** `CardModal.tsx` 一处（本条目复用而非新增例外） |
 
 ## 影响范围
 
 **新增**
 - `docs/plan/g17-draw-ritual.md`（本文）
+- `app/components/MotionProvider.tsx`（客户端边界，见「实现偏离记录」）
 - （测试）`app/draw/select/__tests__/page.test.tsx` 大幅扩写
 
 **修改**
 - `app/draw/select/page.tsx`（重写：连续选满 + 棋盘填满 + 洗牌 + 揭示浮层 + 紧凑槽位条）
-- `app/draw/page.tsx`（B1 去遮罩、B2 文案收敛）
-- `app/page.tsx`（C1 去假加载、C2 问题回填）
+- `app/draw/page.tsx`（B1 去遮罩；并删除随之不可达的 `useState` 导入）
+- `app/page.tsx`（C1 去假加载、C2 问题回填；并删除随之不可达的 `isLoading` 状态与 spinner 分支）
 - `app/components/CardModal.tsx`（新增可选 `actionLabel`）
-- `app/layout.tsx`（`MotionConfig reducedMotion="user"`）
+- `app/components/SpreadSlots.tsx`（`compact` 分支由死代码转为活代码，并改为不渲染含义）
+- `app/layout.tsx`（挂载 `MotionProvider`）
 - `app/globals.css`（`prefers-reduced-motion` 块）
 - `lib/drawFlow.ts`（新增 `SHUFFLE_DURATION_MS`）
 - `tests/css-contract.test.ts`（新增 D1 契约）
 - `docs/archive/draw-interaction.md`（G9/G10/G11 就地补「后续变更」指针，**不改写历史结论**）
 
 **删除**
-- 无文件删除。`SpreadSlots` 的 `compact` 分支由死代码转为活代码（`tests/no-dead-code.test.ts` 无影响）。
+- 无文件删除。两处因去掉假等待而不可达的代码被就地删除（`app/page.tsx` 的加载态、`app/draw/page.tsx` 的 `useState` 导入）——不留"看起来还活着"的死分支。
 
 ## 风险与假设
 
@@ -215,6 +217,22 @@
 | 11 | 清掉 666ms / 500ms 假等待 + 回填首页问题 | 链路省 1.2s；修复 C2 缺陷 |
 | 12 | 揭示浮层**复用 `CardModal`** 而非新建组件（**负责人已确认**，含其 `actionLabel` 公共 API 变更） | 避免新增第二个 `sizes` 例外，守住 G15/D12 唯一小档不变量；符合奥卡姆剃刀 |
 | 13 | 浮层收起除按钮外，**支持点浮层外任意处** | `CardModal` 既有行为，复用即得 |
+
+## 实现偏离记录
+
+实现过程中与原方案的三处偏离，以及一处**实现缺陷自纠**：
+
+| # | 偏离 | 理由 |
+|---|---|---|
+| 1 | **不直接 `import { MotionConfig }` 进 `layout.tsx`**，改为新增客户端边界组件 `MotionProvider.tsx` | `layout.tsx` 是 Server Component，而 `MotionConfig` 需要 Client Context。已核实 `framer-motion@12.33.0` 的 **ESM** 构建带 `"use client"` 指令、但 **CJS** 构建（`dist/cjs/index.js`）中该指令为 0 处——把"Next 恰好解析到 ESM"当作契约太脆。显式界线更可靠，构建已验证通过。 |
+| 2 | **揭示浮层不套 `AnimatePresence`** | 退场期间节点仍留在 DOM：浮层按钮仍可点，且一层 `fixed inset-0` 仍盖着网格。对"点击即落定、连续选满 N 张"的流程，这等于**每次收牌后多出一段约 300ms 的点击死区**。入场动画（弹簧缩放）由 `CardModal` 自身承担，它才是揭示感的来源。<br>附带事实：在本仓库的 jsdom + Vitest 环境下，推进假计时器（含一并 fake `requestAnimationFrame`/`performance`）**都无法**驱动 `AnimatePresence` 完成退场卸载——决定不为此在生产代码里做妥协。 |
+| 3 | **`SpreadSlots` 的 `compact` 模式改为不渲染含义** | 见下「实现缺陷自纠」。compact 是"进度条"而非"阅读面"，含义由页头大号卡片承担。 |
+
+### 实现缺陷自纠
+
+初版实现中，选牌子页**页头**渲染了「当前待选位含义」的大号卡片，而**紧凑槽位条**里的 `SpreadSlots` 又把每个位的含义渲染了一遍——同一句话在屏幕上出现两次。
+
+这正是本条目在 grilling 阶段批评过的"三处说同一件事"的冗余，实现时又犯了一遍；由 A2 测试（`Found multiple elements with the text`）撞出。已按上表第 3 条修正，并补进上表以免重蹈。
 
 ## 测试覆盖的边界（哪些靠自动化、哪些只能人工）
 
