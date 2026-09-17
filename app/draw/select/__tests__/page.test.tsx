@@ -184,7 +184,8 @@ describe("G17 选牌子页(/draw/select)：洗牌 → 连续选满 → 飞入揭
     expect(screen.getByTestId("reveal-flying-card")).toBeInTheDocument();
 
     const modal = within(screen.getByTestId("card-modal-content"));
-    expect(modal.getByText("过去")).toBeInTheDocument();
+    // 位置信息（牌位名）已按用户要求从揭示浮层移除，故不再断言
+    expect(modal.queryByText("过去")).toBeNull();
     expect(modal.getByText(tarotCards[7].name)).toBeInTheDocument();
     // 逆位为 30% 随机，故只断言二者必居其一
     expect(modal.getByText(/^(正位|逆位)$/)).toBeInTheDocument();
