@@ -143,12 +143,14 @@ export function CardModal({
             </div>
           </motion.div>
 
-          {/* 详情在飞行接近尾声时淡入;缩回时先快速淡出。
-              **自带面**:文字直接压在蒙层上时,蒙层越透明越看不清(底下透上来的亮色冲淡白字)。
-              给它自己的深色面,「蒙层够透」与「文字够清」就不再互相打架——
-              这也是上一轮在 /45↔/60 之间来回调却始终不对的根因。 */}
+          {/* 详情面:文字自带深色玻璃底(否则蒙层越透字越看不清),顶部一条金色高光线
+              呼应结果页 .astro-card 的 ::before 设计语言。**只有文字**,不含按钮——
+              按钮是操作,不属于这块文字卡。 */}
           <motion.div
-            className="mt-6 rounded-2xl bg-astro-deep/90 backdrop-blur-md border border-white/10 shadow-xl px-6 py-4 flex flex-col items-center text-center"
+            className="relative mt-7 w-full max-w-xs rounded-2xl px-6 pt-5 pb-4 text-center
+                       bg-gradient-to-b from-astro-mid/95 to-astro-deep/95
+                       border border-white/10
+                       shadow-[0_16px_48px_rgba(15,10,42,0.5)]"
             initial={{ opacity: 0 }}
             animate={{ opacity: reveal.exiting ? 0 : 1 }}
             transition={{
@@ -156,16 +158,29 @@ export function CardModal({
               delay: reveal.exiting ? 0 : (REVEAL_FLY_IN_MS / 1000) * 0.6,
             }}
           >
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-px bg-gradient-to-r from-transparent via-gold to-transparent" />
             {details}
-            {actionLabel && (
-              <button
-                onClick={onClose}
-                className="mt-5 px-10 py-3 rounded-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold shadow-lg transition-colors cursor-pointer"
-              >
-                {actionLabel}
-              </button>
-            )}
           </motion.div>
+
+          {/* 确认按钮:独立于详情面,在面下方居中。点在 content 内已 stopPropagation,
+              故 onClick 直连 onClose 即可。 */}
+          {actionLabel && (
+            <motion.button
+              onClick={onClose}
+              className="mt-5 px-10 h-12 rounded-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold shadow-lg shadow-purple-900/30 transition-colors cursor-pointer"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{
+                opacity: reveal.exiting ? 0 : 1,
+                y: reveal.exiting ? 8 : 0,
+              }}
+              transition={{
+                duration: reveal.exiting ? 0.12 : 0.25,
+                delay: reveal.exiting ? 0 : (REVEAL_FLY_IN_MS / 1000) * 0.7,
+              }}
+            >
+              {actionLabel}
+            </motion.button>
+          )}
         </div>
       </motion.div>
     );
