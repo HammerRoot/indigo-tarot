@@ -64,6 +64,9 @@ export default function SelectPage() {
     reducedMotion || hadPicksOnMount ? "idle" : "shuffling",
   );
   const [reveal, setReveal] = useState<Reveal | null>(null);
+  // 页头是否已吸顶(sticky 生效)。用于切换「两行 → 一行」
+  const [isStuck, setIsStuck] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
   const timersRef = useRef<number[]>([]);
 
   useEffect(() => {
@@ -104,15 +107,43 @@ export default function SelectPage() {
     return () => window.clearTimeout(id);
   }, [reducedMotion, hadPicksOnMount]);
 
-  // 揭示/缩回期间锁定页面滚动,否则缩回的目标格会在动画途中移位
+  // 揭示/缩回期间锁定页面滚动,否则缩回的目标格会在动画途中移位。
+  // 锁定用 overflow:hidden 会让滚动条消失 → 内容宽度变化 → 页面闪动。
+  // 修复:先测出滚动条宽度(有则非 0),锁定同时给 body 补等宽 padding-right,占位不变。
   useEffect(() => {
     if (phase !== "revealing" && phase !== "closing") return;
-    const previous = document.body.style.overflow;
+    const scrollbarWidth =
+      window.innerWidth - document.documentElement.clientWidth;
+    const prevOverflow = document.body.style.overflow;
+    const prevPaddingRight = document.body.style.paddingRight;
     document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
     return () => {
-      document.body.style.overflow = previous;
+      document.body.style.overflow = prevOverflow;
+      document.body.style.paddingRight = prevPaddingRight;
     };
   }, [phase]);
+
+  // 吸顶检测:header sticky top-0,当它的顶边贴到视口顶部(rect.top <= 0)即已吸住。
+  // rAF 节流,避免滚动时高频调用 getBoundingClientRect。
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        setIsStuck(header.getBoundingClientRect().top <= 0);
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const meanings = useMemo(
     () =>
@@ -184,14 +215,16 @@ export default function SelectPage() {
   const revealedFill = reveal ? selectedSlots[reveal.slot] : null;
 
   return (
-    <div className="min-h-screen mystical-bg relative overflow-hidden">
+    // 注意:这里不能有 overflow-hidden —— 任何祖先的 overflow 裁剪都会破坏 sticky 吸顶。
+    // 原扇形轮盘(G8)需要它裁剪,平铺网格不需要;stars 早已 display:none 亦无需裁剪。
+    <div className="min-h-screen mystical-bg relative">
       <div className="stars"></div>
 
       <main className="relative z-10 min-h-screen px-4 py-8">
         {/* 关闭(退出)按钮:进度保留在 store,退出 ≠ 放弃 */}
         <motion.button
           onClick={closeSelect}
-          className="fixed top-6 left-6 mystical-button p-3"
+          className="fixed top-6 left-6 z-30 mystical-button p-3"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           aria-label="关闭选牌"
@@ -200,18 +233,38 @@ export default function SelectPage() {
         </motion.button>
 
         <div className="max-w-3xl mx-auto pt-20">
-          {/* 页头:两行纯文字,不加容器(此处每一像素都该让给网格) */}
-          <div className="text-center mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-800">
+          {/* 页头:吸顶(sticky top-0)。未吸顶两行,吸顶收敛为一行(标题 + 进度),
+              含义在吸顶时隐藏——滚动选牌时最重要的是「在选哪一位」与「选了几张」。 */}
+          <div
+            ref={headerRef}
+            className={cn(
+              "sticky top-0 z-20 text-center mb-6 rounded-b-xl transition-all duration-200",
+              isStuck && "bg-white/90 backdrop-blur-sm shadow-sm -mx-4 px-4 py-2",
+            )}
+          >
+            <h2
+              className={cn(
+                "font-bold text-gray-800",
+                isStuck ? "text-base" : "text-xl md:text-2xl",
+              )}
+            >
               {isComplete
                 ? "牌阵已就位"
                 : `为「${recommendedSpread.positions[focus]}」选一张牌`}
+              {isStuck && (
+                <span className="text-sm font-normal text-gray-500">
+                  {" "}
+                  · 已选 {filledCount} / {recommendedSpread.cardCount}
+                </span>
+              )}
             </h2>
-            <p className="text-sm text-gray-500 mt-2">
-              {!isComplete && `${meanings[focus]} · `}
-              已选 {filledCount} / {recommendedSpread.cardCount}
-              {isShuffling ? " · 洗牌中…" : ""}
-            </p>
+            {!isStuck && (
+              <p className="text-sm text-gray-500 mt-2">
+                {!isComplete && `${meanings[focus]} · `}
+                已选 {filledCount} / {recommendedSpread.cardCount}
+                {isShuffling ? " · 洗牌中…" : ""}
+              </p>
+            )}
           </div>
 
           {/* 棋盘填满:78 个牌位位置全程不变 */}
