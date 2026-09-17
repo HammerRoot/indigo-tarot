@@ -48,6 +48,42 @@ npm run dev                  # http://localhost:3000
    pm2 start npm --name indigo-tarot --max-memory-restart 500M -- start -- -p 3000
    pm2 save && pm2 startup
    ```
+3.5. **更新部署（拉取 `main` 覆盖）**——服务器直连 GitHub 超时，走 `ghfast.top` 镜像：
+
+   ```bash
+   cd /root/indigo-tarot
+   curl -L -o /tmp/code.tar.gz \
+     https://ghfast.top/https://github.com/HammerRoot/indigo-tarot/archive/refs/heads/main.tar.gz
+   tar -xzf /tmp/code.tar.gz --strip-components=1 -C /root/indigo-tarot
+   npm ci && npm run build && pm2 restart indigo-tarot
+   ```
+
+   > ⚠️ **`tar` 只覆盖和新增，从不删除。** 仓库里删掉的文件会一直留在服务器工作树上，
+   > 而 `next build` **会对测试文件做类型检查**——一个引用已删符号的旧测试文件足以让
+   > 生产构建失败（2026-09-17 实际发生过：残留的 `lib/__tests__/grid.test.ts` 引用已删除的
+   > `gridClassFor`，构建报 `TS2305` 直接失败）。
+   >
+   > **每次更新前先对账服务器独有文件**（`tar` 包里有的一律不动）：
+   >
+   > ```bash
+   > tar -tzf /tmp/code.tar.gz | sed 's|^[^/]*/||' | grep -v '/$' | sort > /tmp/expected.txt
+   > find . -type f -not -path './node_modules/*' -not -path './.next/*' -not -path './.git/*' \
+   >   -not -name '.env.local' -not -name 'next-env.d.ts' -not -name '*.log' \
+   >   | sed 's|^\./||' | sort > /tmp/actual.txt
+   > comm -23 /tmp/actual.txt /tmp/expected.txt   # 输出的即"服务器有、仓库已删"
+   > ```
+   >
+   > `next-env.d.ts` 必须在上面排除掉：它被 `.gitignore` 忽略、不进 tar 包，但由 Next
+   > 构建时自动生成、服务器上本该存在——不排除的话它每次都会作为误报出现在清单里。
+   > 同理，任何"被 gitignore 但服务器上理应存在"的文件都属于这一类误报。
+   >
+   > 对照仓库确认后逐个 `rm`。**若出现不认识的条目先停下来核对**——该目录里可能有
+   > 仓库之外的东西，不该盲删。
+   >
+   > 同理，**改了 `next.config.ts` 的 `images` 配置（尤其 `minimumCacheTTL`）后**，
+   > `.next/cache/images` 里按旧配置写入的条目会继续按旧 TTL 下发，需要
+   > `rm -rf .next/cache/images` 才会立即生效（不删则等其自然过期，属自愈）。
+
 4. **Nginx 反向代理**（对外 80 → 应用 3000）：
    - 作用之一是**覆写 `X-Forwarded-For`**，使 IP 限流无法被客户端伪造的请求头绕过（详见 [`archive/migration-2026-09.md`](./archive/migration-2026-09.md) §16）；
    - 配置中 `proxy_buffering off` 是**必需项**——否则 SSE 逐字输出会退化成一次性刷出；
