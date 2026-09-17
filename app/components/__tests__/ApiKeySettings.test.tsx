@@ -6,6 +6,23 @@ function openModal() {
   fireEvent.click(screen.getByTitle("API设置"));
 }
 
+/**
+ * 模拟非安全上下文（HTTP 公网直连）：`crypto.subtle` 不存在。
+ * 这是「记住 Key」加密链路的真实前置条件——见 lib/apiKeyCrypto.ts。
+ * 用实例自有属性遮蔽原型上的 getter，退出时 delete 还原。
+ */
+function withoutSubtle<T>(fn: () => T): T {
+  Object.defineProperty(window.crypto, "subtle", {
+    value: undefined,
+    configurable: true,
+  });
+  try {
+    return fn();
+  } finally {
+    delete (window.crypto as { subtle?: unknown }).subtle;
+  }
+}
+
 describe("R1-D ApiKeySettings 掩码与记住开关", () => {
   it("默认掩码显示（type=password）", () => {
     render(<ApiKeySettings currentApiKey="" onApiKeyChange={vi.fn()} />);
@@ -102,5 +119,47 @@ describe("R1-D ApiKeySettings 掩码与记住开关", () => {
     expect(overlay).not.toBeNull();
     fireEvent.click(overlay!);
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});
+
+describe("O6 非安全上下文（HTTP）隐藏「记住 Key」", () => {
+  it("crypto.subtle 可用时，该行保留且默认勾选（安全上下文不受影响）", () => {
+    render(<ApiKeySettings currentApiKey="" onApiKeyChange={vi.fn()} />);
+    openModal();
+    expect(screen.getByText(/在本设备记住 Key/)).toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).toBeChecked();
+  });
+
+  it("无 crypto.subtle 时整行隐藏：勾选框与边界说明文案都不渲染", () => {
+    withoutSubtle(() => {
+      render(<ApiKeySettings currentApiKey="" onApiKeyChange={vi.fn()} />);
+      openModal();
+      expect(screen.queryByRole("checkbox")).toBeNull();
+      expect(screen.queryByText(/在本设备记住 Key/)).toBeNull();
+      expect(screen.queryByText(/静态窃取/)).toBeNull();
+    });
+  });
+
+  it("无 crypto.subtle 时保存携带 remember=false（不再尝试注定失败的加密）", () => {
+    withoutSubtle(() => {
+      const onChange = vi.fn();
+      render(<ApiKeySettings currentApiKey="" onApiKeyChange={onChange} />);
+      openModal();
+      fireEvent.change(screen.getByPlaceholderText("sk-..."), {
+        target: { value: "sk-x" },
+      });
+      fireEvent.click(screen.getByText("保存"));
+      expect(onChange).toHaveBeenCalledWith("sk-x", false);
+    });
+  });
+
+  it("无 crypto.subtle 时，其余表单项照常可用（隐藏的只有记住 Key）", () => {
+    withoutSubtle(() => {
+      render(<ApiKeySettings currentApiKey="" onApiKeyChange={vi.fn()} />);
+      openModal();
+      expect(screen.getByPlaceholderText("sk-...")).toBeInTheDocument();
+      expect(screen.getByText("API 设置")).toBeInTheDocument();
+      expect(screen.getByText("保存")).toBeInTheDocument();
+    });
   });
 });

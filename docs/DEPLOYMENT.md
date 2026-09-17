@@ -217,7 +217,7 @@ npm run dev                  # http://localhost:3000
 8. 改环境变量后必须**重启 PM2 进程**才生效（`pm2 restart indigo-tarot`，无需重新 build）。
 9. ⚠️ 若需重建 PM2 进程，务必带上 `-p 3000 --max-memory-restart 500M` 并执行 `pm2 save`，否则重启后应用会回到 80 端口与 Nginx 冲突。
 
-> ⚠️ 当前生产为 **HTTP 明文直连**（无 HTTPS），`crypto.subtle` 不可用 → API Key「记住」功能失效（刷新丢 Key），属固有限制。详见 [`OPERATIONS.md`](./OPERATIONS.md) 三、已知限制。
+> ⚠️ 当前生产为 **HTTP 明文直连**（无 HTTPS），`crypto.subtle` 不可用 → API Key「记住」功能失效（刷新丢 Key），属固有限制；该选项此时在页面上不显示（O6）。详见 [`OPERATIONS.md`](./OPERATIONS.md) 三、已知限制。
 
 ## 四、成本控制（重要）
 

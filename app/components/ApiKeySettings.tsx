@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Settings, Key, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -28,6 +28,17 @@ export function ApiKeySettings({
   const [showKey, setShowKey] = useState(false);
   const [remember, setRemember] = useState(true);
 
+  // 「记住 Key」依赖 crypto.subtle 做 AES-GCM 加密（lib/apiKeyCrypto.ts），而 crypto.subtle
+  // 只在安全上下文（HTTPS / localhost）存在。生产是 HTTP 公网直连，它是 undefined，
+  // 加密必然抛 `Cannot read properties of undefined (reading 'generateKey')`（决策 D10）。
+  // 检测到不可用就隐藏整行——否则用户勾了、刷新后 Key 没了，看起来像 bug。
+  //
+  // 初值 true 与 SSR 输出一致，避免 hydration 不匹配；弹窗默认关闭，用户看到时已校正完毕。
+  const [canRememberKey, setCanRememberKey] = useState(true);
+  useEffect(() => {
+    setCanRememberKey(typeof window.crypto?.subtle !== "undefined");
+  }, []);
+
   const isControlled = open !== undefined;
   const isOpen = isControlled ? open : internalOpen;
   const setOpen = (v: boolean) => {
@@ -36,7 +47,8 @@ export function ApiKeySettings({
   };
 
   const handleSave = () => {
-    onApiKeyChange(apiKey, remember);
+    // 不能记住时显式传 false：跳过注定失败的加密分支（store 里会 catch 并打 console.error）
+    onApiKeyChange(apiKey, canRememberKey && remember);
     setOpen(false);
   };
 
@@ -143,25 +155,27 @@ export function ApiKeySettings({
                   </div>
                 </div>
 
-                {/* 记住 Key（加密保存） */}
-                <div className="mb-6">
-                  <label className="flex items-start gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={remember}
-                      onChange={(e) => setRemember(e.target.checked)}
-                      className="mt-1 accent-purple-600"
-                    />
-                    <span className="text-sm text-gray-700">
-                      在本设备记住 Key（加密保存）
-                    </span>
-                  </label>
-                  <p className="text-xs text-gray-400 mt-2 leading-relaxed">
-                    加密保存可防止静态窃取（如浏览器扩展扫描、磁盘取证），
-                    但无法防恶意脚本/浏览器扩展在会话期间的读取。
-                    关闭后 Key 仅保存在当前会话，刷新页面需重新输入。
-                  </p>
-                </div>
+                {/* 记住 Key（加密保存）——仅在加密可用的安全上下文下渲染（O6） */}
+                {canRememberKey && (
+                  <div className="mb-6">
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={remember}
+                        onChange={(e) => setRemember(e.target.checked)}
+                        className="mt-1 accent-purple-600"
+                      />
+                      <span className="text-sm text-gray-700">
+                        在本设备记住 Key（加密保存）
+                      </span>
+                    </label>
+                    <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                      加密保存可防止静态窃取（如浏览器扩展扫描、磁盘取证），
+                      但无法防恶意脚本/浏览器扩展在会话期间的读取。
+                      关闭后 Key 仅保存在当前会话，刷新页面需重新输入。
+                    </p>
+                  </div>
+                )}
 
                 {/* 保存按钮（当前状态上方，全宽） */}
                 <button
