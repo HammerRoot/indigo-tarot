@@ -37,7 +37,7 @@
 | N6 | 依赖审计（spec G4） | ✅ 已完成并上线（2026-09-16） | 我 | 15 项（1 critical / 10 high）→ 升级 `next` 16.1.6 → **16.3.5** + `npm audit fix` → **0 漏洞**；可选 CI 经评估不加（归档 §13）。**服务器已重新部署，`node_modules/next` 实测 `16.3.5`** |
 | N7 | 分支处置（spec G4） | ✅ 已完成（2026-09-16） | 我 | `feature/less-modules` 已删除（被决策 D4/O2 取代，最后提交 `3e40e49`）；`feat/tencent-migration` 已并入 main |
 | N8 | 补齐 Redis 分支测试（quota / rate-limit / trial） | ✅ 已完成（2026-09-16） | 我 | 由 N3 事故暴露的**系统性测试盲区**。已补 26 例（quota 11 / rate-limit 7 / trial 8），并做变异验证证明测试确实能抓到对应缺陷。**全部内容见 [`archive/n8-redis-branch-tests.md`](./archive/n8-redis-branch-tests.md)，本文不重复** |
-| N9 | Redis 故障**静默降级**无告警 | ✅ 已完成 | 你 | UptimeRobot 已加 `/api/health` 监控（见 N1）：该端点在 Redis 连不上时返回 503、触发告警，静默降级不再"无人知晓"。至此无需再改空 error handler |
+| N9 | Redis 故障**静默降级**无告警 | ✅ 已完成（2026-09-16） | 你 | UptimeRobot 已加 `/api/health` 监控（见 N1）：该端点在 Redis 连不上时返回 503、触发告警，静默降级不再"无人知晓"。至此无需再改空 error handler |
 
 ---
 
