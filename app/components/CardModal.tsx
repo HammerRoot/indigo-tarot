@@ -73,8 +73,13 @@ export function CardModal({
       <span className="inline-block px-4 py-1.5 rounded-full bg-gold/20 border border-gold/40 text-gold text-xs tracking-widest uppercase mb-3">
         {position}
       </span>
-      <h3 className="text-white text-2xl font-bold mb-1">{card.name}</h3>
-      <p className="text-white/60 text-sm mb-2">{isReversed ? "逆位" : "正位"}</p>
+      {/* 牌名与正/逆位并一行:字号颜色各自不变(牌名 2xl bold / 正逆位 white/60 text-sm) */}
+      <h3 className="text-white text-2xl font-bold mb-1">
+        {card.name}
+        <span className="text-white/60 text-sm font-normal ml-2">
+          {isReversed ? "逆位" : "正位"}
+        </span>
+      </h3>
       <p className="text-gold/90 text-sm tracking-wide">{keywords}</p>
     </>
   );
@@ -95,14 +100,15 @@ export function CardModal({
     return (
       <motion.div
         data-testid="card-modal-overlay"
-        className="fixed inset-0 z-50 bg-purple-950/45 backdrop-blur-sm flex items-center justify-center p-4"
+        className="fixed inset-0 z-50 bg-purple-950/60 backdrop-blur-md flex items-center justify-center p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         onClick={onClose}
       >
+        {/* 底部给悬浮按钮让位:内容整体上移,避免牌名/关键词与按钮重叠 */}
         <div
           data-testid="card-modal-content"
-          className="relative flex flex-col items-center"
+          className="relative flex flex-col items-center pb-24"
           onClick={(e) => e.stopPropagation()}
         >
           {/* 飞行元素:rotateY 0 → 180,背→正。容器与详情的时序见下 */}
@@ -148,16 +154,32 @@ export function CardModal({
             }}
           >
             {details}
-            {actionLabel && (
-              <button
-                onClick={onClose}
-                className="mt-6 px-10 py-3 rounded-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold shadow-lg transition-colors cursor-pointer"
-              >
-                {actionLabel}
-              </button>
-            )}
           </motion.div>
         </div>
+
+        {/* 确认按钮:脱离详情流,fixed 在蒙层底部满宽——拇指最易达、连选多张位置不变。
+            蒙层 onClick 也触发 onClose,按钮须 stopPropagation 避免冒泡导致重复调用。 */}
+        {actionLabel && (
+          <motion.div
+            className="fixed bottom-6 left-4 right-4"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: reveal.exiting ? 0 : 1, y: reveal.exiting ? 12 : 0 }}
+            transition={{
+              duration: reveal.exiting ? 0.12 : 0.25,
+              delay: reveal.exiting ? 0 : (REVEAL_FLY_IN_MS / 1000) * 0.6,
+            }}
+          >
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
+              className="w-full h-[52px] rounded-2xl bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white text-lg font-bold shadow-lg active:scale-[0.99] transition cursor-pointer"
+            >
+              {actionLabel}
+            </button>
+          </motion.div>
+        )}
       </motion.div>
     );
   }
