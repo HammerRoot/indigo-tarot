@@ -1,9 +1,26 @@
-# 🟢 G16 测试文件移出生产构建的类型检查
+# G16：测试文件移出生产构建的类型检查
 
-> **本文只负责**：G16 单一条目的根因、技术方案、风险点、做完后的检测流程。
-> **本文不写**：其他条目状态（→ [`../README.md`](../README.md)）、部署与运维现状（→ [`../DEPLOYMENT.md`](../DEPLOYMENT.md) / [`../OPERATIONS.md`](../OPERATIONS.md)）。
+> **归档日期**：2026-09-17 ｜ **条目状态**：✅ 已完成（已合并 `main` @ `2e7583d`）
 >
-> **状态**：✅ 实现完成（TDD 红→绿 + 变异验证 + 全量门禁通过），待在 `update/test-typecheck-scope` 分支验收合并。
+> ⚠️ **本文是历史记录，不描述当前状态。** 文中"现状 / 当前"等表述均指归档当时。
+> 规格台账与决策记录见 [`README.md`](../README.md)，部署与运维见 [`DEPLOYMENT.md`](../DEPLOYMENT.md) / [`OPERATIONS.md`](../OPERATIONS.md)。
+>
+> **本文只负责**：G16 这一件事——根因、技术方案、风险、检测流程、验收与偏离。
+> **本文不写**：其他条目（→ [`README.md`](../README.md) 的条目状态表）、其他待办（→ [`OPERATIONS.md`](../OPERATIONS.md)）。
+>
+> 其他文档提到 G16 时**只能链接本文**，不得复写其内容。
+
+---
+
+## 〇、完成结果（归档时）
+
+| 项 | 值 |
+|---|---|
+| 状态 | ✅ **已完成**（2026-09-17 实现 + 变异验证 + 全量门禁，已合并 `main`） |
+| 分支 | `update/test-typecheck-scope` |
+| 规模 | 5 文件（`tsconfig.json` 改 exclude、新增 `tsconfig.test.json`、`package.json` 改 type-check、新增契约测试与本文） |
+| 用户可感结果 | 无——**构建产物与运行时行为完全不变**，价值体现在"下一次部署不再被残留测试文件打挂" |
+| 质量门禁 | `type-check` ✅ / `lint` ✅ / `test:run` ✅（40 文件 257 用例） |
 
 ---
 

@@ -1,6 +1,6 @@
 # indigo-tarot 文档
 
-> **本文只负责三件事**：① 文档规则与地图；② 规格台账（条目状态 + 决策 D1–D12）；
+> **本文只负责三件事**：① 文档规则与地图；② 规格台账（条目状态 + 决策 D1–D13）；
 > ③ 文件清单（活跃 / 在飞 / 归档）。
 > **本文不写**：部署步骤（→ [`DEPLOYMENT.md`](./DEPLOYMENT.md)）、运维现状与待办（→ [`OPERATIONS.md`](./OPERATIONS.md)）、
 > 迁移过程与事故经过（→ [`archive/`](./archive/)）。
@@ -25,7 +25,7 @@
 | [`../README.md`](../README.md) | 给使用者：功能、技术栈、快速开始、API 契约、隐私边界 | 部署细节、运维待办、事件记录 |
 | [`DEPLOYMENT.md`](./DEPLOYMENT.md) | 给运维：环境变量、部署步骤、成本控制、管理接口、上线检查清单 | 迁移历史、事故经过、条目状态 |
 | [`OPERATIONS.md`](./OPERATIONS.md) | **唯一的运维现状**：现状速览、待办台账（N 系列）、已知限制、疑点 | 重复本文的规格台账 |
-| **本文** | 文档规则与地图、**规格条目状态**、**决策 D1–D12（唯一定义处）** | 部署现状、运维待办 |
+| **本文** | 文档规则与地图、**规格条目状态**、**决策 D1–D13（唯一定义处）** | 部署现状、运维待办 |
 
 ### 归档规则
 
@@ -72,6 +72,7 @@
 | [`40-green-improvements.md`](./archive/40-green-improvements.md) | 🟢 绿级：质量提升 G1–G7、G14 |
 | [`draw-interaction.md`](./archive/draw-interaction.md) | 🟢 抽牌交互模块：G8–G13（选牌情况页 + 选牌子页 + 结果页优化 + 结论先行 + 免责声明） |
 | [`g15-card-image-cache.md`](./archive/g15-card-image-cache.md) | **G15** 卡牌图片缓存命中：根因证据、档位收敛方案、验收与实测记录、实现偏离、备选路线 |
+| [`g16-test-typecheck-scope.md`](./archive/g16-test-typecheck-scope.md) | **G16** 测试文件移出生产构建类型检查：根因、tsconfig 拆分方案、风险与检测流程、变异验证 |
 
 ---
 
@@ -80,7 +81,7 @@
 本项目采用**规格驱动开发（SDD）+ 测试驱动开发（TDD）**：所有修复与优化先在 [`plan/`](./plan/) 的对应文档中
 定义验收标准与测试计划，再进入开发；逐条走 **红 → 绿 → 重构**。
 
-### 条目状态（共 33 条，全部完成）
+### 条目状态（共 34 条，全部完成）
 
 > 优先级 emoji 含义：🔴 红=安全漏洞 · 🟠 橙=可复现功能缺陷 · 🟡 黄=清理/文档/小功能 · 🟢 绿=质量提升（可选）。编号首字母对应归档文件：`F`=F0 · `R`=红级 · `O`=橙级 · `Y`=黄级 · `G`=绿级。
 
@@ -119,6 +120,7 @@
 | G13 | 结果页末尾 AI 免责声明 + 牌背图案恢复 | 🟢 | 质量提升（视觉/合规） | ✅ 完成 |
 | G14 | 腾讯云迁移适配：ioredis + deviceId 兼容 HTTP | 🟢 | 部署 | ✅ 完成 |
 | G15 | 卡牌图片缓存命中（选牌页翻过的牌，结果页不该再加载） | 🟢 | 质量提升（性能） | ✅ 完成 |
+| G16 | 测试文件移出生产构建的类型检查（残留测试文件不再打挂部署构建） | 🟢 | 质量提升（构建/部署） | ✅ 完成 |
 
 > **本表只登记已完成条目。** 在飞的规格在 [`plan/`](./plan/) 里（见上方「计划中的规格」），
 > 完成并归档后才在此补一行——所以本表是账本，不是待办列表。
@@ -132,7 +134,7 @@
 > 复核方式就是这三条命令本身。**本文不记录测试数量**——那是个每加一个测试就过期的数字，
 > 记在这里只会制造维护负担，且对读者没有价值（要规模就自己跑一条命令）。
 
-### 决策记录（Assumptions & Decisions，D1–D12）
+### 决策记录（Assumptions & Decisions，D1–D13）
 
 | 编号 | 决策 | 理由 |
 |---|---|---|
@@ -148,6 +150,7 @@
 | D10 | HTTP 直连部署下 `crypto.subtle` / `crypto.randomUUID` 不可用：deviceId 改用 `crypto.getRandomValues()` 手写 UUID v4；API Key 加密降级为不持久化（内存可用，刷新需重填） | 公网 IP 直连（免 ICP 备案）只能用 HTTP；上 HTTPS 才能恢复完整功能 |
 | D11 | 存储层从 **Upstash Redis REST 迁移到 ioredis 连自建 Redis**（`REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`）；`redisCommand` 接口与返回结构不变，调用方零改动 | 腾讯云迁移后状态存储须留在境内服务器；自建 Redis + AOF 持久化，不再依赖外部 SaaS |
 | D12 | 卡牌图片收敛为**唯一小档**（`images.imageSizes: [384]`）+ **唯一入口** `CardImage`，靠"布局宽 × DPR ≤ 384"这一不变量使同一张牌在各页面解析出同一个优化 URL | 图片加载慢的根因不是"没缓存"，而是各处 `sizes` 不同导致同一张牌请求了不同宽度的变体（`w=384` vs `w=640`），缓存键不同必然不命中。**代价**：DPR1/2 下小图从 5–26KB 变 53KB/张，换取"翻过的牌零请求"。改动档位前必须复算不变量并跑 `tests/card-image-variant.test.ts`。详见 [G15](./archive/g15-card-image-cache.md) |
+| D13 | **生产构建只做生产代码的类型检查**：测试文件与测试基础设施（`*.test.ts(x)`、`__tests__/`、`vitest.setup.ts`、`vitest.config.ts`）由根 `tsconfig.json` 的 `exclude` 排除，改由 `tsconfig.test.json` 在开发侧（`npm run type-check`）检查 | 职责错配：测试代码不是生产产物，却由生产构建裁决——服务器残留的过期测试文件能打挂部署构建（2026-09-17 实际发生）。**显式拒绝 `typescript.ignoreBuildErrors: true`**：那是关掉检查让症状消失，而非让检查归位。契约见 `tests/tsconfig-scope.test.ts`，详见 [G16](./archive/g16-test-typecheck-scope.md) |
 
 ---
 
