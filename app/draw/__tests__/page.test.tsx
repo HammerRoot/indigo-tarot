@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { useTarotStore } from "@/lib/store";
 import { tarotCards } from "@/lib/tarot-data";
 import { SelectionFill } from "@/lib/drawFlow";
@@ -96,9 +96,6 @@ describe("G10 选牌情况页(/draw)", () => {
     expect(screen.queryByText("开始选牌")).toBeNull();
     expect(document.querySelectorAll('[data-filled-card]').length).toBe(3);
     fireEvent.click(screen.getByText(/开始解析/));
-    act(() => {
-      vi.advanceTimersByTime(500);
-    });
     const { drawnCards, cardReversals } = useTarotStore.getState();
     expect(drawnCards.length).toBe(3);
     expect(drawnCards[0].id).toBe(tarotCards[7].id);
@@ -107,4 +104,17 @@ describe("G10 选牌情况页(/draw)", () => {
     expect(cardReversals.length).toBe(3);
     expect(pushMock).toHaveBeenCalledWith("/result");
   });
+
+  it("B1 去掉 500ms 假等待:点击后不推进计时器即跳转,且无全屏加载遮罩", () => {
+    setupStore([fill(7), fill(20), fill(33)]);
+    render(<DrawPage />);
+    fireEvent.click(screen.getByText(/开始解析/));
+
+    // 同步跳转——未经任何计时器推进
+    expect(pushMock).toHaveBeenCalledWith("/result");
+    // 全屏加载遮罩的文案不存在
+    expect(screen.queryByText(/即将开始AI解析/)).toBeNull();
+    expect(screen.queryByText(/准备进入解析页面/)).toBeNull();
+  });
+
 });
