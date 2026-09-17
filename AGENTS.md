@@ -10,9 +10,16 @@
 > `CLAUDE.md` 一字不差）。它**随仓库提交**，不要删除。
 > **规则只写在本文件里**——往 `CLAUDE.md` 里加规则会立刻制造第二份事实。
 >
-> 文件末尾 `<!-- BEGIN:nextjs-agent-rules -->` 区块由 `next dev` 自动维护（实现在
-> `node_modules/next/dist/server/lib/generate-agent-files.js`，可用 `agentRules: false` 关闭），
-> **不要手改**；连同工作一起提交可保持工作区干净——这是 Next 官方建议。
+> ⚠️ **Next 的 agent 文件自动生成已用 `agentRules: false` 关闭**（见 `next.config.ts`）。
+>
+> **原因**：生成器 `upsertAgentRulesBlock()` 用 `indexOf` 找 `nextjs-agent-rules` 的
+> **首个**起止标记，再把两者之间的内容整段替换掉。本段原先**把起始标记原文写进了正文**，
+> 于是它把正文里那个标记当成块起点、一路删到文件末尾的真正结束标记——**每次 `next dev`
+> 都会删掉本文件第 1–7 节**。2026-09-17 实际发生（80 行 → 21 行），已从 git 恢复。
+> 实现在 `node_modules/next/dist/server/lib/generate-agent-files.js`。
+>
+> 文件末尾的 Next 区块现为**普通静态内容**，不再自动更新。若日后要重新启用生成，
+> **必须先删掉本段里对起止标记的原文引用**，否则会再次截断本文件。
 
 ## 1. 不可妥协项
 

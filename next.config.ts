@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // 仅开发用：Next 16 默认把 dev 资源视为同源白名单（默认 localhost），
+  // 用 127.0.0.1 访问会被当成跨源而拦截 dev 资源，导致页面无法 hydrate（整页停在
+  // SSR 的入场动画初值上，看起来是空白）。这里把回环地址的两个写法都放行。
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
+  // 关闭 Next 的 agent 文件自动生成：它的 upsertAgentRulesBlock() 用 indexOf 取
+  // nextjs-agent-rules 标记的"首个"出现，而 AGENTS.md 正文里引用了该标记原文，
+  // 导致它把正文当成块起点、把第 1–7 节整段删掉（2026-09-17 实际发生）。详见 AGENTS.md。
+  agentRules: false,
   images: {
     // 卡牌图片只保留唯一小档（规格 G15，契约见 lib/cardImage.ts）：
     // 所有卡牌小图的「布局宽度 × DPR」≤ 384 → 恒取同一档 → 同一张牌在
