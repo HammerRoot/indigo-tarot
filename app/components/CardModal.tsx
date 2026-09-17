@@ -68,19 +68,42 @@ export function CardModal({
     .slice(0, 3)
     .join(" · ");
 
+  // 详情文字有两种配色:结果页(默认形态)在深色夜空底上,白字;揭示浮层在浅色面上,深字。
+  // 字号/结构完全一致,只有颜色随底色走。
+  const light = reveal !== undefined;
   const details = (
     <>
-      <span className="inline-block px-4 py-1.5 rounded-full bg-gold/20 border border-gold/40 text-gold text-xs tracking-widest uppercase mb-3">
+      <span
+        className={`inline-block px-4 py-1.5 rounded-full border text-xs tracking-widest uppercase mb-3 ${
+          light
+            ? "bg-amber-50 border-amber-200 text-amber-700"
+            : "bg-gold/20 border-gold/40 text-gold"
+        }`}
+      >
         {position}
       </span>
-      {/* 牌名与正/逆位并一行:字号颜色各自不变(牌名 2xl bold / 正逆位 white/60 text-sm) */}
-      <h3 className="text-white text-2xl font-bold mb-1">
+      {/* 牌名与正/逆位并一行:字号各自不变,颜色随底色 */}
+      <h3
+        className={`text-2xl font-bold mb-1 ${
+          light ? "text-gray-900" : "text-white"
+        }`}
+      >
         {card.name}
-        <span className="text-white/60 text-sm font-normal ml-2">
+        <span
+          className={`text-sm font-normal ml-2 ${
+            light ? "text-gray-500" : "text-white/60"
+          }`}
+        >
           {isReversed ? "逆位" : "正位"}
         </span>
       </h3>
-      <p className="text-gold/90 text-sm tracking-wide">{keywords}</p>
+      <p
+        className={`text-sm tracking-wide ${
+          light ? "text-amber-700" : "text-gold/90"
+        }`}
+      >
+        {keywords}
+      </p>
     </>
   );
 
@@ -143,14 +166,13 @@ export function CardModal({
             </div>
           </motion.div>
 
-          {/* 详情面:文字自带深色玻璃底(否则蒙层越透字越看不清),顶部一条金色高光线
-              呼应结果页 .astro-card 的 ::before 设计语言。**只有文字**,不含按钮——
-              按钮是操作,不属于这块文字卡。 */}
+          {/* 详情面:浅色玻璃拟态(暗色底在占卜语境里不吉利),顶部一条金色高光线
+              呼应结果页 .astro-card 的设计语言。**只有文字**,不含按钮。 */}
           <motion.div
             className="relative mt-7 w-full max-w-xs rounded-2xl px-6 pt-5 pb-4 text-center
-                       bg-gradient-to-b from-astro-mid/95 to-astro-deep/95
-                       border border-white/10
-                       shadow-[0_16px_48px_rgba(15,10,42,0.5)]"
+                       bg-white/90 backdrop-blur-md
+                       border border-purple-100
+                       shadow-[0_16px_40px_rgba(139,92,246,0.18)]"
             initial={{ opacity: 0 }}
             animate={{ opacity: reveal.exiting ? 0 : 1 }}
             transition={{

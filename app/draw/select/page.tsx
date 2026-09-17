@@ -341,7 +341,7 @@ export default function SelectPage() {
             <div className="fixed bottom-6 inset-x-4 z-30">
               <motion.button
                 onClick={closeSelect}
-                className="block w-full max-w-md mx-auto h-[52px] rounded-2xl bg-gradient-to-r from-gold-light to-gold hover:brightness-105 text-astro-deep text-lg font-bold shadow-[0_8px_28px_rgba(212,175,55,0.35)] active:scale-[0.99] transition"
+                className="block w-full max-w-md mx-auto h-[52px] rounded-2xl bg-gradient-to-r from-amber-200 to-gold-light hover:brightness-105 text-amber-950 text-lg font-bold shadow-[0_8px_28px_rgba(212,175,55,0.4)] active:scale-[0.99] transition"
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 whileHover={{ scale: 1.01 }}
