@@ -3,7 +3,7 @@
 > **本文只负责**：G16 单一条目的根因、技术方案、风险点、做完后的检测流程。
 > **本文不写**：其他条目状态（→ [`../README.md`](../README.md)）、部署与运维现状（→ [`../DEPLOYMENT.md`](../DEPLOYMENT.md) / [`../OPERATIONS.md`](../OPERATIONS.md)）。
 >
-> **状态**：⬜ 待审核（SPEC 已定稿，**未实现**，等负责人审核通过再进入 TDD）。
+> **状态**：✅ 实现完成（TDD 红→绿 + 变异验证 + 全量门禁通过），待在 `update/test-typecheck-scope` 分支验收合并。
 
 ---
 
@@ -87,20 +87,18 @@
 
 ## 六、做完后的检测流程（验收标准）
 
-> 全部通过才算完成；任一失败即停下。
+> 全部通过才算完成；任一失败即停下。**均已通过（2026-09-17）**。
 
-1. **生产构建通过**：`npm run build` 全绿，且构建后 `git status` 干净（根 tsconfig 未被 Next 改写）。
-2. **变异验证——本条目最关键的证明**：
-   - 临时在 `lib/__tests__/` 放一个**故意引用不存在符号**的测试文件（如 `__mutation__.test.ts` 引用 `@/lib/not-exist`）；
-   - 断言 A：`npm run build` **不再因此失败**（证明残留测试文件已无法打挂生产构建）；
-   - 断言 B：`npm run type-check` **仍然因此失败**（证明测试文件的类型检查能力没有被关掉，只是换到了正确的位置）；
-   - 完成后立即删除变异文件，不留残留（沿用 `tests/no-dead-code.test.ts` 对 `__mutation__` 目录的禁制精神）。
-3. **type-check 全绿**：`npm run type-check`（此时走 `tsconfig.test.json`）在干净树上通过。
-4. **测试全绿**：`npm run test:run` 通过（证明 `exclude` 没有误伤 vitest 本身——vitest 用的是 `vitest.config.ts`，不读 tsconfig 的 exclude）。
-5. **lint 全绿**：`npm run lint`。
-6. **范围复核**：
-   - `tsc -p tsconfig.json --listFilesOnly | grep -cE "\.test\.|__tests__"` → **0**（生产构建范围不含测试）；
-   - `tsc -p tsconfig.test.json --listFilesOnly | grep -cE "\.test\.|__tests__"` → **39**（开发类型检查仍覆盖全部测试）。
+- [x] **生产构建通过**：`npm run build` 全绿，且构建后 `git status` 干净（根 tsconfig 未被 Next 改写——diff 确认 exclude 仍在）。
+- [x] **变异验证——本条目最关键的证明**：
+  - 放置 `tests/__mutation__.test.ts`（引用不存在的 `@/lib/not-exist`）；
+  - 断言 A：`npm run build` **退出码 0、无 TS2307、`✓ Compiled successfully`**——残留测试文件已无法打挂生产构建；
+  - 断言 B：`npm run type-check` **报 `TS2307: Cannot find module '@/lib/not-exist'`**——测试文件的类型检查能力没有被关掉，只是换到了正确的位置；
+  - 变异文件已删除，无残留。
+- [x] **type-check 全绿**：`npm run type-check`（走 `tsconfig.test.json`）在干净树上通过。
+- [x] **测试全绿**：`npm run test:run` 40 文件 265 用例通过（exclude 未误伤 vitest——它读 `vitest.config.ts`，不读 tsconfig 的 exclude）。
+- [x] **lint 全绿**：`npm run lint`。
+- [x] **范围复核**：`tsc -p tsconfig.json --listFilesOnly` 测试文件数 = **0**；`tsc -p tsconfig.test.json --listFilesOnly` 测试文件数 = **40**（39 + 新增契约测试）。**这同时验证了 §五风险 1 的 `extends` exclude 覆盖语义成立**。
 
 ---
 
