@@ -6,9 +6,9 @@
 >
 > ⚠️ Claude Code **不原生读取 `AGENTS.md`**——官方文档明确写的是 "Claude Code reads `CLAUDE.md`,
 > not `AGENTS.md`"；只有 `AGENTS.md` 而没有 `CLAUDE.md` 时**什么都不会加载**，无回退也无警告。
-> 因此仓库根有一个内容仅为 `@AGENTS.md` 的 `CLAUDE.md` 作为桥接。它被 `.gitignore` 的 `CLAUDE.*`
-> 忽略，属**本机桥接文件**：**规则只写在本文件里**，写进 `CLAUDE.md` 的内容既不进仓库、
-> 也不会被其他机器或其他人看到。
+> 因此仓库根有一个内容仅为 `@AGENTS.md` 的 `CLAUDE.md` 作为桥接（这行内容与 Next 自动生成的
+> `CLAUDE.md` 一字不差）。它**随仓库提交**，不要删除。
+> **规则只写在本文件里**——往 `CLAUDE.md` 里加规则会立刻制造第二份事实。
 >
 > 文件末尾 `<!-- BEGIN:nextjs-agent-rules -->` 区块由 `next dev` 自动维护（实现在
 > `node_modules/next/dist/server/lib/generate-agent-files.js`，可用 `agentRules: false` 关闭），
@@ -36,13 +36,20 @@
 
 ## 4. Spec 状态对账（核心）
 
-- 把 `spec/` 当作架构与契约的**状态账本**。动手前先找出相关 spec，确认它是 `planned/`、`implemented/` 还是缺失。
-- 功能级 spec 放进 `spec/<state>/<feature-domain>/`，不要因为"有架构影响"就全堆进 `architecture/`。
-- **"完成"的定义**：一个改动不算完，直到**实现、测试、文档、示例、兼容信息、`spec/` 状态，讲的是同一个故事**。
-- 一条 planned spec 经代码 / 测试证明落地后，把它从 `spec/planned/` 移到 `spec/implemented/`，更新状态、实现锚点，并在**同一个工作项里**更新 `spec/README.md`。
-- 只部分落地的：留在 `planned/`，记录已实现子集、推迟子集、锚点、剩余验收标准，**不要**标成 implemented。
-- implemented spec 与实际行为不符时：要么修实现 / 文档 / 测试恢复契约，要么更新 spec 和兼容说明——别留着不一致。
-- 收尾时对任何动了公共 API / 推荐用法 / 运行时行为 / 示例 / 兼容的改动，跨 `spec/ 代码/ docs/ tests/` grep 相关术语，消除不一致再报完成；并明确说明 spec 对账是**完成 / 不适用 / 受阻**。
+> **流程细节的唯一出处是 [`docs/README.md`](docs/README.md)**——规格目录布局、条目状态表、
+> 归档规则、决策记录都在那里。本节只写必须记住的纪律，**不复述流程**。
+
+- **动手前先看规格现状**：在 [`docs/plan/`](docs/plan/) 找相关 SPEC。有就按它走；没有就**先写一份**
+  （验收标准 + 测试计划）再动代码，不要边写边想。
+- **在飞的规格就是 `docs/plan/` 里的文件**（一个功能点一个文件）。目录内容即清单，
+  不需要在任何地方另外登记——所以 `docs/README.md` 只在条目**收口时**才更新。
+- **"完成"的定义**：一个改动不算完，直到**实现、测试、文档、示例、SPEC 状态讲的是同一个故事**。
+- **完成才归档**：条目验收后从 `docs/plan/` 移入 [`docs/archive/`](docs/archive/)，
+  **并在 `docs/README.md` 补一行条目状态**（若产生了长期决策，同时补决策记录）。
+- **只部分落地的**：留在 `docs/plan/` 并写明已实现子集、推迟子集、剩余验收标准，**不要**记成已完成。
+- **SPEC 与实际行为不符时**：要么修实现 / 文档 / 测试恢复契约，要么更新 SPEC 和兼容说明——别留着不一致。
+- **收尾时**对任何动了公共 API / 推荐用法 / 运行时行为 / 示例 / 兼容的改动，跨 `代码 / docs/ / tests/`
+  grep 相关术语消除不一致，并明确说明 SPEC 对账是**完成 / 不适用 / 受阻**。
 
 ## 5. 文档与示例同步
 
