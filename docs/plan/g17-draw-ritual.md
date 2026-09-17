@@ -58,7 +58,7 @@
 ### B. 选牌情况页 `/draw`
 
 - [ ] **B1 去掉假等待**：点「开始解析」直接写入 store 并 `push("/result")`，**不再有 500ms 全屏遮罩**
-- [ ] **B2 文案收敛**：进度文字 / 空位高亮 / 按钮下提示三处不再重复表达同一件事；删除已失效的"选完自动返回"类文案
+- [ ] **B2 失效文案清除**：选牌子页的「剩 N 张 · 点击牌背即选 · **选完自动返回**」在新模型下已不成立，须替换为新交互的准确描述
 - [ ] **B3 双入口保留**：点高亮空位与点「开始选牌」仍等价（均 `push("/draw/select")`）
 
 ### C. 首页 `/`
@@ -141,7 +141,7 @@
 | `app/draw/select/__tests__/page.test.tsx` | A11 退出不放弃 | 关闭按钮 `push("/draw")`；返回后 store 中 `selectedSlots` 保持已选内容 |
 | `app/draw/select/__tests__/page.test.tsx` | A1 洗牌（reduced-motion 跳过） | mock `useReducedMotion` 为 `true` 时进场即可点击；为 `false` 时 `SHUFFLE_DURATION_MS` 内点击无效 |
 | `app/draw/__tests__/page.test.tsx` | B1 去掉假等待 | 点「开始解析」后立即 `push("/result")`（无计时器推进）；DOM 中无全屏加载遮罩 |
-| `app/draw/__tests__/page.test.tsx` | B2 文案收敛 | 已失效文案（"选完自动返回"等）不出现在页面 |
+| `app/draw/select/__tests__/page.test.tsx` | B2 失效文案清除 | 选牌子页不含「选完自动返回」与「剩 N 张」 |
 | `app/__tests__/page.test.tsx` | C1 去掉假等待 | 提交问题后不推进计时器即 `push("/draw")` |
 | `app/__tests__/page.test.tsx` | C2 问题回填 | store 中 `question` 非空时，输入框 `value` 等于该问题 |
 | `app/components/__tests__/CardModal.test.tsx` | `actionLabel` 主按钮 | 传 `actionLabel="继续"` 时渲染该按钮，点击调用 `onClose`；不传时无该按钮（结果页行为不变） |
@@ -163,7 +163,6 @@
 - `app/layout.tsx`（`MotionConfig reducedMotion="user"`）
 - `app/globals.css`（`prefers-reduced-motion` 块）
 - `lib/drawFlow.ts`（新增 `SHUFFLE_DURATION_MS`）
-- `README.md`（功能特色第 2 条「流畅抽牌体验」的描述已过期，须同步为新的交互形态）
 - `tests/css-contract.test.ts`（新增 D1 契约）
 - `docs/archive/draw-interaction.md`（G9/G10/G11 就地补「后续变更」指针，**不改写历史结论**）
 
@@ -201,7 +200,7 @@
 | 9 | 子页顶部**常驻紧凑槽位条** | 新增；激活 `SpreadSlots` 无调用方的 `compact` 分支 |
 | 10 | 无障碍**只做 `prefers-reduced-motion`** | 键盘可达与屏幕阅读器明确列为已知缺口 |
 | 11 | 清掉 666ms / 500ms 假等待 + 回填首页问题 | 链路省 1.2s；修复 C2 缺陷 |
-| 12 | 揭示浮层**复用 `CardModal`** 而非新建组件 | 避免新增第二个 `sizes` 例外，守住 G15/D12 唯一小档不变量；符合奥卡姆剃刀 |
+| 12 | 揭示浮层**复用 `CardModal`** 而非新建组件（**负责人已确认**，含其 `actionLabel` 公共 API 变更） | 避免新增第二个 `sizes` 例外，守住 G15/D12 唯一小档不变量；符合奥卡姆剃刀 |
 | 13 | 浮层收起除按钮外，**支持点浮层外任意处** | `CardModal` 既有行为，复用即得 |
 
 ## 已知缺口（本轮明确不实现）
@@ -217,8 +216,10 @@
 
 ## 收口动作（完成时执行，非现在）
 
+- [ ] `README.md` 功能特色第 2 条「流畅抽牌体验（8 列）」同步为新交互形态
+      —— **经负责人确认，此项推迟到验收时执行，不在实现阶段改动**
+      （依 [AGENTS.md](../../AGENTS.md) 第 1 节，约束是"完成之前更新文档"，而非"编码之前"）
 - [ ] `docs/README.md`「条目状态」补 G17 一行；若第 12 条被认定为长期决策，同步补入「决策记录」D14
 - [ ] `docs/archive/draw-interaction.md` 的 G9/G10/G11 各补一行「后续变更」（**不改写历史结论**）
-- [ ] `README.md` 功能特色第 2 条同步为新交互形态
 - [ ] 本文移入 `docs/archive/g17-draw-ritual.md`，顶部加归档日期与"不描述当前状态"声明
 - [ ] 跨 `代码 / docs/ / tests/` grep `8 列`、`选完自动返回`、`减去已选` 等术语，消除不一致

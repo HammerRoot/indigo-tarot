@@ -109,3 +109,62 @@ describe("首页：免费试用用完时的弹窗引导", () => {
     expect(useTarotStore.getState().trialUsed).toBe(false);
   });
 });
+
+describe("G17 首页：去掉假等待 + 问题回填", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    sessionStorage.clear();
+    // 试用可用 → 提交不被 API 设置闸门拦下
+    useTarotStore.setState({
+      trialUsed: false,
+      apiKey: "",
+      encryptedApiKey: null,
+      question: "",
+      recommendedSpread: null,
+      drawnCards: [],
+      cardReversals: [],
+    });
+    trialStatusMock.trialUsed = false;
+    globalThis.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/trial-status")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(trialStatusMock), {
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ questions: ["测试问题一"] }), {
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    }) as unknown as typeof fetch;
+  });
+
+  it("C1 提交后不等待 666ms 即跳转 /draw", async () => {
+    render(<Home />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.change(screen.getByLabelText("你的问题"), {
+      target: { value: "我的测试问题" },
+    });
+    fireEvent.click(screen.getByText("开始占卜"));
+
+    // 同步跳转：不推进任何计时器
+    expect(routerPushMock).toHaveBeenCalledWith("/draw");
+  });
+
+  it("C2 store 中已有问题时，输入框回填该问题（返回首页不必重输）", async () => {
+    useTarotStore.setState({ question: "之前问过的问题" });
+    render(<Home />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByLabelText("你的问题")).toHaveValue("之前问过的问题");
+  });
+});
