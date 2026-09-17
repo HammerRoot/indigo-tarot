@@ -68,14 +68,17 @@ npm run dev                  # http://localhost:3000
    > ```bash
    > tar -tzf /tmp/code.tar.gz | sed 's|^[^/]*/||' | grep -v '/$' | sort > /tmp/expected.txt
    > find . -type f -not -path './node_modules/*' -not -path './.next/*' -not -path './.git/*' \
-   >   -not -name '.env.local' -not -name 'next-env.d.ts' -not -name '*.log' \
-   >   | sed 's|^\./||' | sort > /tmp/actual.txt
+   >   -not -name '.env.local' -not -name 'next-env.d.ts' -not -name '.deployed-sha' \
+   >   -not -name '*.log' | sed 's|^\./||' | sort > /tmp/actual.txt
    > comm -23 /tmp/actual.txt /tmp/expected.txt   # 输出的即"服务器有、仓库已删"
    > ```
    >
-   > `next-env.d.ts` 必须在上面排除掉：它被 `.gitignore` 忽略、不进 tar 包，但由 Next
-   > 构建时自动生成、服务器上本该存在——不排除的话它每次都会作为误报出现在清单里。
-   > 同理，任何"被 gitignore 但服务器上理应存在"的文件都属于这一类误报。
+   > 上面排除的两个名字都是**误报**，缺了它们每次都会出现在清单里：
+   > - `next-env.d.ts`：被 `.gitignore` 忽略、不进 tar 包，但由 Next 构建时自动生成、服务器上本该存在；
+   > - `.deployed-sha`：见 3.6 的版本标记，是本机运维文件，本就不该进仓库。
+   >
+   > 同理，任何"服务器上理应存在但不在仓库里"的文件都属于这一类误报——**先把它们加进排除列表，
+   > 而不是从服务器上删掉**。清单里出现不认识的条目时，先停下来核对再动手。
    >
    > 对照仓库确认后逐个 `rm`。**若出现不认识的条目先停下来核对**——该目录里可能有
    > 仓库之外的东西，不该盲删。
@@ -86,7 +89,27 @@ npm run dev                  # http://localhost:3000
 
 3.6. **部署回退（部署坏了怎么恢复）**
 
-   **部署前必做：记录回退锚点**——本地 `git rev-parse main`，记下"上一个好版本的 SHA"（即本次部署前 main 停在的 commit）。回退靠的就是它。
+   **部署前必做：记录回退锚点。** 锚点是**当前线上正在运行的版本**——即**上次部署时发布的那个 SHA**，
+   **不是**你这次要部署的新版本。
+
+   > ⚠️ 本文初稿把这条写反了（写成"本次部署前 `main` 停在的 commit"，那恰恰是**要部署的新版本**）。
+   > 2026-09-17 实测暴露：部署前 `main` 已是 `c047e23`，但线上跑的是 `0ff5d65`，真正的锚点是后者。
+
+   **线上跑的是哪个版本，查服务器上的版本标记**：
+
+   ```bash
+   cat /root/indigo-tarot/.deployed-sha
+   ```
+
+   **每次部署成功并验证后，必须更新它**：
+
+   ```bash
+   # 在服务器上执行，SHA 取本地 `git rev-parse --short main` 的值
+   echo "<SHA>" > /root/indigo-tarot/.deployed-sha
+   ```
+
+   > 该文件不属仓库、不进 `tar` 包，因此不会被覆盖——它只记录"这台机器当前跑的版本"。
+   > **不更新它，下一次的锚点就又只能靠翻文档猜。**
 
    **部署失败（`build` 报错）**：`&&` 链保证 `pm2 restart` 不会执行，线上仍是旧版本，**无需回退**——排查后重试即可。这是被动保护，不要手动去动 pm2。
 
