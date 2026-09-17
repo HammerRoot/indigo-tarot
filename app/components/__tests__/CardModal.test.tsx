@@ -82,7 +82,13 @@ describe("G7 CardModal 牌放大模态", () => {
 describe("G17 CardModal 的 actionLabel 主按钮", () => {
   const card = tarotCards[0];
 
-  it("传入 actionLabel 时渲染该按钮，点击触发 onClose", () => {
+  /** 模态内全部按钮的可读标识 */
+  const modalButtons = () =>
+    screen
+      .getAllByRole("button")
+      .map((b) => b.getAttribute("aria-label") ?? b.textContent?.trim() ?? "");
+
+  it("传入 actionLabel 时多出一个同名按钮，点击触发 onClose", () => {
     const onClose = vi.fn();
     render(
       <CardModal
@@ -93,11 +99,11 @@ describe("G17 CardModal 的 actionLabel 主按钮", () => {
         actionLabel="继续"
       />,
     );
-    fireEvent.click(screen.getByText("继续"));
+    fireEvent.click(screen.getByRole("button", { name: "继续" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("不传 actionLabel 时不渲染任何主按钮（结果页行为不变）", () => {
+  it("不传 actionLabel 时按钮集合恰为关闭按钮（结果页行为不变）", () => {
     render(
       <CardModal
         card={card}
@@ -106,6 +112,7 @@ describe("G17 CardModal 的 actionLabel 主按钮", () => {
         onClose={() => {}}
       />,
     );
-    expect(screen.queryByText("继续")).toBeNull();
+    // 正面断言:任何多余的主按钮都会出现在这个集合里并使断言失败
+    expect(modalButtons()).toEqual(["关闭"]);
   });
 });

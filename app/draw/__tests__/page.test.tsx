@@ -105,16 +105,14 @@ describe("G10 选牌情况页(/draw)", () => {
     expect(pushMock).toHaveBeenCalledWith("/result");
   });
 
-  it("B1 去掉 500ms 假等待:点击后不推进计时器即跳转,且无全屏加载遮罩", () => {
+  it("B1 去掉 500ms 假等待:同步跳转且不残留待触发的计时器", () => {
     setupStore([fill(7), fill(20), fill(33)]);
     render(<DrawPage />);
     fireEvent.click(screen.getByText(/开始解析/));
 
     // 同步跳转——未经任何计时器推进
     expect(pushMock).toHaveBeenCalledWith("/result");
-    // 全屏加载遮罩的文案不存在
-    expect(screen.queryByText(/即将开始AI解析/)).toBeNull();
-    expect(screen.queryByText(/准备进入解析页面/)).toBeNull();
+    // 正面断言:任何形式的「假等待」都会留下待触发的计时器,旧实现的 500ms 遮罩即在此露馅
+    expect(vi.getTimerCount()).toBe(0);
   });
-
 });

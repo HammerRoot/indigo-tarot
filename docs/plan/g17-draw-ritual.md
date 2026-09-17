@@ -44,9 +44,10 @@
 ### A. 选牌子页 `/draw/select`
 
 - [ ] **A1 洗牌进场**：进入页面后播放一次洗牌动画（约 `SHUFFLE_DURATION_MS` = 1200ms），78 张牌由散乱/堆叠状态归位为 6 列网格；动画结束后才可点击
-- [ ] **A2 网格 6 列**：网格容器 `gridTemplateColumns` 为 `repeat(6, minmax(0, 1fr))`；单张牌宽 ≥ 44px（375px 屏下约 50.5px）
+- [ ] **A2 网格 6 列**：网格以 **6 列**渲染，列数经 `data-grid-columns="6"` 显式暴露（见「DOM 契约」）；单张牌宽 ≥ 44px（375px 屏下约 50.5px）
 - [ ] **A3 棋盘填满**：始终渲染全部 78 张牌位；已选牌的牌位渲染为**不可点的空坑**，其余牌位在 DOM 中位置不变（`data-index` 与网格位置一一对应，不因选牌而位移）
-- [ ] **A4 常驻紧凑槽位条**：子页顶部显示牌阵名 + 紧凑槽位（已填显示牌面、当前待选位高亮）+ `已选 k / N`；用户全程无需离开子页即可掌握进度
+- [ ] **A4 常驻紧凑槽位条**：子页顶部显示牌阵名 + 紧凑槽位（已填显示牌面、当前待选位高亮）+ 计数文案 `已选 k / N`；用户全程无需离开子页即可掌握进度。
+      进度须**同时**以结构（已填槽位数 / 空槽位数）与文案两种形式可观测——测试以结构为主、文案为辅
 - [ ] **A5 点击即落定**：点击牌背 → 立即写入 store（该位落定，不可逆）→ 原位 3D 翻牌；翻牌完成后**弹出揭示浮层**
 - [ ] **A6 揭示浮层**：居中放大展示该牌，标注牌位名 + 牌名 + **正位/逆位** + 关键词；**不自动关闭**
 - [ ] **A7 收起方式**：点「继续」按钮、点浮层外任意处、或按 ESC，三者均可收起；收起后留在 `/draw/select`（**不跳转**），该牌位变为空坑，紧凑槽位条更新，待选位前移
@@ -57,8 +58,7 @@
 
 ### B. 选牌情况页 `/draw`
 
-- [ ] **B1 去掉假等待**：点「开始解析」直接写入 store 并 `push("/result")`，**不再有 500ms 全屏遮罩**
-- [ ] **B2 失效文案清除**：选牌子页的「剩 N 张 · 点击牌背即选 · **选完自动返回**」在新模型下已不成立，须替换为新交互的准确描述
+- [ ] **B1 去掉假等待**：点「开始解析」**同步**写入 store 并 `push("/result")`；点击后**不残留任何待触发的计时器**（旧实现的 500ms 遮罩即在此露馅）
 - [ ] **B3 双入口保留**：点高亮空位与点「开始选牌」仍等价（均 `push("/draw/select")`）
 
 ### C. 首页 `/`
@@ -100,7 +100,21 @@
 > **这样做的理由**：新建一个 `RevealOverlay` 组件会（a）与 `CardModal` 职责重叠，违反 [AGENTS.md](../../AGENTS.md) 第 7 节奥卡姆剃刀；
 > （b）**新增第二个 `sizes` 例外，直接冲击 G15/D12 的唯一小档不变量**（见「设计决策」第 12 条）。
 
-### 4. 图片不变量
+### 4. DOM 契约（测试与实现的接口，**必须遵守**）
+
+测试只断言这些显式契约与可观测结果，**不断言内联样式字符串、子元素下标或具体文案**（除非本节声明）。
+这样列数、间距、动画机制等可自由实现，而契约本身可被证伪。
+
+| 选择器 | 出现在 | 含义 |
+|---|---|---|
+| `[data-grid-columns="6"]` | 网格容器 | **新增**。列数无法从 jsdom 布局观测，故显式暴露为契约 |
+| `[data-grid-cell="<牌组索引>"]` | 每个牌位（恒 78 个） | **新增**。顺序即网格排列顺序，选牌后**顺序不变** |
+| `[data-picked-hole="<牌组索引>"]` | 已选牌位 | **新增**。空坑，无 `role`/`tabindex`，不可交互 |
+| `[data-compact-slots="true"]` | 子页顶部槽位条容器 | **新增**。内部复用 `SpreadSlots` 的 `data-filled-card` / `data-empty-slot` |
+| `[data-card-back="true"][data-index]` | 未选牌背 | 沿用 `GridCard` 既有契约 |
+| `[data-testid="card-modal-overlay"]` / `-content` | 揭示浮层 | 沿用 `CardModal` 既有契约 |
+
+### 5. 图片不变量
 
 所有新增/改动的牌面渲染必须落在 `CARD_IMAGE_SIZES = "112px"` 的布局宽上限内：
 
@@ -113,12 +127,12 @@
 
 改列数（6 → 其他）前必须复算该表并跑 `tests/card-image-variant.test.ts`。
 
-### 5. 首页 `app/page.tsx`
+### 6. 首页 `app/page.tsx`
 
 - 删除 `setTimeout(..., 666)`，改为同步 `resetSession()` + `setQuestion()` 后直接 `router.push("/draw")`。
 - `localQuestion` 初值改为从 store 读取当前 `question`，实现 C2 回填。
 
-### 6. `app/layout.tsx` + `app/globals.css`
+### 7. `app/layout.tsx` + `app/globals.css`
 
 - `layout.tsx` 外层包 `<MotionConfig reducedMotion="user">`。
 - `globals.css` 增加 `@media (prefers-reduced-motion: reduce)` 块，停用 `animate-pulse` 与 `.stars` 的 `@keyframes twinkle`。
@@ -129,24 +143,23 @@
 
 | 测试文件 | 测试名 | 断言要点 |
 |---|---|---|
-| `app/draw/select/__tests__/page.test.tsx` | A2 网格 6 列 | 容器 `gridTemplateColumns` 含 `repeat(6, minmax(0, 1fr))`；78 个牌位 |
-| `app/draw/select/__tests__/page.test.tsx` | A3 棋盘填满 | 选中 `data-index="7"` 后，该位置变为空坑（不可点）；`data-index="8"` 仍在原 DOM 序位（相邻兄弟关系不变） |
-| `app/draw/select/__tests__/page.test.tsx` | A4 紧凑槽位条 | 子页顶部存在紧凑槽位条；已选 N 张后其文本含 `已选 N / M`；当前待选位高亮 |
+| `app/draw/select/__tests__/page.test.tsx` | A2 网格 6 列 | `[data-grid-columns]` 为 `"6"`；78 个 `[data-grid-cell]` |
+| `app/draw/select/__tests__/page.test.tsx` | A3 棋盘填满 | 选牌前后 `[data-grid-cell]` 的**顺序数组逐个相等**（不位移）；`data-index="7"` 不再是牌背、改为空坑 |
+| `app/draw/select/__tests__/page.test.tsx` | A4 紧凑槽位条 | 结构断言为主：`[data-compact-slots]` 内已填/空槽位数为 `{0,3}` → `{1,2}`；文案为辅（容忍空白差异） |
 | `app/draw/select/__tests__/page.test.tsx` | A5+A6 点击即落定并揭示 | 点牌后牌面挂载、揭示浮层出现；浮层含牌位名、牌名、正/逆位文案 |
 | `app/draw/select/__tests__/page.test.tsx` | A7 三种收起方式 | 点「继续」/ 点浮层遮罩 / 按 ESC 均关闭浮层，且 **`router.push` 未被调用**（停留在子页） |
 | `app/draw/select/__tests__/page.test.tsx` | A7 收起后状态推进 | 收起后该位为空坑、紧凑槽位条计数 +1、待选位前移 |
 | `app/draw/select/__tests__/page.test.tsx` | A8 连续选满 | 连续选满 M 张全程不调用 `router.push`；选满后出现「完成选牌」，点击 `push("/draw")` |
-| `app/draw/select/__tests__/page.test.tsx` | A9 不可逆 | 点击已选空坑无反应；无任何"重选/换一张"控件存在于 DOM |
+| `app/draw/select/__tests__/page.test.tsx` | A9 不可逆 | **正面断言**：未选满时全页按钮集合恰为 `["关闭选牌"]`（任何形态的重选入口都会使其失败）；空坑无 `role`/`tabindex`；点击空坑不改槽位 |
 | `app/draw/select/__tests__/page.test.tsx` | A10 防误触 | 翻牌/揭示期间点其他牌不改变 `selectedSlots` |
 | `app/draw/select/__tests__/page.test.tsx` | A11 退出不放弃 | 关闭按钮 `push("/draw")`；返回后 store 中 `selectedSlots` 保持已选内容 |
 | `app/draw/select/__tests__/page.test.tsx` | A1 洗牌（reduced-motion 跳过） | mock `useReducedMotion` 为 `true` 时进场即可点击；为 `false` 时 `SHUFFLE_DURATION_MS` 内点击无效 |
-| `app/draw/__tests__/page.test.tsx` | B1 去掉假等待 | 点「开始解析」后立即 `push("/result")`（无计时器推进）；DOM 中无全屏加载遮罩 |
-| `app/draw/select/__tests__/page.test.tsx` | B2 失效文案清除 | 选牌子页不含「选完自动返回」与「剩 N 张」 |
+| `app/draw/__tests__/page.test.tsx` | B1 去掉假等待 | 点「开始解析」后未经计时器推进即 `push("/result")`；**正面断言 `vi.getTimerCount() === 0`**（任何假等待都会留下待触发计时器） |
 | `app/__tests__/page.test.tsx` | C1 去掉假等待 | 提交问题后不推进计时器即 `push("/draw")` |
 | `app/__tests__/page.test.tsx` | C2 问题回填 | store 中 `question` 非空时，输入框 `value` 等于该问题 |
-| `app/components/__tests__/CardModal.test.tsx` | `actionLabel` 主按钮 | 传 `actionLabel="继续"` 时渲染该按钮，点击调用 `onClose`；不传时无该按钮（结果页行为不变） |
+| `app/components/__tests__/CardModal.test.tsx` | `actionLabel` 主按钮 | 传时按钮集合多出该项且点击调用 `onClose`；**不传时按钮集合恰为 `["关闭"]`**（正面断言，结果页行为不变） |
 | `app/components/__tests__/CardModal.test.tsx` | 既有行为回归 | ESC / 点遮罩 / 点关闭按钮的既有断言全部保持通过 |
-| `tests/css-contract.test.ts` | D1 reduced-motion 契约 | `globals.css` 含 `@media (prefers-reduced-motion: reduce)` 块，且块内覆盖 `animate-pulse` 与 `twinkle` |
+| `tests/css-contract.test.ts` | D1 reduced-motion 契约 | 块内须含**真实的 `animation:` 属性声明**（注释不算）；须为 `.stars` 停用动画；须停用 `.animate-pulse` **或**用通配符统一降级 |
 | `tests/card-image-variant.test.ts` | 图片不变量回归 | 既有 7 条断言全绿；`sizes` 例外仍**只有** `CardModal.tsx` 一处（本条目复用而非新增例外） |
 
 ## 影响范围
@@ -203,6 +216,18 @@
 | 12 | 揭示浮层**复用 `CardModal`** 而非新建组件（**负责人已确认**，含其 `actionLabel` 公共 API 变更） | 避免新增第二个 `sizes` 例外，守住 G15/D12 唯一小档不变量；符合奥卡姆剃刀 |
 | 13 | 浮层收起除按钮外，**支持点浮层外任意处** | `CardModal` 既有行为，复用即得 |
 
+## 测试覆盖的边界（哪些靠自动化、哪些只能人工）
+
+诚实划界，避免"有测试 = 已验证"的错觉：
+
+| 验收项 | 自动化覆盖 | 说明 |
+|---|---|---|
+| A1–A11、B1、C1–C2 | ✅ 单元/组件测试 | 断言均为可证伪的正面形式 |
+| **D1 reduced-motion** | ⚠️ **仅结构与接线** | 测试用 `vi.mock` 替换了 `useReducedMotion`，验证的是"页面逻辑会读这个 hook"**而非**真机行为；`MotionConfig` 与 CSS 媒体查询只有源码级文本匹配（`css-contract`）。**真机降级效果须人工验收** |
+| A2 的「单张牌宽 ≥ 44px」 | ❌ jsdom 无布局 | 只能人工在 375px 设备/模拟器上量 |
+| 洗牌动画观感、78 张入场性能 | ❌ | 人工真机验收（SPEC 风险区已记录低端机掉帧风险） |
+| 失效文案已清除 | ❌ 刻意为之 | 见「收口动作」——不做无法证伪的断言 |
+
 ## 已知缺口（本轮明确不实现）
 
 按 [AGENTS.md](../../AGENTS.md) 第 1 节「能力不够就停下来报告差距，而不是假装做完」，
@@ -222,4 +247,6 @@
 - [ ] `docs/README.md`「条目状态」补 G17 一行；若第 12 条被认定为长期决策，同步补入「决策记录」D14
 - [ ] `docs/archive/draw-interaction.md` 的 G9/G10/G11 各补一行「后续变更」（**不改写历史结论**）
 - [ ] 本文移入 `docs/archive/g17-draw-ritual.md`，顶部加归档日期与"不描述当前状态"声明
-- [ ] 跨 `代码 / docs/ / tests/` grep `8 列`、`选完自动返回`、`减去已选` 等术语，消除不一致
+- [ ] 跨 `代码 / docs/ / tests/` grep `8 列`、`选完自动返回`、`剩 N 张`、`减去已选` 等术语，消除不一致
+      —— **失效文案的清除靠这道 grep 兜底，不设单元测试**：断言"某句话不存在"无法证伪
+      （实现只要换个说法就能溜过），属于本 SPEC 明确拒绝的**假绿**形态

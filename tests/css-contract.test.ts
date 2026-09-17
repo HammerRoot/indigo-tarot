@@ -60,15 +60,32 @@ describe("O2 设计系统类全局契约", () => {
   // 规格 G17：无障碍只做 prefers-reduced-motion（键盘与 SR 明确记为已知缺口）。
   // 契约锁定"CSS 动画必须被降级"——framer-motion 一侧由 MotionConfig reducedMotion="user" 覆盖，
   // CSS 一侧（animate-pulse / .stars 的 twinkle）必须在此显式停用，二者缺一即漏。
-  it("G17 prefers-reduced-motion 降级块存在，且覆盖 CSS 动画", () => {
+  it("G17 prefers-reduced-motion 降级块存在，且确实停用了 CSS 动画", () => {
     const globals = readSource("app/globals.css");
     const block = globals.match(
       /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{([\s\S]*?)\n\}/,
     );
-    expect(block, "globals.css 应含 @media (prefers-reduced-motion: reduce) 块").not.toBeNull();
+    expect(
+      block,
+      "globals.css 应含 @media (prefers-reduced-motion: reduce) 块",
+    ).not.toBeNull();
     const body = block![1];
-    expect(body, "该块应停用 Tailwind 的 animate-pulse").toContain("animation");
-    expect(body, "该块应覆盖 .stars 的 twinkle 动画").toContain(".stars");
+
+    // 必须是真实的属性声明——注释里提到 "animation" 不算
+    expect(body, "该块应含真实的 animation 属性声明").toMatch(
+      /animation(-duration|-iteration-count)?\s*:/,
+    );
+    // 必须为 .stars 的 twinkle 停用动画
+    expect(body, "该块应为 .stars 停用动画").toMatch(
+      /\.stars[^{]*\{[^}]*animation/,
+    );
+    // 必须干掉 Tailwind 的 animate-pulse：直接覆盖，或用通配符统一降级
+    const killsPulse =
+      /\.animate-pulse/.test(body) || /(^|\n)\s*\*[^{]*\{/.test(body);
+    expect(
+      killsPulse,
+      "该块应停用 animate-pulse，或用通配符统一降级所有 CSS 动画",
+    ).toBe(true);
   });
 
   it("mystical 样式依赖的 CSS 变量已在 :root 定义", () => {
