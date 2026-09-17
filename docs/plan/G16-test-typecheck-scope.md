@@ -34,16 +34,25 @@
 
 ### 4.1 拆分 tsconfig：生产构建用不含测试的，开发类型检查用含测试的
 
-**根 `tsconfig.json`（生产构建读它）——`exclude` 增加测试文件**：
+**根 `tsconfig.json`（生产构建读它）——`exclude` 增加测试文件与测试基础设施**：
 
 ```jsonc
 "exclude": [
   "node_modules",
   "**/*.test.ts",
   "**/*.test.tsx",
-  "**/__tests__/**"
+  "**/__tests__/**",
+  "vitest.setup.ts",   // 测试基础设施：import 的是 devDependencies
+  "vitest.config.ts"   // （vitest / @testing-library/jest-dom）
 ]
 ```
+
+> **为什么连 `vitest.setup.ts` / `vitest.config.ts` 一起排除**（SPEC 初稿漏了，实现阶段补上）：
+> 它们同样是测试代码、同样 import devDependencies。留在生产构建的类型检查范围内，
+> 意味着**哪天有人用 `npm ci --omit=dev` 部署，构建会因 `Cannot find module 'vitest'` 直接挂**。
+> 初稿的验收标准只 grep 了 `.test.ts` 与 `__tests__/`——那是**围着事故本身写的**
+> （残留文件恰好是 `.test.ts` 形态），而不是围着"生产构建只检查生产代码"这条原则写的。
+> 补上后，生产构建范围内的测试相关文件数为 0。
 
 **新建 `tsconfig.test.json`（`npm run type-check` 读它）——继承根配置、覆盖 exclude 以重新纳入测试**：
 
