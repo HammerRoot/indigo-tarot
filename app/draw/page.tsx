@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useCallback, useEffect, useMemo } from "react";
+import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTarotStore, recommendSpread } from "@/lib/store";
@@ -27,20 +27,6 @@ export default function DrawPage() {
     setDrawnCards,
     setCardReversals,
   } = useTarotStore();
-
-  const [showFullScreenLoading, setShowFullScreenLoading] = useState(false);
-
-  // 控制全屏加载时的滚动禁用
-  useEffect(() => {
-    if (showFullScreenLoading) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [showFullScreenLoading]);
 
   // 无问题回首页;推荐牌阵
   useEffect(() => {
@@ -84,17 +70,15 @@ export default function DrawPage() {
     router.push("/draw/select");
   }, [isComplete, router]);
 
-  // 完成选牌 → 写入结果数据并进入解析
+  // 完成选牌 → 写入结果数据并进入解析。
+  // 写入与跳转均为同步操作,不设人为等待(规格 G17):旧的 500ms 全屏遮罩底下没有任何异步任务,
+  // 只是让应用平白变慢,且其文案「准备进入解析页面」与「离开本页」的实际行为不符。
   const handleAnalyze = useCallback(() => {
     const fills = selectedSlots.filter((s): s is SelectionFill => s !== null);
     if (fills.length !== cardCount) return;
     setDrawnCards(fills.map((f) => f.card));
     setCardReversals(fills.map((f) => f.reversed));
-    setShowFullScreenLoading(true);
-    window.setTimeout(() => {
-      setShowFullScreenLoading(false);
-      router.push("/result");
-    }, 500);
+    router.push("/result");
   }, [selectedSlots, cardCount, setDrawnCards, setCardReversals, router]);
 
   if (!recommendedSpread) {
@@ -181,74 +165,6 @@ export default function DrawPage() {
           </div>
         </div>
       </main>
-
-      {/* 全屏加载效果 */}
-      <AnimatePresence>
-        {showFullScreenLoading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-gradient-to-br from-purple-900/95 via-blue-900/95 to-purple-800/95 backdrop-blur-sm z-50 flex items-center justify-center"
-          >
-            <div className="text-center">
-              <motion.div
-                className="relative mb-8"
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                <motion.div
-                  className="w-32 h-32 border-4 border-yellow-300/30 border-t-yellow-300 rounded-full"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                />
-                <motion.div
-                  className="absolute inset-4 w-24 h-24 border-4 border-purple-300/30 border-b-purple-300 rounded-full"
-                  animate={{ rotate: -360 }}
-                  transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <motion.div
-                    className="text-4xl"
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    🔮
-                  </motion.div>
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
-                  🚀 即将开始AI解析
-                </h3>
-                <p className="text-lg text-purple-200 mb-6 max-w-md mx-auto">
-                  准备进入解析页面,实时观看AI思考过程...
-                </p>
-                <div className="flex justify-center space-x-2">
-                  {[0, 1, 2].map((i) => (
-                    <motion.div
-                      key={i}
-                      className="w-3 h-3 bg-yellow-300 rounded-full"
-                      animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-                      transition={{
-                        duration: 1.5,
-                        repeat: Infinity,
-                        delay: i * 0.2,
-                      }}
-                    />
-                  ))}
-                </div>
-              </motion.div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

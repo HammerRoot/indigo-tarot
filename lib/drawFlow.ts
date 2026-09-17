@@ -5,8 +5,11 @@
 
 import type { TarotCard } from "./tarot-data";
 
-// 3D 翻牌动画时长(ms):子页点击选中 → 原位翻转展示牌面 → 自动返回情况页
+// 3D 翻牌动画时长(ms):子页点击选中 → 原位翻转展示牌面 → 揭示浮层弹出
 export const FLIP_DURATION_MS = 700;
+// 进场洗牌动画时长(ms):进入选牌子页时,78 张牌由散乱状态归位为网格
+// 与 reveal 一样是"状态机与视觉共用同一时长"的写法,避免回调时序依赖
+export const SHUFFLE_DURATION_MS = 1200;
 // 逆位概率(与 G6 原实现一致:30%)
 export const REVERSAL_PROBABILITY = 0.3;
 

@@ -11,14 +11,21 @@ interface CardModalProps {
   position: string;
   isReversed?: boolean;
   onClose: () => void;
+  /**
+   * 可选主按钮文案(规格 G17)。传入时在牌面下方渲染一个主按钮,点击等价于 onClose。
+   * 选牌子页的揭示浮层传「继续」;结果页不传,行为与 G7 完全一致。
+   */
+  actionLabel?: string;
 }
 
 // 牌放大模态(规格 G7):点击结果页牌面 → 居中放大展示,标注牌位/牌名/正逆位/关键词
+// G17 起兼作选牌子页的揭示浮层(复用而非新建:它已是 G15 唯一被许可传 sizes 的组件)
 export function CardModal({
   card,
   position,
   isReversed = false,
   onClose,
+  actionLabel,
 }: CardModalProps) {
   // ESC 关闭
   useEffect(() => {
@@ -84,6 +91,16 @@ export function CardModal({
           </p>
           <p className="text-gold/90 text-sm tracking-wide">{keywords}</p>
         </div>
+
+        {/* 可选主按钮（G17 揭示浮层用「继续」） */}
+        {actionLabel && (
+          <button
+            onClick={onClose}
+            className="mt-6 px-10 py-3 rounded-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold shadow-lg transition-colors cursor-pointer"
+          >
+            {actionLabel}
+          </button>
+        )}
       </motion.div>
     </motion.div>
   );

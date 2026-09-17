@@ -579,3 +579,20 @@
     font-size: 18px;
   }
 }
+
+/* === 无障碍：减弱动态效果（规格 G17） ===
+   framer-motion 一侧由 <MotionProvider> 的 MotionConfig reducedMotion="user" 覆盖；
+   这里负责 CSS 一侧——本仓库实际的无限 CSS 动画是：
+     .astro-stars::before 的 twinkle（注意 .stars 是 display:none，与动画无关）
+     Tailwind 的 animate-pulse（首页骨架屏、SpreadSlots 聚焦空位）
+   用通配符统一降到一帧，避免逐类枚举漏掉将来新增的动画。 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
