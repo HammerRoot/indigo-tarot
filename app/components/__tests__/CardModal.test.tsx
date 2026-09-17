@@ -77,7 +77,62 @@ describe("G7 CardModal 牌放大模态", () => {
   });
 });
 
-// 规格 G17：选牌子页复用 CardModal 作为揭示浮层，需要一个「继续」主按钮。
+// 规格 G17：选牌子页复用 CardModal 作为揭示浮层。
+// reveal 为可选 prop——结果页不传，行为与 G7 完全一致（上方用例即回归保证）。
+describe("G17 CardModal 的 reveal 形态", () => {
+  const card = tarotCards[0];
+  const ORIGIN = { x: 40, y: 300, width: 51, height: 76 };
+
+  const renderReveal = (props: Partial<{ actionLabel: string; exiting: boolean }> = {}) =>
+    render(
+      <CardModal
+        card={card}
+        position="过去"
+        isReversed={false}
+        onClose={() => {}}
+        actionLabel="确认"
+        reveal={{ origin: ORIGIN, exiting: props.exiting ?? false }}
+      />,
+    );
+
+  it("揭示形态不渲染右上角关闭按钮（由「确认」与点击蒙层承担退出）", () => {
+    renderReveal();
+    const labels = screen
+      .getAllByRole("button")
+      .map((b) => b.getAttribute("aria-label") ?? b.textContent?.trim() ?? "");
+    expect(labels).toEqual(["确认"]);
+  });
+
+  it("揭示形态的蒙层使用淡紫半透明，而非 G7 的黑蒙层", () => {
+    renderReveal();
+    const overlay = screen.getByTestId("card-modal-overlay");
+    expect(overlay.className).toContain("purple");
+    expect(overlay.className).not.toContain("black/85");
+  });
+
+  it("飞行元素存在且载有源格矩形（jsdom 无布局，坐标本身不可断言）", () => {
+    renderReveal();
+    expect(screen.getByTestId("reveal-flying-card")).toBeInTheDocument();
+  });
+
+  it("非揭示形态（结果页）仍保留黑蒙层与关闭按钮", () => {
+    render(
+      <CardModal
+        card={card}
+        position="过去"
+        isReversed={false}
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.getByTestId("card-modal-overlay").className).toContain(
+      "black/85",
+    );
+    expect(screen.getByLabelText("关闭")).toBeInTheDocument();
+    expect(screen.queryByTestId("reveal-flying-card")).toBeNull();
+  });
+});
+
+// 规格 G17：选牌子页复用 CardModal 作为揭示浮层，需要一个「确认」主按钮。
 // 该 prop 为可选——结果页不传，行为与 G7 完全一致（上方用例即回归保证）。
 describe("G17 CardModal 的 actionLabel 主按钮", () => {
   const card = tarotCards[0];

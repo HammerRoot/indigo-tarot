@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPositionMeanings,
+  createDeckOrder,
   extractQuestionTheme,
 } from "@/lib/drawFlow";
+import { tarotCards } from "@/lib/tarot-data";
 
 describe("G8 extractQuestionTheme", () => {
   it("去除标点与疑问语气词,提取简短主题", () => {
@@ -45,5 +47,34 @@ describe("G8 buildPositionMeanings", () => {
     const meanings = buildPositionMeanings("问题", positions);
     expect(meanings).toHaveLength(10);
     expect(meanings[9]).toContain("位9");
+  });
+});
+// 规格 G17（bug 修复）：牌序必须每局洗一次
+// 修复前 app/draw/select 直接渲染 tarotCards 的固定数据顺序，于是「第 1 格永远是愚者」——
+// 习惯性点同一位置的用户每次占卜都会抽到同一张牌。
+describe("G17 createDeckOrder：牌序洗牌", () => {
+  it("返回 0..n-1 的一个排列（长度、取值域、无重复）", () => {
+    const order = createDeckOrder(78);
+    expect(order).toHaveLength(78);
+    expect([...order].sort((a, b) => a - b)).toEqual(
+      Array.from({ length: 78 }, (_, i) => i),
+    );
+    expect(new Set(order).size).toBe(78);
+  });
+
+  it("n = 1 与 n = 0 的边界", () => {
+    expect(createDeckOrder(1)).toEqual([0]);
+    expect(createDeckOrder(0)).toEqual([]);
+  });
+
+  it("多次调用会产生不同的顺序（否则等同于没洗）", () => {
+    const orders = Array.from({ length: 20 }, () => createDeckOrder(78).join(","));
+    expect(new Set(orders).size).toBeGreaterThan(1);
+  });
+
+  it("不修改任何外部数组（纯函数）", () => {
+    const snapshot = JSON.stringify(tarotCards);
+    createDeckOrder(tarotCards.length);
+    expect(JSON.stringify(tarotCards)).toBe(snapshot);
   });
 });
