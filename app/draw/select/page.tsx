@@ -220,7 +220,13 @@ export default function SelectPage() {
     <div className="min-h-screen mystical-bg relative">
       <div className="stars"></div>
 
-      <main className="relative z-10 min-h-screen px-4 py-8">
+      <main
+        className={cn(
+          "relative z-10 min-h-screen px-4 py-8",
+          // 悬浮的「完成选牌」会盖住网格最后一行 → 让出底部空间
+          isComplete && "pb-28",
+        )}
+      >
         {/* 关闭(退出)按钮:进度保留在 store,退出 ≠ 放弃 */}
         <motion.button
           onClick={closeSelect}
@@ -327,14 +333,17 @@ export default function SelectPage() {
             })}
           </div>
 
-          {/* 选满后才出现;中途关闭走左上角,语义是「退出」而非「完成」 */}
+          {/* 选满后才出现;中途关闭走左上角,语义是「退出」而非「完成」。
+              悬浮在底部:选满时按钮原本埋在 1090px 网格的最下方,要滚到底才够得着。 */}
           {isComplete && (
-            <div className="mt-10 pb-4 text-center">
+            <div className="fixed bottom-6 inset-x-4 z-30">
               <motion.button
                 onClick={closeSelect}
-                className="mystical-button px-12 py-4 text-xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
+                className="block w-full max-w-md mx-auto h-[52px] rounded-2xl bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white text-lg font-bold shadow-2xl active:scale-[0.99] transition"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
               >
                 完成选牌
               </motion.button>

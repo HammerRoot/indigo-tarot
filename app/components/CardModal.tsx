@@ -105,10 +105,10 @@ export function CardModal({
         animate={{ opacity: 1 }}
         onClick={onClose}
       >
-        {/* 底部给悬浮按钮让位:内容整体上移,避免牌名/关键词与按钮重叠 */}
+        {/* 底部不再需要给悬浮按钮让位——确认按钮回到详情流内 */}
         <div
           data-testid="card-modal-content"
-          className="relative flex flex-col items-center pb-24"
+          className="relative flex flex-col items-center"
           onClick={(e) => e.stopPropagation()}
         >
           {/* 飞行元素:rotateY 0 → 180,背→正。容器与详情的时序见下 */}
@@ -143,9 +143,12 @@ export function CardModal({
             </div>
           </motion.div>
 
-          {/* 详情在飞行接近尾声时淡入;缩回时先快速淡出 */}
+          {/* 详情在飞行接近尾声时淡入;缩回时先快速淡出。
+              **自带面**:文字直接压在蒙层上时,蒙层越透明越看不清(底下透上来的亮色冲淡白字)。
+              给它自己的深色面,「蒙层够透」与「文字够清」就不再互相打架——
+              这也是上一轮在 /45↔/60 之间来回调却始终不对的根因。 */}
           <motion.div
-            className="mt-6 text-center flex flex-col items-center"
+            className="mt-6 rounded-2xl bg-astro-deep/90 backdrop-blur-md border border-white/10 shadow-xl px-6 py-4 flex flex-col items-center text-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: reveal.exiting ? 0 : 1 }}
             transition={{
@@ -154,32 +157,16 @@ export function CardModal({
             }}
           >
             {details}
+            {actionLabel && (
+              <button
+                onClick={onClose}
+                className="mt-5 px-10 py-3 rounded-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold shadow-lg transition-colors cursor-pointer"
+              >
+                {actionLabel}
+              </button>
+            )}
           </motion.div>
         </div>
-
-        {/* 确认按钮:脱离详情流,fixed 在蒙层底部满宽——拇指最易达、连选多张位置不变。
-            蒙层 onClick 也触发 onClose,按钮须 stopPropagation 避免冒泡导致重复调用。 */}
-        {actionLabel && (
-          <motion.div
-            className="fixed bottom-6 left-4 right-4"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: reveal.exiting ? 0 : 1, y: reveal.exiting ? 12 : 0 }}
-            transition={{
-              duration: reveal.exiting ? 0.12 : 0.25,
-              delay: reveal.exiting ? 0 : (REVEAL_FLY_IN_MS / 1000) * 0.6,
-            }}
-          >
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-              }}
-              className="w-full h-[52px] rounded-2xl bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white text-lg font-bold shadow-lg active:scale-[0.99] transition cursor-pointer"
-            >
-              {actionLabel}
-            </button>
-          </motion.div>
-        )}
       </motion.div>
     );
   }
