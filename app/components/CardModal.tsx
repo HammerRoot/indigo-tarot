@@ -155,13 +155,16 @@ export function CardModal({
             </div>
           </motion.div>
 
-          {/* 详情面:淡紫色玻璃(暗色不吉利、纯白太素),顶部一条金色高光线。
-              白字在紫底上可读;只装文字,不含按钮。 */}
+          {/* 详情面:负责人指定的紫(oklab lab(37 51.4 -62.65) = 鲜明的蓝紫),
+              60% 不透明叠在蒙层上,顶部一条金色高光线。只装文字,不含按钮。 */}
           <motion.div
             className="relative mt-7 w-full max-w-xs rounded-2xl px-6 pt-5 pb-4 text-center
-                       bg-purple-400/90 backdrop-blur-sm
                        border border-white/20
                        shadow-[0_16px_40px_rgba(124,58,237,0.35)]"
+            style={{
+              backgroundColor:
+                "color-mix(in oklab, lab(37 51.4 -62.65 / 0.93) 60%, transparent)",
+            }}
             initial={{ opacity: 0 }}
             animate={{ opacity: reveal.exiting ? 0 : 1 }}
             transition={{
