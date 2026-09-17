@@ -68,38 +68,27 @@ export function CardModal({
     .slice(0, 3)
     .join(" · ");
 
-  // 详情文字有两种配色:结果页(默认形态)在深色夜空底上,白字;揭示浮层在浅色面上,深字。
-  // 字号/结构完全一致,只有颜色随底色走。
+  // 详情文字两种形态:
+  // - 结果页(默认):深色夜空底,白字 + 金色关键词,含「牌位」pill;
+  // - 揭示浮层:淡紫面,白字 + 亮金关键词,**去掉牌位 pill**(用户明确不要)。
   const light = reveal !== undefined;
   const details = (
     <>
-      <span
-        className={`inline-block px-4 py-1.5 rounded-full border text-xs tracking-widest uppercase mb-3 ${
-          light
-            ? "bg-amber-50 border-amber-200 text-amber-700"
-            : "bg-gold/20 border-gold/40 text-gold"
-        }`}
-      >
-        {position}
-      </span>
-      {/* 牌名与正/逆位并一行:字号各自不变,颜色随底色 */}
-      <h3
-        className={`text-2xl font-bold mb-1 ${
-          light ? "text-gray-900" : "text-white"
-        }`}
-      >
+      {!light && (
+        <span className="inline-block px-4 py-1.5 rounded-full bg-gold/20 border border-gold/40 text-gold text-xs tracking-widest uppercase mb-3">
+          {position}
+        </span>
+      )}
+      {/* 牌名与正/逆位并一行:字号各自不变 */}
+      <h3 className="text-white text-2xl font-bold mb-1">
         {card.name}
-        <span
-          className={`text-sm font-normal ml-2 ${
-            light ? "text-gray-500" : "text-white/60"
-          }`}
-        >
+        <span className="text-white/60 text-sm font-normal ml-2">
           {isReversed ? "逆位" : "正位"}
         </span>
       </h3>
       <p
         className={`text-sm tracking-wide ${
-          light ? "text-amber-700" : "text-gold/90"
+          light ? "text-gold-light" : "text-gold/90"
         }`}
       >
         {keywords}
@@ -123,7 +112,7 @@ export function CardModal({
     return (
       <motion.div
         data-testid="card-modal-overlay"
-        className="fixed inset-0 z-50 bg-purple-950/60 backdrop-blur-md flex items-center justify-center p-4"
+        className="fixed inset-0 z-50 bg-purple-100/60 backdrop-blur-md flex items-center justify-center p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         onClick={onClose}
@@ -166,13 +155,13 @@ export function CardModal({
             </div>
           </motion.div>
 
-          {/* 详情面:浅色玻璃拟态(暗色底在占卜语境里不吉利),顶部一条金色高光线
-              呼应结果页 .astro-card 的设计语言。**只有文字**,不含按钮。 */}
+          {/* 详情面:淡紫色玻璃(暗色不吉利、纯白太素),顶部一条金色高光线。
+              白字在紫底上可读;只装文字,不含按钮。 */}
           <motion.div
             className="relative mt-7 w-full max-w-xs rounded-2xl px-6 pt-5 pb-4 text-center
-                       bg-white/90 backdrop-blur-md
-                       border border-purple-100
-                       shadow-[0_16px_40px_rgba(139,92,246,0.18)]"
+                       bg-purple-400/90 backdrop-blur-sm
+                       border border-white/20
+                       shadow-[0_16px_40px_rgba(124,58,237,0.35)]"
             initial={{ opacity: 0 }}
             animate={{ opacity: reveal.exiting ? 0 : 1 }}
             transition={{
@@ -185,11 +174,11 @@ export function CardModal({
           </motion.div>
 
           {/* 确认按钮:独立于详情面,在面下方居中。点在 content 内已 stopPropagation,
-              故 onClick 直连 onClose 即可。 */}
+              故 onClick 直连 onClose 即可。拉长以更好点按。 */}
           {actionLabel && (
             <motion.button
               onClick={onClose}
-              className="mt-5 px-10 h-12 rounded-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold shadow-lg shadow-purple-900/30 transition-colors cursor-pointer"
+              className="mt-5 px-14 h-12 rounded-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold shadow-lg shadow-purple-900/30 transition-colors cursor-pointer"
               initial={{ opacity: 0, y: 8 }}
               animate={{
                 opacity: reveal.exiting ? 0 : 1,
