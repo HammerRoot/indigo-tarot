@@ -163,6 +163,23 @@ w=384（新条目）→ image/webp  54,348 B  Cache-Control: public, max-age=259
 > 由于旧 TTL 只有 4 小时，属**自愈**问题，不强制清缓存；若要立即生效，部署后删一次
 > 服务器上的 `.next/cache/images` 即可。
 
+### 6.4 生产部署验证（2026-09-17）
+
+已按手工流程部署（`main` @ `0ff5d65`），并从公网侧复核：
+
+| 检查 | 结果 |
+|---|---|
+| `/api/health` | `{"status":"ok","checks":{"redis":"ok"}}` |
+| 首页 | HTTP 200 |
+| `/_next/image?...&w=384` | `Cache-Control: public, max-age=2592000, must-revalidate` ✅ **核心目标达成**（部署前为 `max-age=14400`） |
+| 线上 HTML 的 `srcSet` 阶梯 | `384w, 640w, …, 3840w`——旧小档（16–256）已消失，证明新配置生效 |
+| 已删除的 `/api/deepseek` | 404（残留文件未使其复活） |
+
+> **本次部署踩到的坑（已写入 [`DEPLOYMENT.md`](../DEPLOYMENT.md)）**：`tar` 覆盖式部署**从不删除**仓库已删的文件，
+> 而本仓库历史删除项不少。首次部署因残留的 `lib/__tests__/grid.test.ts`（引用已删除的 `gridClassFor`）与
+> `lib/__tests__/pick.test.ts`（引用已删除的 `lib/pick.ts`）导致 `next build` 类型检查失败。
+> 另需注意 `next-env.d.ts` 被 `.gitignore` 忽略、不进 tar 包，但服务器上本该存在——对账时会作为误报出现。
+
 ---
 
 ## 七、影响范围
