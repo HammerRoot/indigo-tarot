@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useTarotStore } from "@/lib/store";
 import {
   encryptApiKey,
@@ -44,6 +44,28 @@ describe("R1-B/C store API Key 加密存储", () => {
   it("关闭记住开关 → encryptedApiKey 为 null", async () => {
     await useTarotStore.getState().setApiKey("sk-x", false);
     expect(useTarotStore.getState().encryptedApiKey).toBeNull();
+  });
+
+  // O6：生产 HTTP 下 crypto.subtle 不存在。组件此时传 remember=false，
+  // 这里钉住"真的不会走到加密"——否则控制台会报 generateKey 读取失败。
+  it("O6 无 crypto.subtle + remember=false：完全不触碰加密，且不产生 console.error", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    Object.defineProperty(window.crypto, "subtle", {
+      value: undefined,
+      configurable: true,
+    });
+    try {
+      await useTarotStore.getState().setApiKey("sk-x", false);
+
+      expect(useTarotStore.getState().encryptedApiKey).toBeNull();
+      // 无异常、无报错 = 从未尝试过 crypto.subtle.generateKey
+      expect(errSpy).not.toHaveBeenCalled();
+      // 会话密钥也不该被写入（写入即意味着 generateSessionKey 跑过了）
+      expect(sessionStorage.getItem(SESSION_KEY_NAME)).toBeNull();
+    } finally {
+      delete (window.crypto as { subtle?: unknown }).subtle;
+      errSpy.mockRestore();
+    }
   });
 
   it("旧版明文 apiKey 字段被 merge 丢弃（不进入内存态）", () => {

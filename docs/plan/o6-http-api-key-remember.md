@@ -43,6 +43,25 @@
 **变异验证**：把判定条件反转（`!==` → `===`）→ **6 例失败**（含 3 例既有的记住开关测试），
 还原后 13/13 通过——证明测试对这条行为敏感，不是恒真断言。
 
+### 调用链末端：确认真的没走到加密
+
+[`lib/__tests__/store.test.ts`](../../lib/__tests__/store.test.ts) 新增 1 例。
+
+**"UI 不显示" ≠ "不会调用加密"**——组件传 `remember=false` 只是必要条件，还得确认 store
+那侧真的没走到加密。该用例在 `crypto.subtle` 缺席下调用 `setApiKey("sk-x", false)`，断言三件事：
+
+- `encryptedApiKey` 为 `null`；
+- **`console.error` 未被调用**（无异常 = 从未尝试 `crypto.subtle.generateKey`）；
+- sessionStorage 中没有会话密钥（若有，说明 `generateSessionKey` 已经跑过）。
+
+**变异验证（本次最强证据）**：把该用例的 `remember` 换回改动前的 `true` → 用例失败，
+且报错正是生产上那条 `TypeError: Cannot read properties of undefined (reading 'generateKey')`。
+即**这条测试能复现用户实际遇到的线上故障**，改动后才转为通过。
+
+> 结论：`generateSessionKey()` 在整个仓库里唯一的可达路径是 `store.ts` 中
+> `if (remember && apiKey)` 分支内的 `ensureSessionKey()`。`remember=false` 时该分支整体跳过，
+> 因此 `crypto.subtle` 一次都不会被触碰。
+
 ## 影响范围
 
 - **修改**：[`app/components/ApiKeySettings.tsx`](../../app/components/ApiKeySettings.tsx) + 测试文件
