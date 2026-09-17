@@ -84,6 +84,29 @@ npm run dev                  # http://localhost:3000
    > `.next/cache/images` 里按旧配置写入的条目会继续按旧 TTL 下发，需要
    > `rm -rf .next/cache/images` 才会立即生效（不删则等其自然过期，属自愈）。
 
+3.6. **部署回退（部署坏了怎么恢复）**
+
+   **部署前必做：记录回退锚点**——本地 `git rev-parse main`，记下"上一个好版本的 SHA"（即本次部署前 main 停在的 commit）。回退靠的就是它。
+
+   **部署失败（`build` 报错）**：`&&` 链保证 `pm2 restart` 不会执行，线上仍是旧版本，**无需回退**——排查后重试即可。这是被动保护，不要手动去动 pm2。
+
+   **部署成功但新版本有问题**：用 `git revert` 回退（**不改写历史、不 force push**，符合本项目"不重写历史"的既有决策）：
+
+   ```bash
+   # 本地：新增一个反向提交，把 main 恢复到上一个好版本的行为
+   git checkout main && git pull
+   git revert <有问题的提交SHA> --no-edit
+   git push origin main
+   ```
+
+   然后服务器**重新走一遍 3.5 的覆盖部署**（tar 拉到 revert 后的 main）。
+
+   > ⚠️ **回退与 `tar` 不删文件的交互**：`git revert` 只改变文件内容、不会删除"仍被跟踪"的文件。
+   > 若被回退的提交**新增**了文件，revert 会让这些文件从 main 消失，但 tar 覆盖部署**不会删掉**
+   > 服务器上对应的副本——残留文件继续留在服务器。纯新增且无人引用的文件（如 `tsconfig.test.json`）
+   > 无害；但若新增的是 `app/` 下的路由，回退后该路由仍会被 Next 编译发布，需手动 `rm` 或跑
+   > 3.5 的对账命令找出并清理。
+
 4. **Nginx 反向代理**（对外 80 → 应用 3000）：
    - 作用之一是**覆写 `X-Forwarded-For`**，使 IP 限流无法被客户端伪造的请求头绕过（详见 [`archive/migration-2026-09.md`](./archive/migration-2026-09.md) §16）；
    - 配置中 `proxy_buffering off` 是**必需项**——否则 SSE 逐字输出会退化成一次性刷出；
