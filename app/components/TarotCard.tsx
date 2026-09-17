@@ -3,7 +3,7 @@
 import { useState, memo } from "react";
 import { motion } from "framer-motion";
 import { TarotCard as TarotCardType } from "@/lib/tarot-data";
-import Image from "next/image";
+import { CardImage } from "@/app/components/CardImage";
 
 interface TarotCardProps {
   card: TarotCardType;
@@ -26,23 +26,19 @@ const CardBack = ({ className }: { className?: string }) => (
 );
 
 // 卡牌正面组件
-const CardFront = ({ 
-  className, 
-  card, 
-  isReversed, 
-  imageError, 
-  setImageError, 
-  cardSizes, 
-  size, 
-  isRevealed 
-}: { 
+const CardFront = ({
+  className,
+  card,
+  isReversed,
+  imageError,
+  setImageError,
+  isRevealed
+}: {
   className?: string;
   card: TarotCardType;
   isReversed: boolean;
   imageError: boolean;
   setImageError: (error: boolean) => void;
-  cardSizes: Record<string, { width: number; height: number }>;
-  size: "sm" | "md" | "lg";
   isRevealed: boolean;
 }) => (
     <div
@@ -52,14 +48,10 @@ const CardFront = ({
     >
       {!imageError && card.image ? (
         <div className="relative w-full h-full">
-          <Image
-            src={card.image}
-            alt={card.name}
-            fill
-            className="object-cover"
+          <CardImage
+            card={card}
             onError={() => setImageError(true)}
             priority={isRevealed}
-            sizes={`${cardSizes[size].width}px`}
             loading={isRevealed ? "eager" : "lazy"}
           />
 
@@ -127,16 +119,13 @@ export const TarotCard = memo(function TarotCard({
 }: TarotCardProps) {
   const [imageError, setImageError] = useState(false);
 
+  // 图片宽度档位统一由 CardImage 的默认 sizes 决定（规格 G15），
+  // 此处只控制布局尺寸；若将来要在 lg 下保持清晰，需同步提升
+  // lib/cardImage.ts 的 CARD_IMAGE_WIDTH 并复算不变量。
   const sizeClasses = {
     sm: "w-24 h-36",
     md: "w-32 h-48",
     lg: "w-40 h-60",
-  };
-
-  const cardSizes = {
-    sm: { width: 96, height: 144 },
-    md: { width: 128, height: 192 },
-    lg: { width: 160, height: 240 },
   };
 
   return (
@@ -163,8 +152,6 @@ export const TarotCard = memo(function TarotCard({
             isReversed={isReversed}
             imageError={imageError}
             setImageError={setImageError}
-            cardSizes={cardSizes}
-            size={size}
             isRevealed={isRevealed}
           />
         </div>

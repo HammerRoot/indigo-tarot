@@ -3,7 +3,7 @@
 import { useState, memo } from "react";
 import { motion } from "framer-motion";
 import { TarotCard as TarotCardType } from "@/lib/tarot-data";
-import Image from "next/image";
+import { CardImage } from "@/app/components/CardImage";
 
 interface ResultTarotCardProps {
   card: TarotCardType;
@@ -33,13 +33,11 @@ export const ResultTarotCard = memo(function ResultTarotCard({
       >
         {!imageError && card.image ? (
           <div className="relative w-full h-full">
-            <Image
-              src={card.image}
-              alt={card.name}
-              fill
-              className="object-cover"
+            {/* sizes 用 CardImage 的默认值：与选牌页翻牌同一个 URL，
+                已翻过的牌在此为纯缓存命中（规格 G15） */}
+            <CardImage
+              card={card}
               onError={() => setImageError(true)}
-              sizes="160px"
               loading="eager"
               priority={index === 0}
             />

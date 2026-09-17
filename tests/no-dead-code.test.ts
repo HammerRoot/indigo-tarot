@@ -55,6 +55,10 @@ describe("Y2 死代码清理静态契约", () => {
       /currentReading/,
       /pickCardsByIndex/,
       /gridClassFor/,
+      // G15：预热的是原图 URL、而页面渲染的是 /_next/image 优化 URL，命中率 0，
+      // 纯属白下载 320KB/张的原图与真正要用的图抢带宽。改由 CardImage 统一出口后删除。
+      /imageCache/,
+      /preloadBatch/,
     ];
     for (const file of [...walk("app"), ...walk("lib")]) {
       const content = readSource(file);
@@ -66,6 +70,10 @@ describe("Y2 死代码清理静态契约", () => {
 
   it("lib/pick.ts 已删除（选牌子页改用 pickedIndexesFromSlots）", () => {
     expect(existsSync(resolve(root, "lib/pick.ts"))).toBe(false);
+  });
+
+  it("lib/imageCache.ts 已删除（G15：预加载 URL 与渲染 URL 不同源，命中率 0）", () => {
+    expect(existsSync(resolve(root, "lib/imageCache.ts"))).toBe(false);
   });
 
   it("gridClassFor 已删除（G11 起结果页改用 flex 换行，该函数无生产调用方）", () => {

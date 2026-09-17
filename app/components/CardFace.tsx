@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { CardImage } from "@/app/components/CardImage";
 import { TarotCard as TarotCardType } from "@/lib/tarot-data";
 
 // 塔罗牌牌面(规格 G8):扇形牌正面 / 飞入克隆 / 槽位填充共用
@@ -20,14 +20,7 @@ export function CardFace({
       className={`relative w-full h-full overflow-hidden rounded-lg bg-gradient-to-b from-amber-50 to-purple-50 ${className}`}
     >
       {card.image ? (
-        <Image
-          src={card.image}
-          alt={card.name}
-          fill
-          sizes="96px"
-          className="object-cover"
-          draggable={false}
-        />
+        <CardImage card={card} />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-purple-800 text-[10px] md:text-xs font-bold text-center p-1 leading-tight">
           {card.name}

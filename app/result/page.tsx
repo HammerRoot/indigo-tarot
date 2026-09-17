@@ -10,7 +10,6 @@ import { generateTarotReadingStream } from "@/lib/deepseek";
 import { ResultTarotCard } from "@/app/components/ResultTarotCard";
 import { MarkdownRenderer } from "@/app/components/MarkdownRenderer";
 import { CardModal } from "@/app/components/CardModal";
-import { imageCache } from "@/lib/imageCache";
 import { parseStreamContent, stripAdviceSection } from "@/lib/stream-parse";
 
 export default function ResultPage() {
@@ -168,10 +167,10 @@ export default function ResultPage() {
       return;
     }
 
-    // 预加载图片
-    const imageUrls = drawnCards.map((card) => card.image).filter(Boolean);
-
-    imageCache.preloadBatch(imageUrls).catch(console.warn);
+    // 不在此预加载图片：牌面在 /draw/select 翻牌时就已按同一个 URL 取到
+    // （规格 G15），结果页对已翻过的牌是纯缓存命中。
+    // 旧实现在这里预热的是原图 URL，而页面渲染的是 /_next/image 优化 URL，
+    // 命中率 0，纯属白下载 ~320KB/张的原图与真正要用的图抢带宽。
 
     // 立即显示卡牌，并立即分析
     setShowCards(true);

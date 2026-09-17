@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
-import Image from "next/image";
+import { CardImage } from "@/app/components/CardImage";
 import { TarotCard as TarotCardType } from "@/lib/tarot-data";
 
 interface CardModalProps {
@@ -66,14 +66,8 @@ export function CardModal({
             isReversed ? "rotate-180" : ""
           }`}
         >
-          <Image
-            src={card.image}
-            alt={card.name}
-            fill
-            className="object-cover"
-            sizes="320px"
-            priority
-          />
+          {/* 唯一显式传 sizes 的位置：放大需要比缩略图更高的分辨率 */}
+          <CardImage card={card} sizes="320px" priority />
           {isReversed && (
             <div className="absolute inset-0 border-4 border-amber-400/70 rounded-2xl z-10" />
           )}
