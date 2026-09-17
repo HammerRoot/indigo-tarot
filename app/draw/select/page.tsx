@@ -334,12 +334,14 @@ export default function SelectPage() {
           </div>
 
           {/* 选满后才出现;中途关闭走左上角,语义是「退出」而非「完成」。
-              悬浮在底部:选满时按钮原本埋在 1090px 网格的最下方,要滚到底才够得着。 */}
+              悬浮在底部:选满时按钮原本埋在 1090px 网格的最下方,要滚到底才够得着。
+              金色:与牌背的深紫蓝区分开,呼应已选牌的金色描边与牌位 pill——
+              紫色按钮会和同是紫色系的牌背/页面糊成一片。 */}
           {isComplete && (
             <div className="fixed bottom-6 inset-x-4 z-30">
               <motion.button
                 onClick={closeSelect}
-                className="block w-full max-w-md mx-auto h-[52px] rounded-2xl bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white text-lg font-bold shadow-2xl active:scale-[0.99] transition"
+                className="block w-full max-w-md mx-auto h-[52px] rounded-2xl bg-gradient-to-r from-gold-light to-gold hover:brightness-105 text-astro-deep text-lg font-bold shadow-[0_8px_28px_rgba(212,175,55,0.35)] active:scale-[0.99] transition"
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 whileHover={{ scale: 1.01 }}
