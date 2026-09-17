@@ -126,7 +126,7 @@ export function firstEmptySlot(
   return null;
 }
 
-/** 已选牌的牌组索引(供选牌子页减去已选牌) */
+/** 已选牌的牌组索引(供选牌子页把已选位置标为不可再选) */
 export function pickedIndexesFromSlots(
   slots: readonly (SelectionFill | null)[],
 ): number[] {
