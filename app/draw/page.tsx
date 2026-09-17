@@ -5,10 +5,12 @@ import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTarotStore, recommendSpread } from "@/lib/store";
+import { tarotCards } from "@/lib/tarot-data";
 import { SpreadSlots } from "@/app/components/SpreadSlots";
 import {
   SelectionFill,
   buildPositionMeanings,
+  createDeckOrder,
   firstEmptySlot,
 } from "@/lib/drawFlow";
 
@@ -22,11 +24,21 @@ export default function DrawPage() {
     question,
     recommendedSpread,
     selectedSlots,
+    deckOrder,
     setRecommendedSpread,
     setSelectedSlots,
+    setDeckOrder,
     setDrawnCards,
     setCardReversals,
   } = useTarotStore();
+
+  // 牌序兜底(规格 G17):正常由首页「开始占卜」时的 resetSession 生成。
+  // 但 deckOrder 是内存态——刷新后丢失,此时补一副新的,否则子页无法渲染。
+  useEffect(() => {
+    if (deckOrder.length !== tarotCards.length) {
+      setDeckOrder(createDeckOrder(tarotCards.length));
+    }
+  }, [deckOrder.length, setDeckOrder]);
 
   // 无问题回首页;推荐牌阵
   useEffect(() => {

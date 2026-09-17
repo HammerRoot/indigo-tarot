@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { TarotCard } from './tarot-data';
-import { SelectionFill } from './drawFlow';
+import { TarotCard, tarotCards } from './tarot-data';
+import { SelectionFill, createDeckOrder } from './drawFlow';
 import { recommendSpreadId } from './spread';
 import {
   decryptApiKey,
@@ -66,6 +66,10 @@ interface TarotStore {
   // 选牌进行中的槽位填充(长度为 cardCount,null 表示未选)——情况页与选牌子页共享,内存态不持久化
   selectedSlots: (SelectionFill | null)[];
   setSelectedSlots: (slots: (SelectionFill | null)[]) => void;
+
+  // 本局的牌序(0..77 的排列,值即 tarotCards 下标)——每局洗一次,整局固定,内存态不持久化
+  deckOrder: number[];
+  setDeckOrder: (order: number[]) => void;
   
   // 抽取的卡牌
   drawnCards: TarotCard[];
@@ -150,6 +154,7 @@ export const useTarotStore = create<TarotStore>()(
       encryptedApiKey: null,
       recommendedSpread: null,
       selectedSlots: [],
+      deckOrder: [],
       drawnCards: [],
       cardReversals: [],
       readings: [],
@@ -204,6 +209,8 @@ export const useTarotStore = create<TarotStore>()(
       
       setRecommendedSpread: (spread) => set({ recommendedSpread: spread }),
       setSelectedSlots: (slots) => set({ selectedSlots: slots }),
+
+      setDeckOrder: (order) => set({ deckOrder: order }),
       
       setDrawnCards: (cards) => set({ drawnCards: cards }),
       
@@ -231,6 +238,9 @@ export const useTarotStore = create<TarotStore>()(
         question: '',
         recommendedSpread: null,
         selectedSlots: [],
+        // 新的一局 → 重新洗牌。整局只洗这一次(规格 G17):
+        // 局中重洗会让"关掉浮层再点同一格"得到不同的牌
+        deckOrder: createDeckOrder(tarotCards.length),
         drawnCards: [],
         cardReversals: [],
         isLoading: false

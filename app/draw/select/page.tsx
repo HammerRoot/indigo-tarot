@@ -6,30 +6,39 @@ import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTarotStore } from "@/lib/store";
 import { tarotCards } from "@/lib/tarot-data";
+import { CardFace } from "@/app/components/CardFace";
+import { CardModal, type CardOrigin } from "@/app/components/CardModal";
 import { GridCard } from "@/app/components/GridCard";
-import { CardModal } from "@/app/components/CardModal";
-import { SpreadSlots } from "@/app/components/SpreadSlots";
+import { cn } from "@/lib/utils";
 import {
-  FLIP_DURATION_MS,
   SHUFFLE_DURATION_MS,
+  REVEAL_FLY_BACK_MS,
   buildPositionMeanings,
   firstEmptySlot,
   pickedIndexesFromSlots,
   randomReversal,
 } from "@/lib/drawFlow";
 
-// 选牌子页(规格 G17 重写):洗牌进场 → 连续选满 → 一次返回
-// - 洗牌动画结束后才可点击(reduced-motion 时跳过)
-// - 点击即落定(立即写入 store,不可逆)→ 原位翻牌 → 揭示浮层(由用户收起)
-// - 棋盘填满:78 个牌位位置全程不变,已选位渲染为空坑,不做重排
+// 选牌子页(规格 G17):洗牌进场 → 连续选满 → 飞入揭示 → 缩回落位
+// - 洗牌动画结束后才可点击(reduced-motion 时跳过;已开局的牌堆不再洗)
+// - 点击即落定(立即写入 store,不可逆)→ 该牌飞入中央揭示 → 用户收起 → 缩回原位
+// - 棋盘填满:78 个牌位位置全程不变;已选位正面全亮展示 + 金色描边
 // - 选满后「完成选牌」回情况页;中途关闭 = 退出(进度保留在 store),不等于放弃
 const GRID_COLUMNS = 6;
 
-// 状态机:shuffling(不可点) → idle(可点) → flipping(原位翻牌) → revealing(揭示浮层)
-type Phase = "shuffling" | "idle" | "flipping" | "revealing";
+// 状态机:shuffling(不可点) → idle(可点) → revealing(揭示浮层开着) → closing(缩回中)
+type Phase = "shuffling" | "idle" | "revealing" | "closing";
+
+/** 本次揭示:源格位置、牌阵槽位、逆位状态、以及源格在视口中的矩形 */
+interface Reveal {
+  position: number;
+  slot: number;
+  reversed: boolean;
+  origin: CardOrigin;
+}
 
 /**
- * 与牌组索引绑定的确定性伪随机(0–1)。
+ * 与牌组位置绑定的确定性伪随机(0–1)。
  * 用确定性函数而非 Math.random:子页会被服务端预渲染,渲染期取随机数会造成 hydration 不一致。
  */
 function shuffleNoise(seed: number): number {
@@ -39,17 +48,22 @@ function shuffleNoise(seed: number): number {
 
 export default function SelectPage() {
   const router = useRouter();
-  const { question, recommendedSpread, selectedSlots, setSelectedSlots } =
+  const { question, recommendedSpread, selectedSlots, deckOrder, setSelectedSlots } =
     useTarotStore();
 
   const reducedMotion = useReducedMotion();
-  const [phase, setPhase] = useState<Phase>(
-    reducedMotion ? "idle" : "shuffling",
+  // 仅在「尚未选任何牌」时播放洗牌动画——已经选中几张还回子页时,已开局的牌堆不该再洗。
+  // 用 useState 的惰性初值冻结首帧取值:否则第一次选牌后 hasPicks 变真,
+  // 会把这个 effect 重跑成「跳过洗牌」。
+  // (不用 useRef —— 在 render 期读 ref.current 会触发 React Compiler 的纯净性规则)
+  const [hadPicksOnMount] = useState(() =>
+    selectedSlots.some((slot) => slot !== null),
   );
-  const [flipIndex, setFlipIndex] = useState<number | null>(null);
-  const [flipReversed, setFlipReversed] = useState(false);
-  // 揭示浮层对应的槽位(与 flipIndex 分离:牌组索引与槽位索引不是一回事)
-  const [revealSlot, setRevealSlot] = useState<number | null>(null);
+
+  const [phase, setPhase] = useState<Phase>(() =>
+    reducedMotion || hadPicksOnMount ? "idle" : "shuffling",
+  );
+  const [reveal, setReveal] = useState<Reveal | null>(null);
   const timersRef = useRef<number[]>([]);
 
   useEffect(() => {
@@ -57,16 +71,18 @@ export default function SelectPage() {
     return () => timers.forEach((id) => window.clearTimeout(id));
   }, []);
 
-  // 无问题或未进入牌阵 → 回到首页/情况页
+  const deckReady = deckOrder.length === tarotCards.length;
+
+  // 无问题 / 未进入牌阵 / 牌序缺失 → 回到首页或情况页
   useEffect(() => {
     if (!question) {
       router.replace("/");
       return;
     }
-    if (!recommendedSpread) {
+    if (!recommendedSpread || !deckReady) {
       router.replace("/draw");
     }
-  }, [question, recommendedSpread, router]);
+  }, [question, recommendedSpread, deckReady, router]);
 
   // 仅首次进入时校验:直接访问一个已选满的子页 → 回退情况页。
   // 刻意用 ref 守卫而非以 focus 为依赖——否则选满最后一张会被立刻弹走,
@@ -82,11 +98,21 @@ export default function SelectPage() {
 
   // 洗牌:动画结束后才放开点击
   useEffect(() => {
-    if (reducedMotion) return;
+    if (reducedMotion || hadPicksOnMount) return;
     const id = window.setTimeout(() => setPhase("idle"), SHUFFLE_DURATION_MS);
     timersRef.current.push(id);
     return () => window.clearTimeout(id);
-  }, [reducedMotion]);
+  }, [reducedMotion, hadPicksOnMount]);
+
+  // 揭示/缩回期间锁定页面滚动,否则缩回的目标格会在动画途中移位
+  useEffect(() => {
+    if (phase !== "revealing" && phase !== "closing") return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [phase]);
 
   const meanings = useMemo(
     () =>
@@ -96,7 +122,6 @@ export default function SelectPage() {
     [question, recommendedSpread],
   );
 
-  // 当前待选位 = 第一个空槽位;为 null 即已选满
   const focus = useMemo(() => firstEmptySlot(selectedSlots), [selectedSlots]);
   const pickedIndexes = useMemo(
     () => pickedIndexesFromSlots(selectedSlots),
@@ -110,41 +135,44 @@ export default function SelectPage() {
 
   const closeSelect = useCallback(() => router.push("/draw"), [router]);
 
-  // 点击牌背即落定:先写 store(不可逆),再原位翻牌,翻毕弹出揭示浮层
+  // 点击牌背即落定:先写 store(不可逆),同时让该牌飞入揭示
   const handleCardSelect = useCallback(
-    (index: number) => {
+    (position: number) => {
       if (phase !== "idle" || focus === null) return;
-      const card = tarotCards[index];
-      if (!card || pickedIndexes.includes(index)) return;
+      const cardIndex = deckOrder[position];
+      const card = cardIndex === undefined ? undefined : tarotCards[cardIndex];
+      if (!card || pickedIndexes.includes(cardIndex)) return;
+
+      // 记录源格矩形:飞入从此处起飞,缩回回到此处
+      const cell = document.querySelector(`[data-grid-cell="${position}"]`);
+      const rect = cell?.getBoundingClientRect();
+      const origin: CardOrigin = rect
+        ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+        : { x: 0, y: 0, width: 0, height: 0 };
 
       const reversed = randomReversal();
       setSelectedSlots(
         selectedSlots.map((slot, i) =>
-          i === focus ? { cardIndex: index, card, reversed } : slot,
+          i === focus ? { cardIndex, card, reversed } : slot,
         ),
       );
-      setFlipIndex(index);
-      setFlipReversed(reversed);
-      setRevealSlot(focus);
-      setPhase("flipping");
-
-      const id = window.setTimeout(
-        () => setPhase("revealing"),
-        FLIP_DURATION_MS,
-      );
-      timersRef.current.push(id);
+      setReveal({ position, slot: focus, reversed, origin });
+      setPhase("revealing");
     },
-    [phase, focus, pickedIndexes, selectedSlots, setSelectedSlots],
+    [phase, focus, deckOrder, pickedIndexes, selectedSlots, setSelectedSlots],
   );
 
-  // 收起揭示浮层:留在子页,该位随后渲染为空坑
+  // 收起揭示浮层:先播缩回动画,落位后才卸载浮层
   const closeReveal = useCallback(() => {
-    setFlipIndex(null);
-    setRevealSlot(null);
-    setPhase("idle");
+    setPhase("closing");
+    const id = window.setTimeout(() => {
+      setReveal(null);
+      setPhase("idle");
+    }, REVEAL_FLY_BACK_MS);
+    timersRef.current.push(id);
   }, []);
 
-  if (!recommendedSpread) {
+  if (!recommendedSpread || !deckReady) {
     return (
       <div className="min-h-screen mystical-bg flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-300"></div>
@@ -153,7 +181,7 @@ export default function SelectPage() {
   }
 
   const isShuffling = phase === "shuffling";
-  const revealedFill = revealSlot !== null ? selectedSlots[revealSlot] : null;
+  const revealedFill = reveal ? selectedSlots[reveal.slot] : null;
 
   return (
     <div className="min-h-screen mystical-bg relative overflow-hidden">
@@ -172,36 +200,21 @@ export default function SelectPage() {
         </motion.button>
 
         <div className="max-w-3xl mx-auto pt-20">
-          {/* 常驻紧凑槽位条:用户全程无需离开子页即可掌握进度 */}
-          <div data-compact-slots="true" className="text-center mb-6">
+          {/* 页头:两行纯文字,不加容器(此处每一像素都该让给网格) */}
+          <div className="text-center mb-6">
             <h2 className="text-xl md:text-2xl font-bold text-gray-800">
               {isComplete
                 ? "牌阵已就位"
                 : `为「${recommendedSpread.positions[focus]}」选一张牌`}
             </h2>
-            {!isComplete && (
-              <div className="mystical-card p-3 max-w-xl mx-auto mt-3">
-                <p className="text-sm text-purple-600 font-semibold">
-                  {meanings[focus]}
-                </p>
-              </div>
-            )}
-            <p className="text-sm text-purple-600 font-semibold mt-3">
+            <p className="text-sm text-gray-500 mt-2">
+              {!isComplete && `${meanings[focus]} · `}
               已选 {filledCount} / {recommendedSpread.cardCount}
               {isShuffling ? " · 洗牌中…" : ""}
             </p>
-            <div className="mt-4">
-              <SpreadSlots
-                positions={recommendedSpread.positions}
-                meanings={meanings}
-                fills={selectedSlots}
-                focusSlot={focus}
-                compact
-              />
-            </div>
           </div>
 
-          {/* 棋盘填满:78 个牌位位置全程不变,已选位渲染为空坑 */}
+          {/* 棋盘填满:78 个牌位位置全程不变 */}
           <div
             data-grid-columns={GRID_COLUMNS}
             className="grid gap-2"
@@ -209,21 +222,25 @@ export default function SelectPage() {
               gridTemplateColumns: `repeat(${GRID_COLUMNS}, minmax(0, 1fr))`,
             }}
           >
-            {tarotCards.map((card, index) => {
-              const picked = pickedIndexes.includes(index);
-              // 翻牌/揭示期间该位仍以牌背(翻面)呈现,收起后才落成空坑
-              const isActive = flipIndex === index && phase !== "idle";
+            {deckOrder.map((cardIndex, position) => {
+              const card = tarotCards[cardIndex];
+              const picked = pickedIndexes.includes(cardIndex);
+              // 揭示/缩回期间该位让位给飞行元素:格子仍占位(不能塌陷,否则飞行目标会移位),
+              // 但对视觉与读屏都隐藏
+              const isFlying = reveal?.position === position;
               return (
                 <motion.div
-                  key={card.id}
-                  data-grid-cell={index}
+                  key={position}
+                  data-grid-cell={position}
+                  // 洗牌进场:78 张牌由散乱状态归位。位移用与位置绑定的确定性伪随机,
+                  // 避免渲染期取随机数导致 hydration 不一致
                   initial={
                     isShuffling
                       ? {
                           opacity: 0.15,
-                          x: (shuffleNoise(index * 3) - 0.5) * 160,
-                          y: (shuffleNoise(index * 3 + 1) - 0.5) * 160,
-                          rotate: (shuffleNoise(index * 3 + 2) - 0.5) * 120,
+                          x: (shuffleNoise(position * 3) - 0.5) * 160,
+                          y: (shuffleNoise(position * 3 + 1) - 0.5) * 160,
+                          rotate: (shuffleNoise(position * 3 + 2) - 0.5) * 120,
                         }
                       : false
                   }
@@ -233,20 +250,23 @@ export default function SelectPage() {
                     ease: "easeOut",
                   }}
                 >
-                  {picked && !isActive ? (
+                  {picked && card ? (
                     <div
-                      data-picked-hole={index}
-                      className="w-full aspect-[2/3] rounded-[3px] md:rounded-md border border-dashed border-purple-400/40 bg-purple-900/10"
-                    />
+                      data-selected-card={position}
+                      aria-hidden={isFlying || undefined}
+                      className={cn(
+                        "w-full aspect-[2/3] rounded-[3px] md:rounded-md overflow-hidden",
+                        "ring-[1.5px] ring-yellow-300/90 shadow-[0_0_12px_rgba(212,175,55,0.45)]",
+                        isFlying && "opacity-0",
+                      )}
+                    >
+                      <CardFace card={card} reversed={reveal?.reversed ?? false} />
+                    </div>
                   ) : (
                     <GridCard
-                      card={card}
-                      index={index}
-                      isFlipped={isActive}
-                      isReversed={isActive && flipReversed}
+                      index={position}
                       isHidden={false}
                       onClick={handleCardSelect}
-                      registerRef={() => undefined}
                     />
                   )}
                 </motion.div>
@@ -270,20 +290,15 @@ export default function SelectPage() {
         </div>
       </main>
 
-      {/* 揭示浮层:复用 CardModal(它已是 G15 唯一被许可传 sizes 的组件)。
-          三种收起方式——「继续」按钮 / 点浮层外 / ESC,均由 CardModal 提供。
-
-          刻意**不套 AnimatePresence**:其退场期间节点仍留在 DOM 里,浮层的按钮仍可点、
-          且一层 fixed inset-0 仍盖着网格——对「点击即落定、连续选满 N 张」的流程而言,
-          这等于每次收牌后多出一段点击死区。入场动画(弹簧缩放)由 CardModal 自身承担,
-          它才是揭示感的来源;退场即时卸载。 */}
-      {phase === "revealing" && revealSlot !== null && revealedFill && (
+      {/* 揭示浮层:复用 CardModal。三种退出方式——「确认」/ 点浮层外 / ESC */}
+      {reveal && revealedFill && (
         <CardModal
           card={revealedFill.card}
-          position={recommendedSpread.positions[revealSlot]}
+          position={recommendedSpread.positions[reveal.slot]}
           isReversed={revealedFill.reversed}
           onClose={closeReveal}
-          actionLabel="继续"
+          actionLabel="确认"
+          reveal={{ origin: reveal.origin, exiting: phase === "closing" }}
         />
       )}
     </div>

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useTarotStore } from "@/lib/store";
+import { tarotCards } from "@/lib/tarot-data";
 import {
   encryptApiKey,
   generateSessionKey,
@@ -133,5 +134,35 @@ describe("Y1 store readings 历史记录", () => {
     const readings = useTarotStore.getState().readings;
     expect(readings.length).toBe(1);
     expect(readings[0].id).toBe("r2");
+  });
+});
+
+// 规格 G17（bug 修复）：一局一副牌序，整局固定
+describe("G17 store deckOrder 牌序", () => {
+  beforeEach(() => {
+    useTarotStore.setState({
+      deckOrder: [],
+      question: "",
+      recommendedSpread: null,
+      selectedSlots: [],
+      drawnCards: [],
+      cardReversals: [],
+    });
+  });
+
+  it("resetSession 生成一副完整的牌序（0..77 的排列）", () => {
+    useTarotStore.getState().resetSession();
+    const order = useTarotStore.getState().deckOrder;
+    expect(order).toHaveLength(tarotCards.length);
+    expect(new Set(order).size).toBe(tarotCards.length);
+  });
+
+  it("牌序确实存在，但不进入持久化（partialize 只含 readings / encryptedApiKey / trialUsed）", () => {
+    useTarotStore.getState().resetSession();
+    // 先证明状态真的生成了——否则下面的「未持久化」是空过
+    expect(useTarotStore.getState().deckOrder.length).toBe(tarotCards.length);
+
+    const persisted = JSON.parse(localStorage.getItem("tarot-store") ?? "{}");
+    expect(persisted.state?.deckOrder).toBeUndefined();
   });
 });

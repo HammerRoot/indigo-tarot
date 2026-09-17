@@ -1,10 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import { CardImage } from "@/app/components/CardImage";
+import { CardBack } from "@/app/components/CardBack";
+import { REVEAL_FLY_IN_MS, REVEAL_FLY_BACK_MS } from "@/lib/drawFlow";
 import { TarotCard as TarotCardType } from "@/lib/tarot-data";
+
+/** 源格在视口中的矩形——揭示浮层飞入的起点、缩回的终点 */
+export interface CardOrigin {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 interface CardModalProps {
   card: TarotCardType;
@@ -12,10 +22,20 @@ interface CardModalProps {
   isReversed?: boolean;
   onClose: () => void;
   /**
-   * 可选主按钮文案(规格 G17)。传入时在牌面下方渲染一个主按钮,点击等价于 onClose。
-   * 选牌子页的揭示浮层传「继续」;结果页不传,行为与 G7 完全一致。
+   * 可选主按钮文案。传入时在牌面下方渲染一个主按钮,点击等价于 onClose。
+   * 结果页不传。
    */
   actionLabel?: string;
+  /**
+   * 揭示形态(规格 G17)。传入时:
+   * - 牌从源格 `origin` 处**旋转翻面 + 放大 + 移到屏幕中央**(一次连续运动);
+   * - `exiting` 为真时反向缩回源格(保持正面);
+   * - 蒙层改用与页底同色系的淡紫(黑蒙层在浅紫页底上就是一面黑墙);
+   * - 隐藏右上角关闭按钮,退出由主按钮与点击蒙层承担。
+   *
+   * 不传则行为与 G7 完全一致(结果页走这条路径)。
+   */
+  reveal?: { origin: CardOrigin; exiting: boolean };
 }
 
 // 牌放大模态(规格 G7):点击结果页牌面 → 居中放大展示,标注牌位/牌名/正逆位/关键词
@@ -26,6 +46,7 @@ export function CardModal({
   isReversed = false,
   onClose,
   actionLabel,
+  reveal,
 }: CardModalProps) {
   // ESC 关闭
   useEffect(() => {
@@ -36,10 +57,112 @@ export function CardModal({
     return () => document.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  // 视口尺寸在浮层出现时冻结一次:飞行是相对"屏幕中央"计算的,resize 不应改变进行中的动画
+  const [viewport] = useState(() =>
+    typeof window === "undefined"
+      ? { w: 375, h: 667 }
+      : { w: window.innerWidth, h: window.innerHeight },
+  );
+
   const keywords = (isReversed ? card.keywordsReversed : card.keywordsUpright)
     .slice(0, 3)
     .join(" · ");
 
+  const details = (
+    <>
+      <span className="inline-block px-4 py-1.5 rounded-full bg-gold/20 border border-gold/40 text-gold text-xs tracking-widest uppercase mb-3">
+        {position}
+      </span>
+      <h3 className="text-white text-2xl font-bold mb-1">{card.name}</h3>
+      <p className="text-white/60 text-sm mb-2">{isReversed ? "逆位" : "正位"}</p>
+      <p className="text-gold/90 text-sm tracking-wide">{keywords}</p>
+    </>
+  );
+
+  // === 揭示形态:牌本身即飞行元素 ===
+  if (reveal) {
+    const cardW = Math.min(viewport.w >= 768 ? 320 : 256, viewport.w - 48);
+    const cardH = cardW * 1.5;
+    // jsdom 无布局(getBoundingClientRect 恒为 0)→ 给一个有意义的兜底缩放,
+    // 否则 scale 会是 0 而让元素不可见
+    const fromScale =
+      reveal.origin.width > 0 ? reveal.origin.width / cardW : 0.2;
+    const fromX =
+      reveal.origin.x + reveal.origin.width / 2 - viewport.w / 2;
+    const fromY =
+      reveal.origin.y + reveal.origin.height / 2 - viewport.h / 2;
+
+    return (
+      <motion.div
+        data-testid="card-modal-overlay"
+        className="fixed inset-0 z-50 bg-purple-950/45 backdrop-blur-sm flex items-center justify-center p-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        onClick={onClose}
+      >
+        <div
+          data-testid="card-modal-content"
+          className="relative flex flex-col items-center"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* 飞行元素:rotateY 0 → 180,背→正。容器与详情的时序见下 */}
+          <motion.div
+            data-testid="reveal-flying-card"
+            className="relative transform-style-3d"
+            style={{ width: cardW, height: cardH }}
+            initial={{ x: fromX, y: fromY, scale: fromScale, rotateY: 0 }}
+            animate={
+              reveal.exiting
+                ? { x: fromX, y: fromY, scale: fromScale, rotateY: 180 }
+                : { x: 0, y: 0, scale: 1, rotateY: 180 }
+            }
+            transition={{
+              duration:
+                (reveal.exiting ? REVEAL_FLY_BACK_MS : REVEAL_FLY_IN_MS) / 1000,
+              ease: "easeInOut",
+            }}
+          >
+            {/* 牌背(飞行起点时的可见面) */}
+            <div className="absolute inset-0 backface-hidden rounded-2xl overflow-hidden">
+              <CardBack />
+            </div>
+            {/* 牌面(翻转后可见) */}
+            <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl overflow-hidden border-2 shadow-2xl shadow-purple-900/50">
+              <div className={isReversed ? "rotate-180 w-full h-full" : "w-full h-full"}>
+                <CardImage card={card} sizes="320px" priority />
+              </div>
+              {isReversed && (
+                <div className="absolute inset-0 border-4 border-amber-400/70 rounded-2xl z-10" />
+              )}
+            </div>
+          </motion.div>
+
+          {/* 详情在飞行接近尾声时淡入;缩回时先快速淡出 */}
+          <motion.div
+            className="mt-6 text-center flex flex-col items-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: reveal.exiting ? 0 : 1 }}
+            transition={{
+              duration: reveal.exiting ? 0.12 : 0.25,
+              delay: reveal.exiting ? 0 : (REVEAL_FLY_IN_MS / 1000) * 0.6,
+            }}
+          >
+            {details}
+            {actionLabel && (
+              <button
+                onClick={onClose}
+                className="mt-6 px-10 py-3 rounded-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold shadow-lg transition-colors cursor-pointer"
+              >
+                {actionLabel}
+              </button>
+            )}
+          </motion.div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // === 默认形态(G7 结果页):行为与样式完全不变 ===
   return (
     <motion.div
       data-testid="card-modal-overlay"
@@ -81,26 +204,17 @@ export function CardModal({
         </div>
 
         {/* 牌位标注 */}
-        <div className="mt-6 text-center">
-          <span className="inline-block px-4 py-1.5 rounded-full bg-gold/20 border border-gold/40 text-gold text-xs tracking-widest uppercase mb-3">
-            {position}
-          </span>
-          <h3 className="text-white text-2xl font-bold mb-1">{card.name}</h3>
-          <p className="text-white/60 text-sm mb-2">
-            {isReversed ? "逆位" : "正位"}
-          </p>
-          <p className="text-gold/90 text-sm tracking-wide">{keywords}</p>
+        <div className="mt-6 text-center flex flex-col items-center">
+          {details}
+          {actionLabel && (
+            <button
+              onClick={onClose}
+              className="mt-6 px-10 py-3 rounded-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold shadow-lg transition-colors cursor-pointer"
+            >
+              {actionLabel}
+            </button>
+          )}
         </div>
-
-        {/* 可选主按钮（G17 揭示浮层用「继续」） */}
-        {actionLabel && (
-          <button
-            onClick={onClose}
-            className="mt-6 px-10 py-3 rounded-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold shadow-lg transition-colors cursor-pointer"
-          >
-            {actionLabel}
-          </button>
-        )}
       </motion.div>
     </motion.div>
   );

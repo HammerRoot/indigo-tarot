@@ -3,15 +3,29 @@
 // - 选牌进行中的槽位填充类型与辅助函数(情况页与选牌子页共享)
 // - 动画时长常量:页面状态机与视觉动画共用同一时长,避免动画回调时序依赖
 
+import { shuffle } from "./shuffle";
 import type { TarotCard } from "./tarot-data";
 
-// 3D 翻牌动画时长(ms):子页点击选中 → 原位翻转展示牌面 → 揭示浮层弹出
-export const FLIP_DURATION_MS = 700;
 // 进场洗牌动画时长(ms):进入选牌子页时,78 张牌由散乱状态归位为网格
-// 与 reveal 一样是"状态机与视觉共用同一时长"的写法,避免回调时序依赖
 export const SHUFFLE_DURATION_MS = 1200;
+// 揭示浮层飞入时长(ms):在源格处旋转翻面(背→正) + 放大 + 移到屏幕中央,一次连续运动
+export const REVEAL_FLY_IN_MS = 500;
+// 揭示浮层缩回时长(ms):从中央缩回源格并保持正面。刻意短于飞入——
+// 飞入是仪式(要看得清、要有分量),缩回只是"归位"(用户的目光已经在找下一张牌了)
+export const REVEAL_FLY_BACK_MS = 280;
 // 逆位概率(与 G6 原实现一致:30%)
 export const REVERSAL_PROBABILITY = 0.3;
+
+/**
+ * 生成一副洗好的牌序:返回 0..size-1 的排列,值即 `tarotCards` 的下标。
+ *
+ * **每局只调用一次,整局固定**——否则关掉揭示浮层后再点同一格会得到不同的牌。
+ * 每局一洗是"点击的牌即抽到的牌"与"牌是随机的"两条承诺同时成立的前提:
+ * 固定顺序(修复前)会让"第 1 格永远是愚者",习惯性点同一位置的用户每次都抽到同一张。
+ */
+export function createDeckOrder(size: number): number[] {
+  return shuffle(Array.from({ length: size }, (_, i) => i));
+}
 
 /** 随机生成逆位状态(30% 概率)。抽离为纯模块函数,避免组件内调用 Math.random 触发 Compiler 纯净性规则 */
 export function randomReversal(): boolean {

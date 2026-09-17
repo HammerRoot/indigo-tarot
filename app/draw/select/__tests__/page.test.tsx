@@ -4,8 +4,8 @@ import { useTarotStore } from "@/lib/store";
 import { tarotCards } from "@/lib/tarot-data";
 import {
   SelectionFill,
-  FLIP_DURATION_MS,
   SHUFFLE_DURATION_MS,
+  REVEAL_FLY_BACK_MS,
 } from "@/lib/drawFlow";
 
 const { pushMock, replaceMock, reducedMotionMock } = vi.hoisted(() => ({
@@ -36,34 +36,49 @@ const SPREAD = {
   category: [],
 };
 
+/** 恒等牌序：位置 i 对应 tarotCards[i]——让多数用例保持确定性 */
+const IDENTITY = Array.from({ length: tarotCards.length }, (_, i) => i);
+
+/** 非恒等牌序（整体后移一位）：用于验证「点击位置 → 牌面」的映射真的走了牌序 */
+const ROTATED = [...IDENTITY.slice(1), IDENTITY[0]];
+
 function fill(cardIndex: number): SelectionFill {
   return { cardIndex, card: tarotCards[cardIndex], reversed: false };
 }
 
-function setupStore(selectedSlots: (SelectionFill | null)[] = [null, null, null]) {
+function setupStore(
+  selectedSlots: (SelectionFill | null)[] = [null, null, null],
+  deckOrder: number[] = IDENTITY,
+) {
   useTarotStore.setState({
     question: "猫咪想说什么",
     recommendedSpread: SPREAD,
     selectedSlots,
+    deckOrder,
   });
 }
 
-// —— 观测辅助：只读「可观测结果」，不读实现细节（样式字符串 / 子元素下标 / 文案） ——
+function pickAt(position: number) {
+  fireEvent.click(
+    document.querySelector(`[data-card-back="true"][data-index="${position}"]`)!,
+  );
+}
+
+/** 点「确认」收起揭示浮层，并让缩回动画走完（落位发生在动画结束时） */
+function confirmReveal() {
+  act(() => {
+    fireEvent.click(screen.getByRole("button", { name: "确认" }));
+    vi.advanceTimersByTime(REVEAL_FLY_BACK_MS);
+  });
+}
+
+const overlay = () => screen.queryByTestId("card-modal-overlay");
 
 /** 网格中牌位的排列顺序（用于断言「位置不因选牌而位移」） */
 function cellOrder(): (string | null)[] {
   return [...document.querySelectorAll("[data-grid-cell]")].map((el) =>
     el.getAttribute("data-grid-cell"),
   );
-}
-
-/** 紧凑槽位条的填充/空位结构（progress 的结构化表达，不依赖文案） */
-function slotCounts() {
-  const bar = document.querySelector('[data-compact-slots="true"]')!;
-  return {
-    filled: bar.querySelectorAll("[data-filled-card]").length,
-    empty: bar.querySelectorAll("[data-empty-slot]").length,
-  };
 }
 
 /** 页面上全部按钮的可读标识——「不存在重选入口」的可证伪正面形式 */
@@ -73,25 +88,7 @@ function buttonLabels(): string[] {
     .map((b) => b.getAttribute("aria-label") ?? b.textContent?.trim() ?? "");
 }
 
-function pickCard(cardIndex: number) {
-  fireEvent.click(
-    document.querySelector(`[data-card-back="true"][data-index="${cardIndex}"]`)!,
-  );
-  act(() => {
-    vi.advanceTimersByTime(FLIP_DURATION_MS);
-  });
-}
-
-const overlay = () => screen.queryByTestId("card-modal-overlay");
-
-/** 收起揭示浮层。走遮罩而非「继续」按钮——本套用例不该依赖按钮文案 */
-function dismissOverlay() {
-  act(() => {
-    fireEvent.click(screen.getByTestId("card-modal-overlay"));
-  });
-}
-
-describe("G17 选牌子页(/draw/select)：连续选满 + 揭示浮层 + 棋盘填满", () => {
+describe("G17 选牌子页(/draw/select)：洗牌 → 连续选满 → 飞入揭示 → 缩回落位", () => {
   beforeEach(() => {
     setupStore();
     reducedMotionMock.value = true;
@@ -104,95 +101,88 @@ describe("G17 选牌子页(/draw/select)：连续选满 + 揭示浮层 + 棋盘�
     replaceMock.mockClear();
   });
 
-  it("A1 洗牌期间不可点击；推进 SHUFFLE_DURATION_MS 后恢复可点", () => {
+  it("S1 洗牌期间不可点击；推进 SHUFFLE_DURATION_MS 后恢复可点", () => {
     reducedMotionMock.value = false;
     render(<SelectPage />);
-    const first = () =>
-      document.querySelector('[data-card-back="true"][data-index="7"]')!;
 
-    fireEvent.click(first());
+    pickAt(7);
     expect(useTarotStore.getState().selectedSlots[0]).toBeNull();
 
     act(() => {
       vi.advanceTimersByTime(SHUFFLE_DURATION_MS);
     });
-
-    fireEvent.click(first());
+    pickAt(7);
     expect(useTarotStore.getState().selectedSlots[0]?.cardIndex).toBe(7);
   });
 
-  it("A1b reduced-motion 开启时跳过洗牌，进场即可点击", () => {
+  it("S1b reduced-motion 开启时跳过洗牌，进场即可点击", () => {
     reducedMotionMock.value = true;
     render(<SelectPage />);
-    fireEvent.click(
-      document.querySelector('[data-card-back="true"][data-index="7"]')!,
-    );
+    pickAt(7);
     expect(useTarotStore.getState().selectedSlots[0]?.cardIndex).toBe(7);
   });
 
-  it("A2 网格为 6 列、78 个牌位；顶部标注当前选牌位置含义", () => {
+  it("S1c 已有选牌时不再播放洗牌（已开局的牌堆不该再洗）", () => {
+    reducedMotionMock.value = false; // 且未跳过洗牌
+    setupStore([fill(7), null, null]);
     render(<SelectPage />);
-    // 列数是无法从 jsdom 布局观测的设计常量 → 以显式 DOM 契约声明（见 SPEC「DOM 契约」）
-    const grid = document.querySelector("[data-grid-columns]")!;
-    expect(grid.getAttribute("data-grid-columns")).toBe("6");
-    expect(document.querySelectorAll("[data-grid-cell]").length).toBe(78);
 
-    expect(screen.getByText("为「过去」选一张牌")).toBeInTheDocument();
-    expect(screen.getByText("「猫咪想说」的起点")).toBeInTheDocument();
+    // 无需推进 SHUFFLE_DURATION_MS 即可点击
+    pickAt(20);
+    expect(useTarotStore.getState().selectedSlots[1]?.cardIndex).toBe(20);
   });
 
-  it("A3 棋盘填满：已选位变空坑，其余牌位排列顺序不变", () => {
+  it("S2 网格 6 列、78 个牌位；页头为两行纯文字；无紧凑槽位条", () => {
+    render(<SelectPage />);
+    expect(
+      document.querySelector("[data-grid-columns]")!.getAttribute("data-grid-columns"),
+    ).toBe("6");
+    expect(document.querySelectorAll("[data-grid-cell]")).toHaveLength(78);
+
+    expect(screen.getByText("为「过去」选一张牌")).toBeInTheDocument();
+    expect(screen.getByText(/「猫咪想说」的起点/)).toBeInTheDocument();
+    expect(screen.getByText(/已选\s*0\s*\/\s*3/)).toBeInTheDocument();
+
+    // 上一版的常驻槽位条已移除
+    expect(document.querySelector('[data-compact-slots="true"]')).toBeNull();
+  });
+
+  it("S3 点击位置 p 落定的是 deckOrder[p] 对应的牌（牌序真的生效）", () => {
+    setupStore([null, null, null], ROTATED);
+    render(<SelectPage />);
+
+    pickAt(7);
+    // ROTATED 整体后移一位 → 位置 7 上是 tarotCards[8]
+    expect(useTarotStore.getState().selectedSlots[0]?.cardIndex).toBe(8);
+    expect(useTarotStore.getState().selectedSlots[0]?.card.id).toBe(
+      tarotCards[8].id,
+    );
+  });
+
+  it("S4 棋盘填满：已选位保留原位，牌位排列顺序不变", () => {
     render(<SelectPage />);
     const before = cellOrder();
     expect(before).toHaveLength(78);
 
-    pickCard(7);
-    dismissOverlay();
+    pickAt(7);
+    confirmReveal();
 
-    // 牌位总数不变，排列顺序逐个一致（不因选牌而位移）
     expect(cellOrder()).toEqual(before);
-    // 该位已不是可选牌背，而是空坑
-    expect(document.querySelector('[data-picked-hole="7"]')).not.toBeNull();
     expect(
       document.querySelector('[data-card-back="true"][data-index="7"]'),
     ).toBeNull();
   });
 
-  it("A4 常驻紧凑槽位条：以填充/空位结构呈现进度，并随选牌推进", () => {
+  it("S5 点击后立即进入揭示：无需推进任何计时器，弹窗与飞行元素即存在", () => {
     render(<SelectPage />);
-    expect(document.querySelector('[data-compact-slots="true"]')).not.toBeNull();
-    expect(slotCounts()).toEqual({ filled: 0, empty: 3 });
-
-    pickCard(7);
-    dismissOverlay();
-
-    expect(slotCounts()).toEqual({ filled: 1, empty: 2 });
-    // 计数文案（SPEC 声明 exact copy 为「已选 k / N」；此处容忍空白差异）
-    const text = document
-      .querySelector('[data-compact-slots="true"]')!
-      .textContent!.replace(/\s+/g, "");
-    expect(text).toContain("已选1/3");
-  });
-
-  it("A5+A6 点击即落定并弹出揭示浮层（含牌位名、牌名、正逆位）", () => {
-    render(<SelectPage />);
-    fireEvent.click(
-      document.querySelector('[data-card-back="true"][data-index="7"]')!,
-    );
+    pickAt(7);
 
     // 落定先于动画：点击瞬间即写入 store
     expect(useTarotStore.getState().selectedSlots[0]?.cardIndex).toBe(7);
-    // 原位翻牌：该牌面已挂载
-    expect(
-      document.querySelector('[data-card-back="true"][data-index="7"] img'),
-    ).not.toBeNull();
-
-    act(() => {
-      vi.advanceTimersByTime(FLIP_DURATION_MS);
-    });
+    // 无 700ms 翻牌等待——弹窗立刻出现
     expect(overlay()).not.toBeNull();
+    expect(screen.getByTestId("reveal-flying-card")).toBeInTheDocument();
 
-    // 在浮层作用域内断言（「过去」等文案在页面的紧凑槽位条里也存在）
     const modal = within(screen.getByTestId("card-modal-content"));
     expect(modal.getByText("过去")).toBeInTheDocument();
     expect(modal.getByText(tarotCards[7].name)).toBeInTheDocument();
@@ -200,25 +190,33 @@ describe("G17 选牌子页(/draw/select)：连续选满 + 揭示浮层 + 棋盘�
     expect(modal.getByText(/^(正位|逆位)$/)).toBeInTheDocument();
   });
 
-  it("A7 三种收起方式均可关闭浮层，且全程不跳转", () => {
+  it("S6 三种收起方式：均先进入缩回，动画走完后弹窗消失，全程不跳转", () => {
     render(<SelectPage />);
 
-    // ① 点「继续」——唯一断言按钮文案的地方，用于钉住 actionLabel 契约
-    pickCard(7);
+    // ① 「确认」按钮
+    pickAt(7);
     act(() => {
-      fireEvent.click(screen.getByRole("button", { name: "继续" }));
+      fireEvent.click(screen.getByRole("button", { name: "确认" }));
+    });
+    expect(overlay()).not.toBeNull(); // 缩回动画期间仍挂载
+    act(() => {
+      vi.advanceTimersByTime(REVEAL_FLY_BACK_MS);
     });
     expect(overlay()).toBeNull();
 
     // ② 点浮层外（遮罩）
-    pickCard(20);
-    dismissOverlay();
+    pickAt(20);
+    act(() => {
+      fireEvent.click(screen.getByTestId("card-modal-overlay"));
+      vi.advanceTimersByTime(REVEAL_FLY_BACK_MS);
+    });
     expect(overlay()).toBeNull();
 
     // ③ ESC
-    pickCard(33);
+    pickAt(33);
     act(() => {
       fireEvent.keyDown(document, { key: "Escape" });
+      vi.advanceTimersByTime(REVEAL_FLY_BACK_MS);
     });
     expect(overlay()).toBeNull();
 
@@ -226,81 +224,83 @@ describe("G17 选牌子页(/draw/select)：连续选满 + 揭示浮层 + 棋盘�
     expect(replaceMock).not.toHaveBeenCalled();
   });
 
-  it("A7b 收起后状态推进：该位成空坑、紧凑槽位条前移", () => {
+  it("S7 缩回落位后：该位为已选牌面（全亮展示，含牌面图）", () => {
     render(<SelectPage />);
-    pickCard(7);
-    expect(document.querySelector('[data-picked-hole="7"]')).toBeNull(); // 揭示中尚未成坑
+    pickAt(7);
+    // 揭示期间该位让位给飞行元素：格子仍在（不能塌陷，否则飞行目标会移位），
+    // 但对视觉与读屏都隐藏
+    expect(
+      document.querySelector('[data-selected-card="7"]')!.getAttribute("aria-hidden"),
+    ).toBe("true");
 
-    dismissOverlay();
-    expect(document.querySelector('[data-picked-hole="7"]')).not.toBeNull();
-    expect(slotCounts()).toEqual({ filled: 1, empty: 2 });
-    expect(screen.getByText("为「现在」选一张牌")).toBeInTheDocument();
+    confirmReveal();
+    const selected = document.querySelector('[data-selected-card="7"]');
+    expect(selected).not.toBeNull();
+    expect(selected!.getAttribute("aria-hidden")).toBeNull();
+    // 正面展示 = 挂载了牌面图
+    expect(selected!.querySelector("img")).not.toBeNull();
+    // 不再是可选牌背
+    expect(
+      document.querySelector('[data-card-back="true"][data-index="7"]'),
+    ).toBeNull();
   });
 
-  it("A8 连续选满全程不跳转；选满后「完成选牌」→ /draw", () => {
+  it("S8 连续选满全程不跳转；选满后「完成选牌」→ /draw", () => {
     render(<SelectPage />);
-    for (const idx of [7, 20, 33]) {
-      pickCard(idx);
-      dismissOverlay();
+    for (const pos of [7, 20, 33]) {
+      pickAt(pos);
+      confirmReveal();
       expect(pushMock).not.toHaveBeenCalled();
     }
 
     expect(
       useTarotStore.getState().selectedSlots.map((s) => s?.cardIndex),
     ).toEqual([7, 20, 33]);
-    expect(slotCounts()).toEqual({ filled: 3, empty: 0 });
+    expect(screen.getByText(/已选\s*3\s*\/\s*3/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /完成选牌/ }));
     expect(pushMock).toHaveBeenCalledWith("/draw");
   });
 
-  it("A9 不可逆：页面上的按钮只有「关闭选牌」，已选空坑不可交互", () => {
+  it("S9 不可逆：页面上的按钮只有「关闭选牌」，已选位不可交互", () => {
     render(<SelectPage />);
-    pickCard(7);
-    dismissOverlay();
+    pickAt(7);
+    confirmReveal();
 
     // 正面断言：未选满时全页按钮集合恰为关闭按钮——
     // 任何形态的重选/撤销/清空入口都会出现在这个集合里并使断言失败
     expect(buttonLabels()).toEqual(["关闭选牌"]);
 
-    // 已选位既非牌背，也不带任何交互语义
-    const hole = document.querySelector('[data-picked-hole="7"]')!;
-    expect(hole.getAttribute("role")).toBeNull();
-    expect(hole.getAttribute("tabindex")).toBeNull();
+    const selected = document.querySelector('[data-selected-card="7"]')!;
+    expect(selected.getAttribute("role")).toBeNull();
+    expect(selected.getAttribute("tabindex")).toBeNull();
 
-    // 行为断言：点它不改变任何槽位
     const before = useTarotStore.getState().selectedSlots[0];
-    fireEvent.click(hole);
+    fireEvent.click(selected);
     expect(useTarotStore.getState().selectedSlots[0]).toEqual(before);
   });
 
-  it("A10 防误触：翻牌中与揭示中点击其他牌均无效", () => {
+  it("S10 防误触：揭示中与缩回中点击其他牌均无效", () => {
     render(<SelectPage />);
-    const other = () =>
-      document.querySelector('[data-card-back="true"][data-index="9"]')!;
 
-    // ① 翻牌动画进行中（浮层尚未弹出）
-    fireEvent.click(
-      document.querySelector('[data-card-back="true"][data-index="7"]')!,
-    );
-    fireEvent.click(other());
+    // ① 揭示中
+    pickAt(7);
+    pickAt(9);
     expect(useTarotStore.getState().selectedSlots[1]).toBeNull();
-    expect(useTarotStore.getState().selectedSlots[0]?.cardIndex).toBe(7);
+    expect(overlay()).not.toBeNull();
 
-    // ② 浮层已弹出：点其他牌同样无效，且浮层不被顶掉
+    // ② 缩回动画进行中
     act(() => {
-      vi.advanceTimersByTime(FLIP_DURATION_MS);
+      fireEvent.click(screen.getByRole("button", { name: "确认" }));
     });
-    expect(overlay()).not.toBeNull();
-    fireEvent.click(other());
+    pickAt(9);
     expect(useTarotStore.getState().selectedSlots[1]).toBeNull();
-    expect(overlay()).not.toBeNull();
   });
 
-  it("A11 退出 ≠ 放弃：关闭按钮回 /draw 且已选保留", () => {
+  it("S11 退出 ≠ 放弃：关闭按钮回 /draw 且已选保留", () => {
     render(<SelectPage />);
-    pickCard(7);
-    dismissOverlay();
+    pickAt(7);
+    confirmReveal();
     fireEvent.click(screen.getByLabelText("关闭选牌"));
     expect(pushMock).toHaveBeenCalledWith("/draw");
     expect(useTarotStore.getState().selectedSlots[0]?.cardIndex).toBe(7);
