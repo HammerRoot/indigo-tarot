@@ -108,8 +108,10 @@ git rev-parse --short HEAD   # 应 = 要部署的 SHA
 
 ## 风险与假设
 
-- **前置（高风险，需负责人验证）**：服务器 `git fetch` 能通镜像。若直连 GitHub 超时且镜像 git 也超时，
-  退路是 deploy.sh 仍走 tar（脚本固化现有 tar 流程，回到上一轮讨论的「脚本固化 tar」分支）。
+- ~~**前置（高风险，需负责人验证）**：服务器 `git fetch` 能通镜像。~~ **已核实（2026-09-18）**：
+  服务器上 `git clone --depth 1 https://ghfast.top/https://github.com/HammerRoot/indigo-tarot.git`
+  成功（236 objects / 29.44 MiB / 4.59 MiB/s）。镜像 URL 已填入 DEPLOYMENT.md §3.2/§3.3，本风险消除。
+  备选的「脚本固化 tar 流程」分支不再需要。
 - **假设**：原地 `git init` 后 `git reset --hard origin/main` 会正确把 190 个同名文件识别为 tracked clean、
   补上缺失的 5 个文件、且不碰 `.env.local`（已按 git 语义核实）。
 - **风险**：`git init` 的默认分支名可能是 `master` 而非 `main`，`git fetch origin main` 后需

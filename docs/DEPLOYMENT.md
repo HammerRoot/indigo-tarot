@@ -65,7 +65,8 @@ npm run dev                  # http://localhost:3000
 
 ### 3.2 日常更新（git 部署）
 
-服务器直连 GitHub 超时，git remote 走镜像（具体镜像 URL 以服务器实测为准，下用 `<镜像>` 占位）。
+服务器直连 GitHub 超时，git remote 走 `ghfast.top` 镜像（2026-09-18 服务器实测 git clone 可用：
+29.44 MiB / 4.59 MiB/s）。镜像为第三方代理服务，若日后失效需更换并同步更新 remote URL。
 
 ```bash
 cd /root/indigo-tarot
@@ -87,7 +88,7 @@ cat .deployed-sha
 cp .env.local /root/.env.local.backup-$(date +%F)
 # 3. 原地建立 git 仓库并拉到 main
 git init
-git remote add origin <镜像>/HammerRoot/indigo-tarot.git
+git remote add origin https://ghfast.top/https://github.com/HammerRoot/indigo-tarot.git
 git fetch origin main
 git reset --hard origin/main
 # 4. 确认 .env.local 还在（git 不碰 .gitignore 里的文件）
