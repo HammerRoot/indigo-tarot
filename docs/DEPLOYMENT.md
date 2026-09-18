@@ -7,7 +7,6 @@
 > indigo-tarot 的环境变量配置与部署指南。本地开发参考 [`README.md`](../README.md)。
 >
 > 当前生产环境为**腾讯云轻量应用服务器 + 自建 Redis**（`http://<SERVER_IP>/`）。
-> 首次部署的完整执行记录见 [`archive/migration-2026-09.md`](./archive/migration-2026-09.md) §4。
 
 ## 一、环境变量清单
 

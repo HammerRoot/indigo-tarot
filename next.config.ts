@@ -5,9 +5,16 @@ const nextConfig: NextConfig = {
   // 用 127.0.0.1 访问会被当成跨源而拦截 dev 资源，导致页面无法 hydrate（整页停在
   // SSR 的入场动画初值上，看起来是空白）。这里把回环地址的两个写法都放行。
   allowedDevOrigins: ["127.0.0.1", "localhost"],
-  // 关闭 Next 的 agent 文件自动生成：它的 upsertAgentRulesBlock() 用 indexOf 取
-  // nextjs-agent-rules 标记的"首个"出现，而 AGENTS.md 正文里引用了该标记原文，
-  // 导致它把正文当成块起点、把第 1–7 节整段删掉（2026-09-17 实际发生）。详见 AGENTS.md。
+  // 关闭 Next 的 agent 文件自动生成（有意为之，见 AGENTS.md 开头的警告）。
+  //
+  // 原因：生成器 upsertAgentRulesBlock() 用 indexOf 取块标记 `<!-- BEGIN:nextjs-agent-rules -->`
+  // 的「首个」出现、再整段替换到「首个」结束标记。AGENTS.md 正文当时**引用了该标记的字面原文**，
+  // 于是生成器把正文当成块起点、一路删到文件末尾的真正结束标记——**每次 `next dev` 都删掉
+  // 第 1–7 节**（2026-09-17 实际发生，80 行 → 21 行，已从 git 恢复）。
+  // 实现在 node_modules/next/dist/server/lib/generate-agent-files.js。
+  //
+  // 现状：AGENTS.md 正文已不含该标记的字面原文（只提名字不会触发——indexOf 找的是完整标记），
+  // 陷阱条件已解除。但**重新启用前请先重新确认这一点**，别只看这条注释。
   agentRules: false,
   images: {
     // 卡牌图片只保留唯一小档（规格 G15，契约见 lib/cardImage.ts）：
