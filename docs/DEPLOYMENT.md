@@ -29,6 +29,8 @@
 > **Redis 判定逻辑**：代码只认 `REDIS_HOST` + `REDIS_PASSWORD` 同时存在（见 [`lib/server/upstash.ts`](../lib/server/upstash.ts) 的 `hasRedisConfig()`）。二者缺一即回退**单实例内存**，服务重启/冷启动计数清零，免费试用会"复活"。
 >
 > **熔断阈值不会因漏配而失效**：`QUOTA_DAILY_LIMIT` 未设置、为空、非数字或 ≤ 0 时，一律回退到 **50**（判定为 `Number.isFinite(v) && v > 0`，见 [`lib/server/quota.ts`](../lib/server/quota.ts) 的 `resolveLimit()`）——即"忘记配"只会用默认上限，不会变成无上限。**唯一解除上限的方式**是管理接口 `POST /api/admin/quota` 传 `{"enabled":false}` 关闭熔断（见第五节）。
+>
+> ⚠️ **改完环境变量必须重启 PM2 进程才生效**：`pm2 restart indigo-tarot`（无需重新 build）。
 
 ## 二、本地开发
 
@@ -54,6 +56,9 @@ npm run dev                  # http://localhost:3000
    pm2 start npm --name indigo-tarot --max-memory-restart 500M -- start -- -p 3000
    pm2 save && pm2 startup
    ```
+
+   > ⚠️ **重建 PM2 进程时务必带上 `-p 3000 --max-memory-restart 500M` 并执行 `pm2 save`**，
+   > 否则重启后应用会回到 80 端口与 Nginx 冲突。
 4. **PM2 日志轮转**——**不做这一步 PM2 日志会无限增长，最终写满磁盘**：
    ```bash
    pm2 install pm2-logrotate
@@ -160,9 +165,17 @@ systemctl enable nginx         # 开机自启
 
 ### 3.6 防火墙与端口
 
-只放行必要端口（22、80）。改环境变量后必须**重启 PM2 进程**才生效（`pm2 restart indigo-tarot`，无需重新 build）。若需重建 PM2 进程，务必带上 `-p 3000 --max-memory-restart 500M` 并执行 `pm2 save`，否则重启后应用会回到 80 端口与 Nginx 冲突。
+**放行端口：22（SSH）、80（HTTP）、443。**
 
-> ⚠️ 当前生产为 **HTTP 明文直连**（无 HTTPS），`crypto.subtle` 不可用 → API Key「记住」功能失效（刷新丢 Key），属固有限制；该选项此时在页面上不显示（O6）。详见 [`OPERATIONS.md`](./OPERATIONS.md) §三。
+> ⚠️ **443 必须保持放行，不要关。** 本机没有监听 443 的服务——放行的目的正是让内核直接回 RST，
+> 使 443 表现为**快速拒绝**而不是**丢包黑洞**。Chrome 的 HTTPS Upgrades 会把 `http://` 升级到
+> `https://`；若 443 丢包，"失败"就变成"等待"，回落逻辑等不到信号，访客卡死在超时页。
+> **只放 22、80 会重新引入该故障。**
+>
+> 相关：改「防火墙**模板**」不会同步到实例，必须直接改「实例**防火墙**」。完整经过见
+> [`OPERATIONS.md`](./OPERATIONS.md) 台账 N10。
+
+**HTTP 明文直连的固有限制**：`crypto.subtle` 不可用 → API Key「记住」功能失效（刷新丢 Key），该选项此时在页面上不显示（O6）。如需 HTTPS，加域名 + ICP 备案 + 证书，现有前置 Nginx 直接加 443 server 块即可，应用侧零改动。详见 [`OPERATIONS.md`](./OPERATIONS.md) §三。
 
 ## 四、成本控制（重要）
 
@@ -229,4 +242,5 @@ curl "http://<你的地址>/api/admin/stats?days=30" \
 
 - [ ] 环境变量已配置并重启 PM2 进程：`DEEPSEEK_API_KEY`、`ADMIN_TOKEN`（**生产新值**，非本地/示例值）、`REDIS_HOST` / `REDIS_PASSWORD`
 - [ ] Nginx 中 `X-Forwarded-For` 为 `$remote_addr`（**覆写**），非 `$proxy_add_x_forwarded_for`（追加）——退成追加态则 IP 限流可被伪造头绕过
+- [ ] 腾讯云**实例防火墙**放行 22 / 80 / **443**——443 被关掉会让部分访客彻底打不开（丢包黑洞，见 §3.6 与 N10）；注意改「模板」不会同步到实例
 - [ ] 无痕窗口实测：不填 Key 占卜 1 次成功 → 再次占卜提示"免费试用已用完" → 填个人 Key 后可正常占卜
