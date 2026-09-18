@@ -2,13 +2,12 @@
 
 > **本文只负责**：环境变量、本地开发、生产部署步骤、成本控制、管理接口、上线检查清单。
 > **本文不写**：迁移历史与事故经过（→ [`archive/`](./archive/)）、运维待办与当前状态
-> （→ [`OPERATIONS.md`](./OPERATIONS.md)）、代码条目状态（→ [`README.md`](./README.md)）。
+> （→ [`OPERATIONS.md`](./OPERATIONS.md)）、条目状态与决策记录（→ [`SPEC.md`](./SPEC.md)）。
 >
 > indigo-tarot 的环境变量配置与部署指南。本地开发参考 [`README.md`](../README.md)。
 >
-> 当前生产环境为**腾讯云轻量应用服务器 + 自建 Redis**（`http://<SERVER_IP>`）。
-> 首次部署的完整执行记录见 [`archive/migration-2026-09.md`](./archive/migration-2026-09.md) §4；
-> 运维现状与台账见 [`OPERATIONS.md`](./OPERATIONS.md)。
+> 当前生产环境为**腾讯云轻量应用服务器 + 自建 Redis**（`http://<SERVER_IP>/`）。
+> 首次部署的完整执行记录见 [`archive/migration-2026-09.md`](./archive/migration-2026-09.md) §4。
 
 ## 一、环境变量清单
 
@@ -171,17 +170,14 @@ systemctl enable nginx         # 开机自启
 > 使 443 表现为**快速拒绝**而不是**丢包黑洞**。Chrome 的 HTTPS Upgrades 会把 `http://` 升级到
 > `https://`；若 443 丢包，"失败"就变成"等待"，回落逻辑等不到信号，访客卡死在超时页。
 > **只放 22、80 会重新引入该故障。**
->
-> 相关：改「防火墙**模板**」不会同步到实例，必须直接改「实例**防火墙**」。完整经过见
-> [`OPERATIONS.md`](./OPERATIONS.md) 台账 N10。
 
-**HTTP 明文直连的固有限制**：`crypto.subtle` 不可用 → API Key「记住」功能失效（刷新丢 Key），该选项此时在页面上不显示（O6）。如需 HTTPS，加域名 + ICP 备案 + 证书，现有前置 Nginx 直接加 443 server 块即可，应用侧零改动。详见 [`OPERATIONS.md`](./OPERATIONS.md) §三。
+**HTTP 明文直连的固有限制**：`crypto.subtle` 不可用 → 不可在前端持久化存储 API Key。如需 HTTPS，加域名 + ICP 备案 + 证书，现有前置 Nginx 直接加 443 server 块即可，应用侧零改动。
 
 ## 四、成本控制（重要）
 
 系统 Key 是免费试用的付费来源，控制成本按以下层次：
 
-1. **硬上限（必须）**：DeepSeek 账户用**固定充值余额**（不用自动续费/信用卡扣款）——余额耗尽 API 自动 401，成本硬性封顶。
+1. **硬上限（必须）**：DeepSeek 账户用**固定充值余额** ——余额耗尽 API 自动 401，成本硬性封顶。
 2. **代码层**：每日熔断 50 次（`/api/admin/quota` 可关/开）+ 每设备试用一次 + IP 限流 3h/5 次。
 3. **持久化**：自建 Redis 的 AOF 保证计数重启不清零。
 

@@ -48,8 +48,8 @@
 ### C. 台账与决策
 
 - [ ] **C1** [`OPERATIONS.md`](../OPERATIONS.md) 台账补 N11 一行
-- [ ] **C2** [`docs/README.md`](../README.md) 决策记录补 D16（git 部署 + deploy.sh，不 CI/CD）、
-      D17（DEPLOYMENT.md 只写现状，历史归 archive）
+- [ ] **C2** [`docs/SPEC.md`](../SPEC.md) 决策记录补 D16（git 部署 + deploy.sh，不 CI/CD）、
+      D17（文档只写现状，历史归 archive）、D18（台账与规则分离）
 
 ## 技术方案
 
@@ -99,12 +99,35 @@ git rev-parse --short HEAD   # 应 = 要部署的 SHA
 | B1 文档不越界 | 本地 grep 过程叙述关键词 |
 | B2/B3 流程正确 | 本地通读 + 真机 dry-run |
 
-## 影响范围
+### 4. 规格台账与文档规则分离（本轮追加，决策 D18）
 
-- 新增：`deploy.sh`、`docs/plan/n11-git-deploy.md`（本文）
-- 修改：`docs/DEPLOYMENT.md`（重写 §三 部署部分）、`docs/OPERATIONS.md`（台账 N11）、
-  `docs/README.md`（决策 D16/D17）
-- 删除：无文件删除（`.deployed-sha` 是服务器上的仓库外文件，不在仓库内）
+**问题**：`docs/README.md` 混装两种变更频率截然不同的内容——规则（几乎不变）与规格台账
+（每次收口都变）。后果是 `git log docs/README.md` 里"规则改了"被台账噪音淹没，
+削弱规则文档的可审计性。
+
+**处置**：新建 [`docs/SPEC.md`](../SPEC.md) 承载条目状态 + 质量门禁 + 决策记录；
+`docs/README.md` 只留规则 / 文件清单 / 脱敏说明，**仅在规则或清单变化时更新**。
+
+**连带（必须一次改全，否则留死指针）**：
+
+| 文件 | 处 | 改动 |
+|---|---|---|
+| `AGENTS.md` | 3 | 第 4 节的流程指针（"唯一出处"、"收口时更新"、"补一行条目状态"）改指 SPEC.md |
+| `docs/README.md` | 5 | 自身描述 + 职责表新增 SPEC.md 一行 + 文件清单 |
+| `docs/OPERATIONS.md` | 1 | 头部"条目状态与决策记录"指针 |
+| `docs/DEPLOYMENT.md` | 1 | 同上 |
+| `README.md` | 1 | 文档总览指针 |
+
+**验收标准**：
+
+- [ ] `docs/SPEC.md` 含条目状态（36 条）、质量门禁、决策记录（D1–D18）
+- [ ] 决策表为**单张完整表**——原 `docs/README.md` 第 159 行有个空行把表截成两半，
+      D14–D17 因此没有表头、Markdown 渲染为纯文本，已一并修复
+- [ ] `docs/README.md` 不再含条目状态与决策记录
+- [ ] 全库无"台账在 docs/README.md"的残留表述（grep 核验）
+
+> **不设自动化测试**（与本文其余部分同理）：文档结构无法用单元测试证伪。
+> 核验方式是收口时的 grep：`grep -rn "README.md.*条目状态\|README.md 补一行"` 应为空。
 
 ## 风险与假设
 
@@ -112,13 +135,20 @@ git rev-parse --short HEAD   # 应 = 要部署的 SHA
   服务器上 `git clone --depth 1 https://ghfast.top/https://github.com/HammerRoot/indigo-tarot.git`
   成功（236 objects / 29.44 MiB / 4.59 MiB/s）。镜像 URL 已填入 DEPLOYMENT.md §3.2/§3.3，本风险消除。
   备选的「脚本固化 tar 流程」分支不再需要。
-- **假设**：原地 `git init` 后 `git reset --hard origin/main` 会正确把 190 个同名文件识别为 tracked clean、
-  补上缺失的 5 个文件、且不碰 `.env.local`（已按 git 语义核实）。
+- **假设（未实测，仅按 git 语义推理）**：原地 `git init` 后 `git reset --hard origin/main` 会正确把
+  190 个同名文件纳入跟踪、补上缺失的文件、且不碰 `.env.local`。
+  ⚠️ **这条没有在真实目录上跑过**——2026-09-18 只验证了「镜像连得通」（在 `/tmp` 里 clone），
+  不等于「原地迁移不会出事」。真实迁移是负责人执行的一次性动作，出问题按 §3.3 的备份回滚。
+- **风险（外部单点依赖）**：`origin` 在迁移时被写死为 `ghfast.top` 镜像 URL，而服务器**直连 GitHub 超时**
+  （这正是引入镜像的原因）。镜像失效 ⇒ `git fetch` 失败 ⇒ 在找到替代镜像前**无法部署**。
+  影响面有限：`deploy.sh` 的 `set -euo pipefail` 会让它在 fetch 失败处中断，**不污染线上**。
+  恢复：`git remote set-url origin <新镜像>/…`。已记入 [`OPERATIONS.md`](../OPERATIONS.md) §三 已知限制与风险。
 - **风险**：`git init` 的默认分支名可能是 `master` 而非 `main`，`git fetch origin main` 后需
   `git reset --hard origin/main` 而非 `git reset --hard main`（脚本用 `origin/main` 已规避）。
 
 ## 收口动作（完成时执行）
 
-- [ ] OPERATIONS.md 台账补 N11；docs/README.md 补 D16/D17；本文移入 archive 并加归档头部
+- [ ] OPERATIONS.md 台账补 N11；docs/SPEC.md 补 D16–D18；本文移入 archive 并加归档头部
+- [ ] 跨文档 grep 核验无"台账在 docs/README.md"的残留（归档正文的历史陈述除外）
 - [ ] 真机 dry-run deploy.sh（负责人执行），确认 git 连通性前置成立
 - [ ] 跨文档 grep 消除「tar」「ghfast.top」「.deployed-sha」的过期残留（archive 除外）
