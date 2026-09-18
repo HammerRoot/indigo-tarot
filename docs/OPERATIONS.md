@@ -101,18 +101,7 @@
 | **N 系列各条目的过程**（根因、排查、实测数据、踩坑） | [`archive/n-series-detail.md`](./archive/n-series-detail.md) |
 | N8 Redis 分支测试的全部内容 | [`archive/n8-redis-branch-tests.md`](./archive/n8-redis-branch-tests.md) |
 | N11 部署方式切换的 spec | [`archive/n11-git-deploy.md`](./archive/n11-git-deploy.md) |
-| 迁移过程与事故经过 | [`archive/migration-2026-09.md`](./archive/migration-2026-09.md)（章节见下） |
+| 迁移过程与事故经过 | [`archive/migration-2026-09.md`](./archive/migration-2026-09.md) |
 
-### `migration-2026-09.md` 章节索引
-
-| 想查什么 | 归档章节 |
-|---|---|
-| 部署概览 / 已确认决策 | §1、§2 |
-| 实际部署步骤（含环境变量、Redis、PM2、防火墙） | §4、§5 |
-| 已完成的代码改动（ioredis 迁移、deviceId 兼容 HTTP） | §6 |
-| 防滥用策略现状（试用/限流/配额/成本兜底） | §7 |
-| 问题排查记录（6 项） | §10 |
-| 分支、发布、Vercel 处置、CI/CD 结论 | §11、§12、§13 |
-| 用量与来源查询速查（管理 API + redis-cli） | §14 |
-| IP 限流疑点实测记录 | §15 |
-| Nginx 反向代理接入（Q1 修复）：背景、架构变化、切换步骤、实测结果 | §16（**当前配置全文已移至 [`DEPLOYMENT.md`](./DEPLOYMENT.md) §三**） |
+> **不给归档文件做章节索引**——打开它自己就有目录。给归档做索引等于又维护一份清单，
+> 而"目录内容即清单"是本项目的既有规则（见 [`README.md`](./README.md)）。
