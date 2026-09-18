@@ -7,7 +7,7 @@
 >
 > 本文件收录腾讯云迁移过程中**已完成**的内容：部署执行记录、代码改动、验证结果、问题排查与运维速查。
 >
-> **未完成待办、疑点与上线前安全清单** → [OPERATIONS.md](../OPERATIONS.md)。
+> **运维现状、疑点与待办** → [OPERATIONS.md](../OPERATIONS.md)。
 
 ---
 
@@ -380,14 +380,14 @@ redis-cli -a "$REDIS_PASSWORD" --no-auth-warning --scan --pattern 'rl:*'
 实际输出：
 
 ```
-rl:system_::ffff:58.33.206.209
+rl:system_::ffff:203.0.113.9
 rl:system_::ffff:127.0.0.1
 ```
 
 说明：
 
 - Next.js 会基于 TCP 连接的远端地址写入 `x-forwarded-for`，因此无需 Nginx 也能取到真实 IP；
-- `::ffff:` 前缀是 IPv4-mapped IPv6 表示法，`::ffff:58.33.206.209` 等价于 `58.33.206.209`，键值语义正确；
+- `::ffff:` 前缀是 IPv4-mapped IPv6 表示法，`::ffff:203.0.113.9` 等价于 `203.0.113.9`，键值语义正确；
 - `::ffff:127.0.0.1` 来自服务器本机 curl 诊断请求，属预期；
 - 对**未自带请求头**的正常客户端，IP 限流按真实 IP 生效。
 

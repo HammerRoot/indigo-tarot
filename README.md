@@ -5,7 +5,8 @@
 > **本文只负责**：面向使用者的功能说明、技术栈、快速开始、API 契约、隐私边界。
 > **本文不写**：部署步骤（→ [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)）、运维待办与现状
 > （→ [`docs/OPERATIONS.md`](./docs/OPERATIONS.md)）、代码条目状态与决策记录。
-> **文档总览、规格台账与单一源规则见 [`docs/README.md`](./docs/README.md)。**
+> **文档总览与单一源规则见 [`docs/README.md`](./docs/README.md)；规格条目状态与决策记录见
+> [`docs/SPEC.md`](./docs/SPEC.md)。**
 
 ## ✨ 功能特色
 
