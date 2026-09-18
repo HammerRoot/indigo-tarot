@@ -72,7 +72,7 @@
 
 ---
 
-## 三、决策记录（Assumptions & Decisions，D1–D18）
+## 三、决策记录（Assumptions & Decisions，D1–D19）
 
 | 编号 | 决策 | 理由 |
 |---|---|---|
@@ -83,8 +83,8 @@
 | D5 | 测试统一使用 Vitest 生态（jsdom），不引入 MSW | mock 全局 fetch 已满足路由测试需求 |
 | D6 | Y1 历史记录采用最小实现（列表 + 详情 + 删除） | 与 store 现有骨架匹配，避免过度设计 |
 | D7 | R1-A 主方案 `react-markdown`（默认转义、无 dangerouslySetInnerHTML）；备选 DOMPurify 仅在主方案依赖冲突时启用 | 白名单解析优于黑名单消毒 |
-| D8 | 加密的边界：**不防 XSS 与会话期扩展读取**（解密在客户端进行）；主密码 PBKDF2 派生与服务端托管 Key 记为远期，不实现 | 纯浏览器方案无法防会话内窃取；R1-A（XSS 消毒）才是防主路径的核心 |
-| D9 | 免费试用一次基于 **deviceId（localStorage）+ 服务端记录（Redis 优先）**；无登录系统，"同一用户一次"为**尽力而为**——清 localStorage/换浏览器/无痕可绕过，IP 限流作为辅助防线 | 无登录系统的通行做法（防普通用户滥用）；"一人一次"需登录系统（远期） |
+| D8 | 加密的边界：**不防 XSS 与会话期扩展读取**（解密在客户端进行）。主密码 PBKDF2 派生与服务端托管 Key **不在本轮实现**——已落成计划 [`plan/account-system.md`](./plan/account-system.md)（它需要用户体系） | 纯浏览器方案无法防会话内窃取；R1-A（XSS 消毒）才是防主路径的核心 |
+| D9 | 免费试用一次基于 **deviceId（localStorage）+ 服务端记录（Redis 优先）**；无登录系统，"同一用户一次"为**尽力而为**——清 localStorage/换浏览器/无痕可绕过，IP 限流作为辅助防线。真正的"一人一次"需用户体系，已落成计划 [`plan/account-system.md`](./plan/account-system.md) | 无登录系统的通行做法（防普通用户滥用） |
 | D10 | HTTP 直连部署下 `crypto.subtle` / `crypto.randomUUID` 不可用：deviceId 改用 `crypto.getRandomValues()` 手写 UUID v4；API Key 加密降级为不持久化（内存可用，刷新需重填） | 公网 IP 直连（免 ICP 备案）只能用 HTTP；上 HTTPS 才能恢复完整功能 |
 | D11 | 存储层从 **Upstash Redis REST 迁移到 ioredis 连自建 Redis**（`REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`）；`redisCommand` 接口与返回结构不变，调用方零改动 | 腾讯云迁移后状态存储须留在境内服务器；自建 Redis + AOF 持久化，不再依赖外部 SaaS |
 | D12 | 卡牌图片收敛为**唯一小档**（`images.imageSizes: [384]`）+ **唯一入口** `CardImage`，靠"布局宽 × DPR ≤ 384"这一不变量使同一张牌在各页面解析出同一个优化 URL | 图片加载慢的根因不是"没缓存"，而是各处 `sizes` 不同导致同一张牌请求了不同宽度的变体（`w=384` vs `w=640`），缓存键不同必然不命中。**代价**：DPR1/2 下小图从 5–26KB 变 53KB/张，换取"翻过的牌零请求"。改动档位前必须复算不变量并跑 `tests/card-image-variant.test.ts`。详见 [G15](./archive/g15-card-image-cache.md) |
@@ -97,4 +97,4 @@
 `OPERATIONS.md` 是运维台账，**过程正是复盘的原料**，且它允许随运维状态更新（只有 `README.md`（规则）
 与 `DEPLOYMENT.md`（步骤）是基本不动的）。收敛原则仍适用：纯历史纠错**删**、约束**保留结论**、
 **不把现状事实抄进过程叙述**（那会制造第二份事实） |
-| D18 | **规格台账与文档规则分开**：条目状态 + 质量门禁 + 决策记录在 [`docs/SPEC.md`](./SPEC.md)；文档规则 / 职责划分 / 脱敏说明留在 [`docs/README.md`](./README.md) | **变更频率不同**：台账每次收口都变，规则几乎不变。混在一起会让 `git log docs/README.md` 里"规则改了"淹没在台账噪音中，削弱规则文档的可审计性。副作用是 AGENTS.md 第 4 节的流程指针需同步指向两份文档 |
+| D19 | **计划与待办只住在 `docs/plan/`**：每个事项一份规格文件，含**验收标准 + 技术方案 + 测试计划**；其他文档提它只放**指针**，不得只写一行"待办 xxx"。**判断标准**：只有"要做的事"进 `plan/`；"已接受、不打算改"的限制留在 `OPERATIONS.md`「已知限制与风险」 | 一行字形式的待办**不可执行**——没有验收标准，读完了也不知道做到什么算完；且散落多处会互相漂移（2026-09-18 实际清理过：暂缓项散在 OPERATIONS §三 与 D8/D9 里）。这也与第 4 节「动手前先在 `plan/` 找 SPEC」是同一条纪律的两面 |：条目状态 + 质量门禁 + 决策记录在 [`docs/SPEC.md`](./SPEC.md)；文档规则 / 职责划分 / 脱敏说明留在 [`docs/README.md`](./README.md) | **变更频率不同**：台账每次收口都变，规则几乎不变。混在一起会让 `git log docs/README.md` 里"规则改了"淹没在台账噪音中，削弱规则文档的可审计性。副作用是 AGENTS.md 第 4 节的流程指针需同步指向两份文档 |
