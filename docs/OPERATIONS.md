@@ -39,6 +39,7 @@
 | N8 | 补齐 Redis 分支测试（quota / rate-limit / trial） | ✅ 已完成（2026-09-16） | 我 | 由 N3 事故暴露的**系统性测试盲区**。已补 26 例（quota 11 / rate-limit 7 / trial 8），并做变异验证证明测试确实能抓到对应缺陷。**全部内容见 [`archive/n8-redis-branch-tests.md`](./archive/n8-redis-branch-tests.md)，本文不重复** |
 | N9 | Redis 故障**静默降级**无告警 | ✅ 已完成（2026-09-16） | 你 | UptimeRobot 已加 `/api/health` 监控（见 N1）：该端点在 Redis 连不上时返回 503、触发告警，静默降级不再"无人知晓"。至此无需再改空 error handler |
 | N10 | 443 是**丢包黑洞**，把"HTTPS 升级失败"放大成"访客彻底打不开" | ✅ 已完成（2026-09-17） | 你 | **根因**：Chrome 的 HTTPS Upgrades 会把 `http://` 升级到 `https://`；本机 443 被防火墙**丢包**（`Connection timed out`），"失败"变成"等待"，回落逻辑等不到信号，访客卡死在超时页。<br>**修复**：腾讯云防火墙放行 443 → 服务器上无监听者、内核直接回 RST → 443 变**快速拒绝**（`Connection refused`），浏览器得以回落 HTTP。<br>**验证**：手机蜂窝 / 关 Clash 实测 `http://<SERVER_IP>` 正常打开。<br>**两个坑**：① 改「防火墙**模板**」不会同步到实例，必须直接改「实例**防火墙**」——曾因此把 22/80 一起弄丢、致全站 502；② 本机 **Clash 会扭曲 443** 成 `ERR_CONNECTION_CLOSED`，验证时须关 Clash 或给该 IP 加直连。<br>**教训**：此类故障请求到不了 nginx、UptimeRobot/云监控都直连 HTTP，**监控全绿也发现不了**，只能靠真机实测 |
+| N11 | 部署改 git + `deploy.sh` + DEPLOYMENT.md 现状/历史分离 | ✅ 已完成（2026-09-18） | 我 | 部署从 tar 覆盖改为 `git fetch + reset --hard`（自动删文件、git 本身即锚点），固化 `deploy.sh`（人确认、不 CI/CD）；DEPLOYMENT.md 收敛为纯现状，历史痕迹清除（越界的「实测/初稿」叙述已删，约束保留结论）。首次 tar→git 迁移步骤见 DEPLOYMENT.md §3.3。spec 见 [`archive/n11-git-deploy.md`](./archive/n11-git-deploy.md) |
 
 ---
 
