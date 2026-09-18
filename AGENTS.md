@@ -40,6 +40,10 @@
   已提交到 `main` 而未推送的，用 `git branch <新分支>` + `git branch -f main origin/main` 挪出去。
 - 只用中性前缀：`feature/`（新能力 / 设计）、`bug-fix/`（功能缺陷）、`update/`（文档 / 配置维护）、`refactor/`（行为不变的结构调整）。
 - 分支名 / PR 标题 / commit **不得**包含 coding-agent 名、厂商名、作者签名或 "generated-by" 之类标记。
+- **默认只 commit，不推送。** 推送到远端（`git push`）、建 PR、合并——**都必须由负责人明确指示后才做**。
+  "做完了"不等于"可以推"：完成一个改动只意味着可以 `git commit`，停在本地分支上。
+  **不要因为"分支已经建好 / 前几步都做了"就顺手把推送也做掉**——这是一次不可逆的对外动作，
+  且本仓库会同步影响到生产部署链路（见 [`DEPLOYMENT.md`](docs/DEPLOYMENT.md)）。
 
 ## 4. Spec 状态对账（核心）
 
